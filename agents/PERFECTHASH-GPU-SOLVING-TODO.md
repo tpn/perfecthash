@@ -18,18 +18,20 @@
 - Synced the branch to `nv1`, built there, and collected cross-machine Hologram/Hydrogen results.
 - Refactored the POC to use C++ templates for 16-bit and 32-bit storage variants.
 - Benchmarked serial 16-bit vs 32-bit HologramWorld runs locally and on `nv1`.
+- Wired the main curated hash families into the POC with compile-time selection.
+- Validated the hash-family port against known-good offline `.seeds` files.
 
 ## In Progress
-- Decide whether the next cut should stay standalone or start reusing PerfectHash hash routines and seed semantics.
+- Improve seed-generation / seed-search fidelity for the real hash families.
 
 ## Next
 - Decide whether to push the 16-bit idea further:
   - keep only the current light-touch downsizing, or
   - template more of the peel/update state, including `XorEdge`
-- Replace the surrogate hash with one or more real PerfectHash hash functions:
-  - `MultiplyShiftR`
-  - `MultiplyShiftRX`
-  - good `Mulshrolate*RX` family members
+- Improve random attempt quality for real hash families:
+  - compare current SplitMix-derived seed generation against library behavior
+  - honor additional seed-mask / byte-range expectations if needed
+  - consider a mutation step around known-good seed shapes instead of full random generation
 - Measure real-key throughput and solve rate on Hydrogen/HologramWorld across batch sizes.
 - Measure solve throughput as a function of:
   - edges

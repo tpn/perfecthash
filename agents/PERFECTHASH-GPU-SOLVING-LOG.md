@@ -86,3 +86,18 @@
   - `HologramWorld-31016.keys`, batch `128`, storage `16`: GPU `18.913 ms`, CPU `54.885 ms`
   - `Hydrogen-40147.keys`, batch `128`, storage `32`: GPU `30.982 ms`, CPU `119.915 ms`
 - 2026-03-20 20:28:09 PDT: Corrected an earlier measurement mistake: parallel benchmark launches on the same GPU materially distorted timings, so final 16/32 comparisons were rerun serially.
+- 2026-03-22 19:17:08 PDT: Replaced the SplitMix-only hash path in the POC with a host-selected, compile-time-instantiated set of real hash families:
+  - `MultiplyShiftR`
+  - `MultiplyShiftRX`
+  - `Mulshrolate1RX`
+  - `Mulshrolate2RX`
+  - `Mulshrolate3RX`
+  - `Mulshrolate4RX`
+  - plus `SplitMix` as a baseline control
+- 2026-03-22 19:17:08 PDT: Added fixed seed-set loading via `--seeds-file` for validation against known-good offline outputs.
+- 2026-03-22 19:17:08 PDT: Observed that random batch runs with the new real hash families on `HologramWorld-31016.keys` could yield `0/128` solves for some functions, despite exact GPU/CPU agreement.
+- 2026-03-22 19:17:08 PDT: Validated the formula port against known-good offline seed sets:
+  - `HologramWorld-31016.MultiplyShiftR.seeds` + `MultiplyShiftR`: GPU `1/1`, CPU `1/1`
+  - `HologramWorld-31016.Mulshrolate3RX.seeds` + `Mulshrolate3RX`: GPU `1/1`, CPU `1/1`
+  - `tests/data/HologramWorld-31016.Mulshrolate1RX.seeds` + `Mulshrolate1RX`: GPU `1/1`, CPU `1/1`
+- 2026-03-22 19:17:08 PDT: Conclusion from the validation run: current real-hash implementation is correct for the tested families; poor random-attempt yield is now the main issue to investigate.
