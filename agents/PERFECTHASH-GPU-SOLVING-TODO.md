@@ -23,6 +23,8 @@
 - Replaced SplitMix-derived candidate seeds with a Philox-based generator closer to solver precedent.
 - Mirrored the `HashShift` override for non-AND-mask (`RX`) families.
 - Matched CPU fixed-attempt yield for representative real-key cases using Philox and real hash families.
+- Verified additional known-good HologramWorld CPU seed files in the POC.
+- Verified a CPU-found Hydrogen `Mulshrolate3RX` seed set in the POC.
 
 ## In Progress
 - Expand CPU-equivalence checks beyond the current representative cases.
@@ -37,6 +39,7 @@
   - consider a mutation step around known-good seed shapes instead of full random generation
 - Consider measuring actual `PerfectHashCreate` attempt yield for one representative case so the POC has a concrete target.
 - Compare winning subsequence / seed material against CPU CSV for a case with non-zero solutions.
+- Compare POC random-yield vs CPU random-yield for Hydrogen `Mulshrolate3RX`, where CPU definitely finds multiple solutions under Philox.
 - Measure real-key throughput and solve rate on Hydrogen/HologramWorld across batch sizes.
 - Measure solve throughput as a function of:
   - edges

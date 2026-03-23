@@ -120,3 +120,15 @@
   - `HologramWorld-31016.keys`, `Mulshrolate3RX`, Philox, fixed/batch `2048`: CPU `1/2048`, POC `1/2048`
   - `Hydrogen-40147.keys`, `MultiplyShiftR`, Philox, fixed/batch `128`: CPU `0/128`, POC `0/128`
 - 2026-03-22 23:00:22 PDT: Current status: for the tested real-key / real-hash cases above, the standalone solver now matches CPU fixed-attempt yield as well as per-seed correctness.
+- 2026-03-23 07:17:23 PDT: Validated additional known-good CPU seed files against the POC:
+  - `HologramWorld-31016.MultiplyShiftRX.seeds`: GPU `1/1`, CPU `1/1`
+  - `HologramWorld-31016.Mulshrolate4RX.seeds`: GPU `1/1`, CPU `1/1`
+- 2026-03-23 07:17:23 PDT: Ran `PerfectHashCreate` for `/home/trent/src/perfecthash-keys/sys32/Hydrogen-40147.keys` with:
+  - `Mulshrolate3RX`
+  - `Philox43210`
+  - `FixedAttempts=2048`
+  - result: `26` CPU solutions found (`SolutionsFoundRatio=0.01268`)
+- 2026-03-23 07:17:23 PDT: Extracted the winning Hydrogen `Mulshrolate3RX` seed set from the CPU CSV and fed it into the POC:
+  - batch `1`, storage `32`
+  - GPU `1/1`, CPU `1/1`, mismatches `0`
+- 2026-03-23 07:17:23 PDT: Conclusion: the POC is not failing to solve valid graphs; random-yield differences were the source of confusion. Known-good CPU seeds solve correctly, including on Hydrogen.

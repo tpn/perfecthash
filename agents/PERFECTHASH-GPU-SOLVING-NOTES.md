@@ -339,6 +339,21 @@
     - POC: `0/128`
 - This does not prove full equivalence yet, but it does show the standalone GPU+CPU reference path is now matching the library’s fixed-attempt yield behavior for representative real-key cases and real hash families.
 
+## Known-Good Seed Validation
+- The confusion about “not finding a solution” is now resolved:
+  - the POC does find solutions when given known-good CPU seed sets
+  - the earlier failures were about random seed yield, not inability to solve a valid graph
+- Confirmed known-good CPU seed sets that solve in the POC:
+  - `HologramWorld-31016.MultiplyShiftR.seeds`
+  - `HologramWorld-31016.MultiplyShiftRX.seeds`
+  - `HologramWorld-31016.Mulshrolate3RX.seeds`
+  - `HologramWorld-31016.Mulshrolate4RX.seeds`
+  - `tests/data/HologramWorld-31016.Mulshrolate1RX.seeds`
+- Confirmed Hydrogen CPU-found seed set:
+  - extracted a winning `Mulshrolate3RX` seed set from `PerfectHashCreate` CSV for `/home/trent/src/perfecthash-keys/sys32/Hydrogen-40147.keys`
+  - the POC solved it successfully with GPU `1/1`, CPU `1/1`, mismatches `0`
+- This is the strongest current evidence that the standalone graph build/peel/assign/verify path is functionally equivalent to CPU for tested seed sets.
+
 ## Assignment / Order Semantics
 - The POC does perform assignment.
 - It explicitly verifies order-preserving indexing for actual keys:
