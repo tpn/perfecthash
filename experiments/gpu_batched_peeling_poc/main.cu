@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cctype>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
@@ -9,17 +10,28 @@
 #include <iomanip>
 #include <iostream>
 #include <limits>
-#include <sstream>
 #include <string>
 #include <type_traits>
 #include <vector>
 
 namespace {
 
+constexpr uint32_t MAX_NUMBER_OF_SEEDS = 8;
+
 enum class StorageMode {
     Auto,
     Bits16,
     Bits32,
+};
+
+enum class HashFunctionKind {
+    SplitMix,
+    MultiplyShiftR,
+    MultiplyShiftRX,
+    Mulshrolate1RX,
+    Mulshrolate2RX,
+    Mulshrolate3RX,
+    Mulshrolate4RX,
 };
 
 struct Options {
@@ -29,7 +41,9 @@ struct Options {
     uint64_t KeySeed = 0x123456789abcdef0ull;
     uint64_t GraphSeed = 0x0f1e2d3c4b5a6978ull;
     std::string KeysFile;
+    std::string SeedsFile;
     StorageMode Storage = StorageMode::Auto;
+    HashFunctionKind HashFunction = HashFunctionKind::MultiplyShiftR;
     bool Verbose = false;
 };
 
@@ -38,6 +52,28 @@ struct FrontierItemT {
     uint32_t Graph;
     StorageT Vertex;
     StorageT Edge;
+};
+
+template<typename StorageT>
+struct HashPairT {
+    StorageT Vertex1;
+    StorageT Vertex2;
+};
+
+union ULongBytes {
+    uint32_t AsULong;
+    struct {
+        uint8_t Byte1;
+        uint8_t Byte2;
+        uint8_t Byte3;
+        uint8_t Byte4;
+    };
+};
+
+struct GraphSeeds {
+    uint32_t NumberOfSeeds = 0;
+    uint32_t Padding = 0;
+    uint32_t Seeds[MAX_NUMBER_OF_SEEDS] = {};
 };
 
 struct CpuResult {
@@ -60,6 +96,8 @@ struct ExperimentResult {
     float GpuMilliseconds = 0.0f;
     double CpuMilliseconds = 0.0;
     uint32_t StorageBits = 0;
+    const char *HashFunctionName = nullptr;
+    StorageMode SelectedStorage = StorageMode::Auto;
 };
 
 template<typename T>
@@ -78,7 +116,7 @@ CheckCuda(cudaError_t Error, const char *Message)
     }
 }
 
-std::vector<uint64_t>
+std::vector<uint32_t>
 LoadKeysFromFile(const std::string &Path)
 {
     std::ifstream File(Path, std::ios::binary | std::ios::ate);
@@ -93,14 +131,96 @@ LoadKeysFromFile(const std::string &Path)
         std::exit(EXIT_FAILURE);
     }
 
-    std::vector<uint32_t> Raw(static_cast<size_t>(Size / sizeof(uint32_t)));
+    std::vector<uint32_t> Keys(static_cast<size_t>(Size / sizeof(uint32_t)));
     File.seekg(0, std::ios::beg);
-    if (!File.read(reinterpret_cast<char *>(Raw.data()), Size)) {
+    if (!File.read(reinterpret_cast<char *>(Keys.data()), Size)) {
         std::cerr << "Failed to read keys file: " << Path << "\n";
         std::exit(EXIT_FAILURE);
     }
 
-    return std::vector<uint64_t>(Raw.begin(), Raw.end());
+    return Keys;
+}
+
+std::string
+Trim(const std::string &Value)
+{
+    size_t Start = 0;
+    size_t End = Value.size();
+
+    while (Start < End && std::isspace(static_cast<unsigned char>(Value[Start]))) {
+        ++Start;
+    }
+
+    while (End > Start && std::isspace(static_cast<unsigned char>(Value[End - 1]))) {
+        --End;
+    }
+
+    return Value.substr(Start, End - Start);
+}
+
+GraphSeeds
+LoadSeedsFromFile(const std::string &Path)
+{
+    std::ifstream File(Path);
+    if (!File) {
+        std::cerr << "Failed to open seeds file: " << Path << "\n";
+        std::exit(EXIT_FAILURE);
+    }
+
+    GraphSeeds Seeds = {};
+    std::string Line;
+
+    while (std::getline(File, Line)) {
+        Line = Trim(Line);
+        if (Line.empty() || Line[0] == '#') {
+            continue;
+        }
+
+        auto Equals = Line.find('=');
+        if (Equals == std::string::npos) {
+            continue;
+        }
+
+        std::string Name = Trim(Line.substr(0, Equals));
+        std::string Value = Trim(Line.substr(Equals + 1));
+
+        if (Name.rfind("Seed", 0) != 0 || Name.find('_') != std::string::npos) {
+            continue;
+        }
+
+        char *End = nullptr;
+        unsigned long Parsed = std::strtoul(Value.c_str(), &End, 0);
+        if (!End || *End != '\0') {
+            std::cerr << "Invalid seed value in " << Path << ": " << Line << "\n";
+            std::exit(EXIT_FAILURE);
+        }
+
+        unsigned Index = static_cast<unsigned>(std::strtoul(Name.c_str() + 4, &End, 10));
+        if (Index == 0 || Index > MAX_NUMBER_OF_SEEDS) {
+            std::cerr << "Invalid seed index in " << Path << ": " << Name << "\n";
+            std::exit(EXIT_FAILURE);
+        }
+
+        Seeds.Seeds[Index - 1] = static_cast<uint32_t>(Parsed);
+        Seeds.NumberOfSeeds = std::max<uint32_t>(Seeds.NumberOfSeeds, Index);
+    }
+
+    if (Seeds.NumberOfSeeds == 0) {
+        std::cerr << "No seeds found in seeds file: " << Path << "\n";
+        std::exit(EXIT_FAILURE);
+    }
+
+    return Seeds;
+}
+
+std::string
+ToLower(std::string Value)
+{
+    std::transform(Value.begin(),
+                   Value.end(),
+                   Value.begin(),
+                   [](unsigned char Ch) { return static_cast<char>(std::tolower(Ch)); });
+    return Value;
 }
 
 const char *
@@ -116,6 +236,31 @@ StorageModeToString(StorageMode Mode)
         default:
             return "unknown";
     }
+}
+
+HashFunctionKind
+ParseHashFunctionKind(const std::string &Value)
+{
+    const std::string Lower = ToLower(Value);
+
+    if (Lower == "splitmix") {
+        return HashFunctionKind::SplitMix;
+    } else if (Lower == "multiplyshiftr") {
+        return HashFunctionKind::MultiplyShiftR;
+    } else if (Lower == "multiplyshiftrx") {
+        return HashFunctionKind::MultiplyShiftRX;
+    } else if (Lower == "mulshrolate1rx") {
+        return HashFunctionKind::Mulshrolate1RX;
+    } else if (Lower == "mulshrolate2rx") {
+        return HashFunctionKind::Mulshrolate2RX;
+    } else if (Lower == "mulshrolate3rx") {
+        return HashFunctionKind::Mulshrolate3RX;
+    } else if (Lower == "mulshrolate4rx") {
+        return HashFunctionKind::Mulshrolate4RX;
+    }
+
+    std::cerr << "Invalid --hash-function value: " << Value << "\n";
+    std::exit(EXIT_FAILURE);
 }
 
 Options
@@ -138,6 +283,8 @@ ParseOptions(int argc, char **argv)
             Opts.Edges = static_cast<uint32_t>(std::stoul(RequireValue("--edges")));
         } else if (Arg == "--keys-file") {
             Opts.KeysFile = RequireValue("--keys-file");
+        } else if (Arg == "--seeds-file") {
+            Opts.SeedsFile = RequireValue("--seeds-file");
         } else if (Arg == "--batch") {
             Opts.Batch = static_cast<uint32_t>(std::stoul(RequireValue("--batch")));
         } else if (Arg == "--threads") {
@@ -147,7 +294,7 @@ ParseOptions(int argc, char **argv)
         } else if (Arg == "--graph-seed") {
             Opts.GraphSeed = std::stoull(RequireValue("--graph-seed"), nullptr, 0);
         } else if (Arg == "--storage-bits") {
-            auto Value = RequireValue("--storage-bits");
+            const auto Value = RequireValue("--storage-bits");
             if (Value == "auto") {
                 Opts.Storage = StorageMode::Auto;
             } else if (Value == "16") {
@@ -158,19 +305,25 @@ ParseOptions(int argc, char **argv)
                 std::cerr << "Invalid --storage-bits value: " << Value << "\n";
                 std::exit(EXIT_FAILURE);
             }
+        } else if (Arg == "--hash-function") {
+            Opts.HashFunction = ParseHashFunctionKind(RequireValue("--hash-function"));
         } else if (Arg == "--verbose") {
             Opts.Verbose = true;
         } else if (Arg == "--help" || Arg == "-h") {
             std::cout
                 << "Usage: gpu_batched_peeling_poc [options]\n"
-                << "  --edges <n>         Number of logical keys for generated input\n"
-                << "  --keys-file <p>     Load 32-bit keys from a .keys file\n"
-                << "  --batch <n>         Number of graph attempts in the batch\n"
-                << "  --threads <n>       Threads per block for build/collect/peel kernels\n"
-                << "  --storage-bits <x>  auto, 16, or 32\n"
-                << "  --key-seed <x>      Base seed for generated keys\n"
-                << "  --graph-seed <x>    Base seed for per-graph hash seeds\n"
-                << "  --verbose           Print per-graph mismatch details\n";
+                << "  --edges <n>           Number of logical keys for generated input\n"
+                << "  --keys-file <p>       Load 32-bit keys from a .keys file\n"
+                << "  --seeds-file <p>      Load a fixed seed set from a .seeds file\n"
+                << "  --batch <n>           Number of graph attempts in the batch\n"
+                << "  --threads <n>         Threads per block for build/collect/peel kernels\n"
+                << "  --storage-bits <x>    auto, 16, or 32\n"
+                << "  --hash-function <x>   SplitMix, MultiplyShiftR, MultiplyShiftRX,\n"
+                << "                        Mulshrolate1RX, Mulshrolate2RX, Mulshrolate3RX,\n"
+                << "                        or Mulshrolate4RX\n"
+                << "  --key-seed <x>        Base seed for generated keys\n"
+                << "  --graph-seed <x>      Base seed for per-graph hash seeds\n"
+                << "  --verbose             Print per-graph mismatch details\n";
             std::exit(EXIT_SUCCESS);
         } else {
             std::cerr << "Unknown argument: " << Arg << "\n";
@@ -211,20 +364,276 @@ SplitMix64(uint64_t Value)
     return Value ^ (Value >> 31);
 }
 
-__host__ __device__ inline uint32_t
-HashVertex(uint64_t Key, uint64_t Seed, uint32_t VertexMask)
+template<typename ValueType,
+         typename ShiftType>
+__host__ __device__ inline ValueType
+RotateRight(ValueType Value, ShiftType Shift)
 {
-    return static_cast<uint32_t>(SplitMix64(Key ^ Seed) & VertexMask);
+    constexpr ShiftType Bits = static_cast<ShiftType>(sizeof(ValueType) * 8);
+
+    if (Shift == 0) {
+        return Value;
+    }
+
+    Shift %= Bits;
+    return (Value >> Shift) | (Value << (Bits - Shift));
 }
 
+template<HashFunctionKind Kind>
+struct HashTraits;
+
+template<>
+struct HashTraits<HashFunctionKind::SplitMix> {
+    static constexpr const char *Name = "SplitMix";
+    static constexpr uint32_t NumberOfSeeds = 2;
+    static constexpr uint32_t Seed3Mask = 0;
+};
+
+template<>
+struct HashTraits<HashFunctionKind::MultiplyShiftR> {
+    static constexpr const char *Name = "MultiplyShiftR";
+    static constexpr uint32_t NumberOfSeeds = 3;
+    static constexpr uint32_t Seed3Mask = 0x1f1f;
+};
+
+template<>
+struct HashTraits<HashFunctionKind::MultiplyShiftRX> {
+    static constexpr const char *Name = "MultiplyShiftRX";
+    static constexpr uint32_t NumberOfSeeds = 3;
+    static constexpr uint32_t Seed3Mask = 0x1f1f;
+};
+
+template<>
+struct HashTraits<HashFunctionKind::Mulshrolate1RX> {
+    static constexpr const char *Name = "Mulshrolate1RX";
+    static constexpr uint32_t NumberOfSeeds = 3;
+    static constexpr uint32_t Seed3Mask = 0x1f1f1f1f;
+};
+
+template<>
+struct HashTraits<HashFunctionKind::Mulshrolate2RX> {
+    static constexpr const char *Name = "Mulshrolate2RX";
+    static constexpr uint32_t NumberOfSeeds = 3;
+    static constexpr uint32_t Seed3Mask = 0x1f1f1f1f;
+};
+
+template<>
+struct HashTraits<HashFunctionKind::Mulshrolate3RX> {
+    static constexpr const char *Name = "Mulshrolate3RX";
+    static constexpr uint32_t NumberOfSeeds = 4;
+    static constexpr uint32_t Seed3Mask = 0x1f1f1f1f;
+};
+
+template<>
+struct HashTraits<HashFunctionKind::Mulshrolate4RX> {
+    static constexpr const char *Name = "Mulshrolate4RX";
+    static constexpr uint32_t NumberOfSeeds = 5;
+    static constexpr uint32_t Seed3Mask = 0x1f1f1f1f;
+};
+
+template<HashFunctionKind Kind>
+GraphSeeds
+MakeGraphSeeds(uint64_t GraphSeed, uint32_t GraphIndex)
+{
+    GraphSeeds Seeds = {};
+    constexpr uint32_t NumberOfSeeds = HashTraits<Kind>::NumberOfSeeds;
+    constexpr uint32_t Seed3Mask = HashTraits<Kind>::Seed3Mask;
+
+    Seeds.NumberOfSeeds = NumberOfSeeds;
+
+    for (uint32_t Index = 0; Index < NumberOfSeeds; ++Index) {
+        uint64_t Material = GraphSeed;
+        Material ^= (static_cast<uint64_t>(GraphIndex) << 32);
+        Material ^= (static_cast<uint64_t>(Index) * 0x9e3779b97f4a7c15ull);
+        Seeds.Seeds[Index] = static_cast<uint32_t>(SplitMix64(Material));
+    }
+
+    if constexpr (Seed3Mask != 0) {
+        Seeds.Seeds[2] &= Seed3Mask;
+    }
+
+    return Seeds;
+}
+
+template<HashFunctionKind Kind>
+std::vector<GraphSeeds>
+MakeGraphSeedsVector(uint32_t Batch,
+                     uint64_t GraphSeed,
+                     const std::string &SeedsFile)
+{
+    if (!SeedsFile.empty()) {
+        GraphSeeds Fixed = LoadSeedsFromFile(SeedsFile);
+        std::vector<GraphSeeds> Seeds(Batch, Fixed);
+        return Seeds;
+    }
+
+    std::vector<GraphSeeds> Seeds(Batch);
+    for (uint32_t Graph = 0; Graph < Batch; ++Graph) {
+        Seeds[Graph] = MakeGraphSeeds<Kind>(GraphSeed, Graph);
+    }
+    return Seeds;
+}
+
+template<HashFunctionKind Kind, typename StorageT>
+struct HashImpl;
+
 template<typename StorageT>
+struct HashImpl<HashFunctionKind::SplitMix, StorageT> {
+    __host__ __device__ static HashPairT<StorageT>
+    Apply(uint32_t Key, const GraphSeeds &Seeds, uint32_t Mask)
+    {
+        uint32_t Vertex1 = static_cast<uint32_t>(SplitMix64(static_cast<uint64_t>(Key) ^ Seeds.Seeds[0])) & Mask;
+        uint32_t Vertex2 = static_cast<uint32_t>(SplitMix64(static_cast<uint64_t>(Key) ^ Seeds.Seeds[1])) & Mask;
+
+        return {
+            static_cast<StorageT>(Vertex1),
+            static_cast<StorageT>(Vertex2),
+        };
+    }
+};
+
+template<typename StorageT>
+struct HashImpl<HashFunctionKind::MultiplyShiftR, StorageT> {
+    __host__ __device__ static HashPairT<StorageT>
+    Apply(uint32_t Key, const GraphSeeds &Seeds, uint32_t Mask)
+    {
+        ULongBytes Seed3 = {};
+        Seed3.AsULong = Seeds.Seeds[2];
+
+        uint32_t Vertex1 = (Key * Seeds.Seeds[0]) >> Seed3.Byte1;
+        uint32_t Vertex2 = (Key * Seeds.Seeds[1]) >> Seed3.Byte2;
+
+        return {
+            static_cast<StorageT>(Vertex1 & Mask),
+            static_cast<StorageT>(Vertex2 & Mask),
+        };
+    }
+};
+
+template<typename StorageT>
+struct HashImpl<HashFunctionKind::MultiplyShiftRX, StorageT> {
+    __host__ __device__ static HashPairT<StorageT>
+    Apply(uint32_t Key, const GraphSeeds &Seeds, uint32_t Mask)
+    {
+        ULongBytes Seed3 = {};
+        Seed3.AsULong = Seeds.Seeds[2];
+        (void)Mask;
+
+        uint32_t Vertex1 = (Key * Seeds.Seeds[0]) >> Seed3.Byte1;
+        uint32_t Vertex2 = (Key * Seeds.Seeds[1]) >> Seed3.Byte1;
+
+        return {
+            static_cast<StorageT>(Vertex1),
+            static_cast<StorageT>(Vertex2),
+        };
+    }
+};
+
+template<typename StorageT>
+struct HashImpl<HashFunctionKind::Mulshrolate1RX, StorageT> {
+    __host__ __device__ static HashPairT<StorageT>
+    Apply(uint32_t Key, const GraphSeeds &Seeds, uint32_t Mask)
+    {
+        ULongBytes Seed3 = {};
+        Seed3.AsULong = Seeds.Seeds[2];
+        (void)Mask;
+
+        uint32_t Vertex1 = Key * Seeds.Seeds[0];
+        Vertex1 = RotateRight(Vertex1, Seed3.Byte2);
+        Vertex1 = Vertex1 >> Seed3.Byte1;
+
+        uint32_t Vertex2 = Key * Seeds.Seeds[1];
+        Vertex2 = Vertex2 >> Seed3.Byte1;
+
+        return {
+            static_cast<StorageT>(Vertex1),
+            static_cast<StorageT>(Vertex2),
+        };
+    }
+};
+
+template<typename StorageT>
+struct HashImpl<HashFunctionKind::Mulshrolate2RX, StorageT> {
+    __host__ __device__ static HashPairT<StorageT>
+    Apply(uint32_t Key, const GraphSeeds &Seeds, uint32_t Mask)
+    {
+        ULongBytes Seed3 = {};
+        Seed3.AsULong = Seeds.Seeds[2];
+        (void)Mask;
+
+        uint32_t Vertex1 = Key * Seeds.Seeds[0];
+        Vertex1 = RotateRight(Vertex1, Seed3.Byte2);
+        Vertex1 = Vertex1 >> Seed3.Byte1;
+
+        uint32_t Vertex2 = Key * Seeds.Seeds[1];
+        Vertex2 = RotateRight(Vertex2, Seed3.Byte3);
+        Vertex2 = Vertex2 >> Seed3.Byte1;
+
+        return {
+            static_cast<StorageT>(Vertex1),
+            static_cast<StorageT>(Vertex2),
+        };
+    }
+};
+
+template<typename StorageT>
+struct HashImpl<HashFunctionKind::Mulshrolate3RX, StorageT> {
+    __host__ __device__ static HashPairT<StorageT>
+    Apply(uint32_t Key, const GraphSeeds &Seeds, uint32_t Mask)
+    {
+        ULongBytes Seed3 = {};
+        Seed3.AsULong = Seeds.Seeds[2];
+        (void)Mask;
+
+        uint32_t Vertex1 = Key * Seeds.Seeds[0];
+        Vertex1 = RotateRight(Vertex1, Seed3.Byte2);
+        Vertex1 = Vertex1 * Seeds.Seeds[3];
+        Vertex1 = Vertex1 >> Seed3.Byte1;
+
+        uint32_t Vertex2 = Key * Seeds.Seeds[1];
+        Vertex2 = RotateRight(Vertex2, Seed3.Byte3);
+        Vertex2 = Vertex2 >> Seed3.Byte1;
+
+        return {
+            static_cast<StorageT>(Vertex1),
+            static_cast<StorageT>(Vertex2),
+        };
+    }
+};
+
+template<typename StorageT>
+struct HashImpl<HashFunctionKind::Mulshrolate4RX, StorageT> {
+    __host__ __device__ static HashPairT<StorageT>
+    Apply(uint32_t Key, const GraphSeeds &Seeds, uint32_t Mask)
+    {
+        ULongBytes Seed3 = {};
+        Seed3.AsULong = Seeds.Seeds[2];
+        (void)Mask;
+
+        uint32_t Vertex1 = Key * Seeds.Seeds[0];
+        Vertex1 = RotateRight(Vertex1, Seed3.Byte2);
+        Vertex1 = Vertex1 * Seeds.Seeds[3];
+        Vertex1 = Vertex1 >> Seed3.Byte1;
+
+        uint32_t Vertex2 = Key * Seeds.Seeds[1];
+        Vertex2 = RotateRight(Vertex2, Seed3.Byte3);
+        Vertex2 = Vertex2 * Seeds.Seeds[4];
+        Vertex2 = Vertex2 >> Seed3.Byte1;
+
+        return {
+            static_cast<StorageT>(Vertex1),
+            static_cast<StorageT>(Vertex2),
+        };
+    }
+};
+
+template<HashFunctionKind Kind, typename StorageT>
 __global__ void
 BuildGraphsKernel(uint32_t Edges,
                   uint32_t Vertices,
                   uint32_t Batch,
-                  const uint64_t *Keys,
-                  const uint64_t *Seeds1,
-                  const uint64_t *Seeds2,
+                  const uint32_t *Keys,
+                  const GraphSeeds *GraphSeedsArray,
                   StorageT *EdgeU,
                   StorageT *EdgeV,
                   uint32_t *Degree,
@@ -241,14 +650,17 @@ BuildGraphsKernel(uint32_t Edges,
         uint32_t EdgeIndex = Graph * Edges + Edge;
         uint32_t VertexBase = Graph * Vertices;
 
-        uint64_t Key = Keys[Edge];
-        uint32_t U = HashVertex(Key, Seeds1[Graph], VertexMask);
-        uint32_t V = HashVertex(Key, Seeds2[Graph], VertexMask);
+        uint32_t Key = Keys[Edge];
+        const GraphSeeds Seeds = GraphSeedsArray[Graph];
+        const auto Hash = HashImpl<Kind, StorageT>::Apply(Key, Seeds, VertexMask);
 
-        EdgeU[EdgeIndex] = static_cast<StorageT>(U);
-        EdgeV[EdgeIndex] = static_cast<StorageT>(V);
+        uint32_t U = static_cast<uint32_t>(Hash.Vertex1);
+        uint32_t V = static_cast<uint32_t>(Hash.Vertex2);
 
-        if (U == V) {
+        EdgeU[EdgeIndex] = Hash.Vertex1;
+        EdgeV[EdgeIndex] = Hash.Vertex2;
+
+        if (U == V || U >= Vertices || V >= Vertices) {
             atomicExch(&InvalidGraphs[Graph], 1u);
             Global += blockDim.x * gridDim.x;
             continue;
@@ -414,15 +826,14 @@ VerifyGraphsKernel(uint32_t Edges,
     }
 }
 
-template<typename StorageT>
+template<HashFunctionKind Kind, typename StorageT>
 CpuResult
 RunCpuReference(uint32_t Graph,
                 uint32_t Edges,
                 uint32_t Vertices,
                 uint32_t EdgeMask,
-                const std::vector<uint64_t> &Keys,
-                const std::vector<uint64_t> &Seeds1,
-                const std::vector<uint64_t> &Seeds2)
+                const std::vector<uint32_t> &Keys,
+                const std::vector<GraphSeeds> &GraphSeedsVector)
 {
     CpuResult Result;
     std::vector<uint32_t> Degree(Vertices, 0);
@@ -434,18 +845,20 @@ RunCpuReference(uint32_t Graph,
     std::vector<StorageT> Assigned(Vertices, 0);
     std::vector<uint8_t> Peeled(Edges, 0);
     std::vector<uint32_t> Queue;
+    const GraphSeeds Seeds = GraphSeedsVector[Graph];
 
     Order.reserve(Edges);
     Queue.reserve(Vertices);
 
     for (uint32_t Edge = 0; Edge < Edges; ++Edge) {
-        uint32_t U = HashVertex(Keys[Edge], Seeds1[Graph], Vertices - 1);
-        uint32_t V = HashVertex(Keys[Edge], Seeds2[Graph], Vertices - 1);
+        const auto Hash = HashImpl<Kind, StorageT>::Apply(Keys[Edge], Seeds, Vertices - 1);
+        uint32_t U = static_cast<uint32_t>(Hash.Vertex1);
+        uint32_t V = static_cast<uint32_t>(Hash.Vertex2);
 
-        EdgeU[Edge] = static_cast<StorageT>(U);
-        EdgeV[Edge] = static_cast<StorageT>(V);
+        EdgeU[Edge] = Hash.Vertex1;
+        EdgeV[Edge] = Hash.Vertex2;
 
-        if (U == V) {
+        if (U == V || U >= Vertices || V >= Vertices) {
             Result.Invalid = true;
             return Result;
         }
@@ -531,37 +944,38 @@ RunCpuReference(uint32_t Graph,
     return Result;
 }
 
-template<typename StorageT>
+template<HashFunctionKind Kind, typename StorageT>
 ExperimentResult
 RunExperiment(const Options &Opts,
-              const std::vector<uint64_t> &Keys,
-              const std::vector<uint64_t> &Seeds1,
-              const std::vector<uint64_t> &Seeds2,
-              const std::string &RequestedKeys)
+              const std::vector<uint32_t> &Keys,
+              const std::vector<GraphSeeds> &GraphSeedsVector,
+              const std::string &RequestedKeys,
+              StorageMode SelectedStorage)
 {
     using FrontierItem = FrontierItemT<StorageT>;
 
     ExperimentResult Result;
 
-    uint32_t Batch = Opts.Batch;
-    uint32_t KeyCount = static_cast<uint32_t>(Keys.size());
-    uint32_t EdgeCapacity = NextPowerOfTwo(KeyCount);
-    uint32_t Vertices = NextPowerOfTwo(EdgeCapacity + 1);
-    uint32_t EdgeMask = EdgeCapacity - 1;
+    const uint32_t Batch = Opts.Batch;
+    const uint32_t KeyCount = static_cast<uint32_t>(Keys.size());
+    const uint32_t EdgeCapacity = NextPowerOfTwo(KeyCount);
+    const uint32_t Vertices = NextPowerOfTwo(EdgeCapacity + 1);
+    const uint32_t EdgeMask = EdgeCapacity - 1;
 
     Result.KeyCount = KeyCount;
     Result.EdgeCapacity = EdgeCapacity;
     Result.Vertices = Vertices;
     Result.Batch = Batch;
     Result.StorageBits = static_cast<uint32_t>(sizeof(StorageT) * 8);
+    Result.HashFunctionName = HashTraits<Kind>::Name;
+    Result.SelectedStorage = SelectedStorage;
 
-    uint64_t TotalEdges = static_cast<uint64_t>(KeyCount) * Batch;
-    uint64_t TotalVertices = static_cast<uint64_t>(Vertices) * Batch;
-    uint64_t FrontierCapacity = TotalVertices;
+    const uint64_t TotalEdges = static_cast<uint64_t>(KeyCount) * Batch;
+    const uint64_t TotalVertices = static_cast<uint64_t>(Vertices) * Batch;
+    const uint64_t FrontierCapacity = TotalVertices;
 
-    uint64_t *DKeys = nullptr;
-    uint64_t *DSeeds1 = nullptr;
-    uint64_t *DSeeds2 = nullptr;
+    uint32_t *DKeys = nullptr;
+    GraphSeeds *DGraphSeeds = nullptr;
     StorageT *DEdgeU = nullptr;
     StorageT *DEdgeV = nullptr;
     uint32_t *DDegree = nullptr;
@@ -577,8 +991,9 @@ RunExperiment(const Options &Opts,
     uint32_t *DFrontierCount = nullptr;
 
     CheckCuda(cudaMalloc(&DKeys, Keys.size() * sizeof(Keys[0])), "cudaMalloc(DKeys)");
-    CheckCuda(cudaMalloc(&DSeeds1, Seeds1.size() * sizeof(Seeds1[0])), "cudaMalloc(DSeeds1)");
-    CheckCuda(cudaMalloc(&DSeeds2, Seeds2.size() * sizeof(Seeds2[0])), "cudaMalloc(DSeeds2)");
+    CheckCuda(cudaMalloc(&DGraphSeeds,
+                         GraphSeedsVector.size() * sizeof(GraphSeedsVector[0])),
+              "cudaMalloc(DGraphSeeds)");
     CheckCuda(cudaMalloc(&DEdgeU, TotalEdges * sizeof(StorageT)), "cudaMalloc(DEdgeU)");
     CheckCuda(cudaMalloc(&DEdgeV, TotalEdges * sizeof(StorageT)), "cudaMalloc(DEdgeV)");
     CheckCuda(cudaMalloc(&DDegree, TotalVertices * sizeof(uint32_t)), "cudaMalloc(DDegree)");
@@ -595,10 +1010,11 @@ RunExperiment(const Options &Opts,
 
     CheckCuda(cudaMemcpy(DKeys, Keys.data(), Keys.size() * sizeof(Keys[0]), cudaMemcpyHostToDevice),
               "cudaMemcpy(DKeys)");
-    CheckCuda(cudaMemcpy(DSeeds1, Seeds1.data(), Seeds1.size() * sizeof(Seeds1[0]), cudaMemcpyHostToDevice),
-              "cudaMemcpy(DSeeds1)");
-    CheckCuda(cudaMemcpy(DSeeds2, Seeds2.data(), Seeds2.size() * sizeof(Seeds2[0]), cudaMemcpyHostToDevice),
-              "cudaMemcpy(DSeeds2)");
+    CheckCuda(cudaMemcpy(DGraphSeeds,
+                         GraphSeedsVector.data(),
+                         GraphSeedsVector.size() * sizeof(GraphSeedsVector[0]),
+                         cudaMemcpyHostToDevice),
+              "cudaMemcpy(DGraphSeeds)");
 
     CheckCuda(cudaMemset(DEdgeU, 0, TotalEdges * sizeof(StorageT)), "cudaMemset(DEdgeU)");
     CheckCuda(cudaMemset(DEdgeV, 0, TotalEdges * sizeof(StorageT)), "cudaMemset(DEdgeV)");
@@ -617,22 +1033,21 @@ RunExperiment(const Options &Opts,
     CheckCuda(cudaEventCreate(&Start), "cudaEventCreate(Start)");
     CheckCuda(cudaEventCreate(&Stop), "cudaEventCreate(Stop)");
 
-    uint32_t BuildBlocks = static_cast<uint32_t>((TotalEdges + Opts.Threads - 1) / Opts.Threads);
-    uint32_t VertexBlocks = static_cast<uint32_t>((TotalVertices + Opts.Threads - 1) / Opts.Threads);
+    const uint32_t BuildBlocks = static_cast<uint32_t>((TotalEdges + Opts.Threads - 1) / Opts.Threads);
+    const uint32_t VertexBlocks = static_cast<uint32_t>((TotalVertices + Opts.Threads - 1) / Opts.Threads);
 
     CheckCuda(cudaEventRecord(Start), "cudaEventRecord(Start)");
 
-    BuildGraphsKernel<StorageT><<<BuildBlocks, Opts.Threads>>>(KeyCount,
-                                                               Vertices,
-                                                               Batch,
-                                                               DKeys,
-                                                               DSeeds1,
-                                                               DSeeds2,
-                                                               DEdgeU,
-                                                               DEdgeV,
-                                                               DDegree,
-                                                               DXorEdge,
-                                                               DInvalidGraphs);
+    BuildGraphsKernel<Kind, StorageT><<<BuildBlocks, Opts.Threads>>>(KeyCount,
+                                                                     Vertices,
+                                                                     Batch,
+                                                                     DKeys,
+                                                                     DGraphSeeds,
+                                                                     DEdgeU,
+                                                                     DEdgeV,
+                                                                     DDegree,
+                                                                     DXorEdge,
+                                                                     DInvalidGraphs);
     CheckCuda(cudaGetLastError(), "BuildGraphsKernel launch");
 
     uint32_t FrontierCount = 0;
@@ -657,7 +1072,7 @@ RunExperiment(const Options &Opts,
 
         ++Result.Rounds;
 
-        uint32_t PeelBlocks = static_cast<uint32_t>((FrontierCount + Opts.Threads - 1) / Opts.Threads);
+        const uint32_t PeelBlocks = static_cast<uint32_t>((FrontierCount + Opts.Threads - 1) / Opts.Threads);
         PeelFrontierKernel<StorageT><<<PeelBlocks, Opts.Threads>>>(KeyCount,
                                                                    Vertices,
                                                                    FrontierCount,
@@ -685,7 +1100,7 @@ RunExperiment(const Options &Opts,
                                                DAssigned);
     CheckCuda(cudaGetLastError(), "AssignGraphsKernel launch");
 
-    uint32_t VerifyBlocks = static_cast<uint32_t>((TotalEdges + Opts.Threads - 1) / Opts.Threads);
+    const uint32_t VerifyBlocks = static_cast<uint32_t>((TotalEdges + Opts.Threads - 1) / Opts.Threads);
     VerifyGraphsKernel<StorageT><<<VerifyBlocks, Opts.Threads>>>(KeyCount,
                                                                  Vertices,
                                                                  Batch,
@@ -717,13 +1132,12 @@ RunExperiment(const Options &Opts,
     std::vector<CpuResult> CpuResults(Batch);
 
     for (uint32_t Graph = 0; Graph < Batch; ++Graph) {
-        CpuResults[Graph] = RunCpuReference<StorageT>(Graph,
-                                                      KeyCount,
-                                                      Vertices,
-                                                      EdgeMask,
-                                                      Keys,
-                                                      Seeds1,
-                                                      Seeds2);
+        CpuResults[Graph] = RunCpuReference<Kind, StorageT>(Graph,
+                                                            KeyCount,
+                                                            Vertices,
+                                                            EdgeMask,
+                                                            Keys,
+                                                            GraphSeedsVector);
     }
 
     auto CpuStop = std::chrono::steady_clock::now();
@@ -731,10 +1145,12 @@ RunExperiment(const Options &Opts,
         std::chrono::duration<double, std::milli>(CpuStop - CpuStart).count();
 
     for (uint32_t Graph = 0; Graph < Batch; ++Graph) {
-        bool ThisGpuSuccess = (InvalidGraphs[Graph] == 0 &&
-                               PeeledCount[Graph] == KeyCount &&
-                               VerifyFailures[Graph] == 0);
-        bool ThisCpuSuccess = (CpuResults[Graph].Success && CpuResults[Graph].Verified);
+        const bool ThisGpuSuccess = (
+            InvalidGraphs[Graph] == 0 &&
+            PeeledCount[Graph] == KeyCount &&
+            VerifyFailures[Graph] == 0
+        );
+        const bool ThisCpuSuccess = (CpuResults[Graph].Success && CpuResults[Graph].Verified);
 
         if (ThisGpuSuccess) {
             ++Result.GpuSuccess;
@@ -769,8 +1185,9 @@ RunExperiment(const Options &Opts,
         << "  Edge capacity:      " << EdgeCapacity << "\n"
         << "  Vertices:           " << Vertices << "\n"
         << "  Batch size:         " << Batch << "\n"
+        << "  Hash function:      " << Result.HashFunctionName << "\n"
         << "  Storage bits:       " << Result.StorageBits << "\n"
-        << "  Storage mode:       " << StorageModeToString(Opts.Storage) << "\n"
+        << "  Storage mode:       " << StorageModeToString(Result.SelectedStorage) << "\n"
         << "  Peel rounds:        " << Result.Rounds << "\n"
         << "  GPU success:        " << Result.GpuSuccess << "/" << Batch << "\n"
         << "  CPU success:        " << Result.CpuSuccess << "/" << Batch << "\n"
@@ -793,8 +1210,7 @@ RunExperiment(const Options &Opts,
     CheckCuda(cudaFree(DDegree), "cudaFree(DDegree)");
     CheckCuda(cudaFree(DEdgeV), "cudaFree(DEdgeV)");
     CheckCuda(cudaFree(DEdgeU), "cudaFree(DEdgeU)");
-    CheckCuda(cudaFree(DSeeds2), "cudaFree(DSeeds2)");
-    CheckCuda(cudaFree(DSeeds1), "cudaFree(DSeeds1)");
+    CheckCuda(cudaFree(DGraphSeeds), "cudaFree(DGraphSeeds)");
     CheckCuda(cudaFree(DKeys), "cudaFree(DKeys)");
     CheckCuda(cudaEventDestroy(Stop), "cudaEventDestroy(Stop)");
     CheckCuda(cudaEventDestroy(Start), "cudaEventDestroy(Start)");
@@ -811,6 +1227,32 @@ SupportsStorage(uint32_t EdgeCapacity, uint32_t Vertices)
             static_cast<uint64_t>(Vertices - 1) <= Max);
 }
 
+template<HashFunctionKind Kind>
+ExperimentResult
+RunWithSelectedStorage(const Options &Opts,
+                       const std::vector<uint32_t> &Keys,
+                       const std::string &RequestedKeys,
+                       StorageMode SelectedStorage)
+{
+    auto GraphSeedsVector = MakeGraphSeedsVector<Kind>(Opts.Batch,
+                                                       Opts.GraphSeed,
+                                                       Opts.SeedsFile);
+
+    if (SelectedStorage == StorageMode::Bits16) {
+        return RunExperiment<Kind, uint16_t>(Opts,
+                                             Keys,
+                                             GraphSeedsVector,
+                                             RequestedKeys,
+                                             SelectedStorage);
+    } else {
+        return RunExperiment<Kind, uint32_t>(Opts,
+                                             Keys,
+                                             GraphSeedsVector,
+                                             RequestedKeys,
+                                             SelectedStorage);
+    }
+}
+
 } // namespace
 
 int
@@ -818,7 +1260,7 @@ main(int argc, char **argv)
 {
     Options Opts = ParseOptions(argc, argv);
 
-    std::vector<uint64_t> Keys;
+    std::vector<uint32_t> Keys;
     std::string RequestedKeys = std::to_string(Opts.Edges);
 
     if (!Opts.KeysFile.empty()) {
@@ -827,7 +1269,7 @@ main(int argc, char **argv)
     } else {
         Keys.resize(Opts.Edges);
         for (uint32_t Edge = 0; Edge < Opts.Edges; ++Edge) {
-            Keys[Edge] = SplitMix64(Opts.KeySeed + Edge);
+            Keys[Edge] = static_cast<uint32_t>(SplitMix64(Opts.KeySeed + Edge));
         }
     }
 
@@ -836,37 +1278,88 @@ main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
-    uint32_t KeyCount = static_cast<uint32_t>(Keys.size());
-    uint32_t EdgeCapacity = NextPowerOfTwo(KeyCount);
-    uint32_t Vertices = NextPowerOfTwo(EdgeCapacity + 1);
+    const uint32_t KeyCount = static_cast<uint32_t>(Keys.size());
+    const uint32_t EdgeCapacity = NextPowerOfTwo(KeyCount);
+    const uint32_t Vertices = NextPowerOfTwo(EdgeCapacity + 1);
 
-    std::vector<uint64_t> Seeds1(Opts.Batch);
-    std::vector<uint64_t> Seeds2(Opts.Batch);
-    for (uint32_t Graph = 0; Graph < Opts.Batch; ++Graph) {
-        Seeds1[Graph] = SplitMix64(Opts.GraphSeed + (Graph * 2ull));
-        Seeds2[Graph] = SplitMix64(Opts.GraphSeed + (Graph * 2ull) + 1ull);
-    }
-
-    StorageMode Selected = Opts.Storage;
-    if (Selected == StorageMode::Auto) {
+    StorageMode SelectedStorage = Opts.Storage;
+    if (SelectedStorage == StorageMode::Auto) {
         if (SupportsStorage<uint16_t>(EdgeCapacity, Vertices)) {
-            Selected = StorageMode::Bits16;
+            SelectedStorage = StorageMode::Bits16;
         } else {
-            Selected = StorageMode::Bits32;
+            SelectedStorage = StorageMode::Bits32;
         }
     }
 
-    if (Selected == StorageMode::Bits16 && !SupportsStorage<uint16_t>(EdgeCapacity, Vertices)) {
-        std::cerr << "16-bit storage does not support edge capacity " << EdgeCapacity
-                  << " and vertex count " << Vertices << ".\n";
+    if (SelectedStorage == StorageMode::Bits16 &&
+        !SupportsStorage<uint16_t>(EdgeCapacity, Vertices)) {
+        std::cerr << "16-bit storage does not support edge capacity "
+                  << EdgeCapacity
+                  << " and vertex count "
+                  << Vertices
+                  << ".\n";
         return EXIT_FAILURE;
     }
 
-    ExperimentResult Result;
-    if (Selected == StorageMode::Bits16) {
-        Result = RunExperiment<uint16_t>(Opts, Keys, Seeds1, Seeds2, RequestedKeys);
-    } else {
-        Result = RunExperiment<uint32_t>(Opts, Keys, Seeds1, Seeds2, RequestedKeys);
+    ExperimentResult Result = {};
+
+    switch (Opts.HashFunction) {
+        case HashFunctionKind::SplitMix:
+            Result = RunWithSelectedStorage<HashFunctionKind::SplitMix>(
+                Opts,
+                Keys,
+                RequestedKeys,
+                SelectedStorage
+            );
+            break;
+        case HashFunctionKind::MultiplyShiftR:
+            Result = RunWithSelectedStorage<HashFunctionKind::MultiplyShiftR>(
+                Opts,
+                Keys,
+                RequestedKeys,
+                SelectedStorage
+            );
+            break;
+        case HashFunctionKind::MultiplyShiftRX:
+            Result = RunWithSelectedStorage<HashFunctionKind::MultiplyShiftRX>(
+                Opts,
+                Keys,
+                RequestedKeys,
+                SelectedStorage
+            );
+            break;
+        case HashFunctionKind::Mulshrolate1RX:
+            Result = RunWithSelectedStorage<HashFunctionKind::Mulshrolate1RX>(
+                Opts,
+                Keys,
+                RequestedKeys,
+                SelectedStorage
+            );
+            break;
+        case HashFunctionKind::Mulshrolate2RX:
+            Result = RunWithSelectedStorage<HashFunctionKind::Mulshrolate2RX>(
+                Opts,
+                Keys,
+                RequestedKeys,
+                SelectedStorage
+            );
+            break;
+        case HashFunctionKind::Mulshrolate3RX:
+            Result = RunWithSelectedStorage<HashFunctionKind::Mulshrolate3RX>(
+                Opts,
+                Keys,
+                RequestedKeys,
+                SelectedStorage
+            );
+            break;
+        case HashFunctionKind::Mulshrolate4RX:
+            Result = RunWithSelectedStorage<HashFunctionKind::Mulshrolate4RX>(
+                Opts,
+                Keys,
+                RequestedKeys,
+                SelectedStorage
+            );
+            break;
     }
 
     return (Result.Mismatches == 0 && Result.CpuVerifyIssues == 0) ?
