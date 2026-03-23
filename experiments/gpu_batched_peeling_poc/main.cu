@@ -45,6 +45,7 @@ struct Options {
     uint64_t RngOffset = 0;
     std::string KeysFile;
     std::string SeedsFile;
+    std::string DumpSolvedSeedsFile;
     StorageMode Storage = StorageMode::Auto;
     HashFunctionKind HashFunction = HashFunctionKind::MultiplyShiftR;
     bool Verbose = false;
@@ -302,6 +303,8 @@ ParseOptions(int argc, char **argv)
             Opts.KeysFile = RequireValue("--keys-file");
         } else if (Arg == "--seeds-file") {
             Opts.SeedsFile = RequireValue("--seeds-file");
+        } else if (Arg == "--dump-solved-seeds") {
+            Opts.DumpSolvedSeedsFile = RequireValue("--dump-solved-seeds");
         } else if (Arg == "--batch") {
             Opts.Batch = static_cast<uint32_t>(std::stoul(RequireValue("--batch")));
         } else if (Arg == "--threads") {
@@ -336,6 +339,8 @@ ParseOptions(int argc, char **argv)
                 << "  --edges <n>           Number of logical keys for generated input\n"
                 << "  --keys-file <p>       Load 32-bit keys from a .keys file\n"
                 << "  --seeds-file <p>      Load a fixed seed set from a .seeds file\n"
+                << "  --dump-solved-seeds <p>\n"
+                << "                        Write successful graph indices and seeds to a CSV\n"
                 << "  --batch <n>           Number of graph attempts in the batch\n"
                 << "  --threads <n>         Threads per block for build/collect/peel kernels\n"
                 << "  --storage-bits <x>    auto, 16, or 32\n"
@@ -1432,6 +1437,20 @@ RunExperiment(const Options &Opts,
     Result.CpuMilliseconds =
         std::chrono::duration<double, std::milli>(CpuStop - CpuStart).count();
 
+    std::ofstream SolvedSeedsFile;
+    if (!Opts.DumpSolvedSeedsFile.empty()) {
+        SolvedSeedsFile.open(Opts.DumpSolvedSeedsFile, std::ios::trunc);
+        if (!SolvedSeedsFile) {
+            std::cerr << "Failed to open solved seeds output file: "
+                      << Opts.DumpSolvedSeedsFile
+                      << "\n";
+            std::exit(EXIT_FAILURE);
+        }
+
+        SolvedSeedsFile
+            << "GraphIndex,HashFunction,Seed1,Seed2,Seed3,Seed4,Seed5,Seed6,Seed7,Seed8\n";
+    }
+
     for (uint32_t Graph = 0; Graph < Batch; ++Graph) {
         const bool ThisGpuSuccess = (
             InvalidGraphs[Graph] == 0 &&
@@ -1445,6 +1464,21 @@ RunExperiment(const Options &Opts,
         }
         if (ThisCpuSuccess) {
             ++Result.CpuSuccess;
+        }
+        if (ThisGpuSuccess && SolvedSeedsFile.is_open()) {
+            const GraphSeeds &Seeds = GraphSeedsVector[Graph];
+            SolvedSeedsFile
+                << Graph
+                << "," << HashTraits<Kind>::Name
+                << "," << Seeds.Seeds[0]
+                << "," << Seeds.Seeds[1]
+                << "," << Seeds.Seeds[2]
+                << "," << Seeds.Seeds[3]
+                << "," << Seeds.Seeds[4]
+                << "," << Seeds.Seeds[5]
+                << "," << Seeds.Seeds[6]
+                << "," << Seeds.Seeds[7]
+                << "\n";
         }
         if (ThisGpuSuccess != ThisCpuSuccess) {
             ++Result.Mismatches;

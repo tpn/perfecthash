@@ -25,9 +25,11 @@
 - Matched CPU fixed-attempt yield for representative real-key cases using Philox and real hash families.
 - Verified additional known-good HologramWorld CPU seed files in the POC.
 - Verified a CPU-found Hydrogen `Mulshrolate3RX` seed set in the POC.
+- Added solved-seed dumping to the POC for mismatch analysis.
+- Confirmed an easy-case random-yield discrepancy on `CoreUIComponents-8193.keys`.
 
 ## In Progress
-- Expand CPU-equivalence checks beyond the current representative cases.
+- Isolate the remaining `164 vs 162` random-yield discrepancy on the easy CoreUI case.
 
 ## Next
 - Decide whether to push the 16-bit idea further:
@@ -40,6 +42,7 @@
 - Consider measuring actual `PerfectHashCreate` attempt yield for one representative case so the POC has a concrete target.
 - Compare winning subsequence / seed material against CPU CSV for a case with non-zero solutions.
 - Compare POC random-yield vs CPU random-yield for Hydrogen `Mulshrolate3RX`, where CPU definitely finds multiple solutions under Philox.
+- Replay dumped POC-success seeds against the real CLI until the first true mismatch is identified.
 - Measure real-key throughput and solve rate on Hydrogen/HologramWorld across batch sizes.
 - Measure solve throughput as a function of:
   - edges

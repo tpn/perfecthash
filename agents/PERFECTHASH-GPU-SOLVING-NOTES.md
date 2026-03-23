@@ -354,6 +354,21 @@
   - the POC solved it successfully with GPU `1/1`, CPU `1/1`, mismatches `0`
 - This is the strongest current evidence that the standalone graph build/peel/assign/verify path is functionally equivalent to CPU for tested seed sets.
 
+## Easier-Key Findings
+- Testing easier fixtures was helpful.
+- Example: `/home/trent/src/perfecthash-keys/sys32/CoreUIComponents-8193.keys`
+  - key-to-edge-capacity ratio: `8193 / 16384 ~= 0.50006`
+  - `MultiplyShiftR`, Philox, batch/fixed `2048`, 16-bit storage in the POC:
+    - GPU success `164/2048`
+    - internal CPU reference success `164/2048`
+  - `PerfectHashCreate` CSV for the same case:
+    - `NumberOfSolutionsFound=162`
+    - `SolutionsFoundRatio=0.07906`
+- Interpretation:
+  - easier fixtures do raise real-hash yield substantially, as expected
+  - however, they also exposed a residual equivalence gap between the standalone POC and the real CLI on at least one case
+  - the current focus should be on understanding that `164 vs 162` discrepancy before claiming full CPU equivalence
+
 ## Assignment / Order Semantics
 - The POC does perform assignment.
 - It explicitly verifies order-preserving indexing for actual keys:

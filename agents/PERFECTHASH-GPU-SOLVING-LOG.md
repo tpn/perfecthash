@@ -132,3 +132,18 @@
   - batch `1`, storage `32`
   - GPU `1/1`, CPU `1/1`, mismatches `0`
 - 2026-03-23 07:17:23 PDT: Conclusion: the POC is not failing to solve valid graphs; random-yield differences were the source of confusion. Known-good CPU seeds solve correctly, including on Hydrogen.
+- 2026-03-23 12:54:14 PDT: Probed an easier fixture suggested by the user:
+  - `/home/trent/src/perfecthash-keys/sys32/CoreUIComponents-8193.keys`
+  - `MultiplyShiftR`, Philox, batch/fixed `2048`
+- 2026-03-23 12:54:14 PDT: POC result for CoreUI easy case:
+  - GPU success `164/2048`
+  - internal CPU reference success `164/2048`
+  - GPU `118.242 ms`
+  - CPU `149.060 ms`
+- 2026-03-23 12:54:14 PDT: Real `PerfectHashCreate` CSV result for the same CoreUI case:
+  - `NumberOfSolutionsFound=162`
+  - `SolutionsFoundRatio=0.07906`
+  - `UsedAssigned16=Y`
+- 2026-03-23 12:54:14 PDT: Added optional solved-seed dumping to the POC (`--dump-solved-seeds`) to help isolate mismatches by replaying exact successful seed sets against the CPU solver.
+- 2026-03-23 12:54:14 PDT: Dumped POC-success seed sets for the CoreUI case and confirmed the CPU CSV winning `MultiplyShiftR` seed (`GraphIndex=26`) appears in the POC’s successful set.
+- 2026-03-23 12:54:14 PDT: Current status: known-good seed sets solve correctly, hard-case fixed-attempt yield matches CPU on tested cases, but the easier CoreUI case still shows a small random-yield discrepancy (`164` vs `162`) that needs investigation.
