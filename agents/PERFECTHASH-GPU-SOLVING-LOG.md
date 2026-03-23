@@ -147,3 +147,11 @@
 - 2026-03-23 12:54:14 PDT: Added optional solved-seed dumping to the POC (`--dump-solved-seeds`) to help isolate mismatches by replaying exact successful seed sets against the CPU solver.
 - 2026-03-23 12:54:14 PDT: Dumped POC-success seed sets for the CoreUI case and confirmed the CPU CSV winning `MultiplyShiftR` seed (`GraphIndex=26`) appears in the POC’s successful set.
 - 2026-03-23 12:54:14 PDT: Current status: known-good seed sets solve correctly, hard-case fixed-attempt yield matches CPU on tested cases, but the easier CoreUI case still shows a small random-yield discrepancy (`164` vs `162`) that needs investigation.
+- 2026-03-23 13:08:47 PDT: Investigated the CoreUI `164 vs 162` discrepancy by replaying seeds and comparing CLI behavior with different concurrency settings.
+- 2026-03-23 13:08:47 PDT: Determined that `PerfectHashCreate --Seeds=...` only replays cleanly as a direct oracle when `MaximumConcurrency=1`; with higher concurrency the attempt scheduling semantics complicate direct replay.
+- 2026-03-23 13:08:47 PDT: Reran the easy CoreUI case with CPU `MaximumConcurrency=1`:
+  - `CoreUIComponents-8193.keys`, `MultiplyShiftR`, Philox, fixed `2048`
+  - CPU result: `164/2048`
+  - POC result: `164/2048`
+- 2026-03-23 13:08:47 PDT: Also confirmed `Hydrogen-40147.keys`, `Mulshrolate3RX`, Philox, fixed `2048` remains `26/2048` with CPU `MaximumConcurrency=1`, matching the POC.
+- 2026-03-23 13:08:47 PDT: Updated conclusion: the standalone solver is CPU-equivalent for the tested cases when concurrency semantics are aligned (`MaximumConcurrency=1`).

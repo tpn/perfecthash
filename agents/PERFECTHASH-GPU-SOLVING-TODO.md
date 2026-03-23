@@ -27,9 +27,10 @@
 - Verified a CPU-found Hydrogen `Mulshrolate3RX` seed set in the POC.
 - Added solved-seed dumping to the POC for mismatch analysis.
 - Confirmed an easy-case random-yield discrepancy on `CoreUIComponents-8193.keys`.
+- Resolved the CoreUI discrepancy as a CPU concurrency-semantic issue; with `MaximumConcurrency=1`, CPU and POC fixed-attempt yield match.
 
 ## In Progress
-- Isolate the remaining `164 vs 162` random-yield discrepancy on the easy CoreUI case.
+- Expand the `MaximumConcurrency=1` equivalence checks to more hash functions and datasets.
 
 ## Next
 - Decide whether to push the 16-bit idea further:
@@ -43,6 +44,7 @@
 - Compare winning subsequence / seed material against CPU CSV for a case with non-zero solutions.
 - Compare POC random-yield vs CPU random-yield for Hydrogen `Mulshrolate3RX`, where CPU definitely finds multiple solutions under Philox.
 - Replay dumped POC-success seeds against the real CLI until the first true mismatch is identified.
+- Sync the latest equivalence findings to `nv1` if cross-machine confirmation is still useful.
 - Measure real-key throughput and solve rate on Hydrogen/HologramWorld across batch sizes.
 - Measure solve throughput as a function of:
   - edges

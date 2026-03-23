@@ -366,8 +366,28 @@
     - `SolutionsFoundRatio=0.07906`
 - Interpretation:
   - easier fixtures do raise real-hash yield substantially, as expected
-  - however, they also exposed a residual equivalence gap between the standalone POC and the real CLI on at least one case
-  - the current focus should be on understanding that `164 vs 162` discrepancy before claiming full CPU equivalence
+  - the original `164 vs 162` discrepancy on CoreUI turned out to be a concurrency-accounting issue in the comparison, not a solver mismatch
+  - when `PerfectHashCreate` is forced to `MaximumConcurrency=1`, the CPU result becomes `164/2048`, matching the POC exactly
+
+## Concurrency Semantics
+- `PerfectHashCreate` with default CPU concurrency can yield slightly different aggregate fixed-attempt solution counts than a simple “one batch slot == one attempt” model, even under Philox.
+- When comparing the standalone POC against the CPU solver, the cleanest apples-to-apples baseline is:
+  - `MaximumConcurrency=1`
+  - same Philox seed / subsequence / offset
+  - same fixed-attempt budget
+- With that baseline:
+  - `CoreUIComponents-8193.keys`, `MultiplyShiftR`, Philox, fixed/batch `2048`
+    - CPU (`MaximumConcurrency=1`): `164/2048`
+    - POC: `164/2048`
+  - `HologramWorld-31016.keys`, `MultiplyShiftR`, Philox, fixed/batch `2048`
+    - CPU: `0/2048`
+    - POC: `0/2048`
+  - `Hydrogen-40147.keys`, `Mulshrolate3RX`, Philox, fixed/batch `2048`
+    - CPU (`MaximumConcurrency=1`): `26/2048`
+    - POC: `26/2048`
+- This is currently the strongest statement of equivalence:
+  - known-good CPU seeds solve correctly
+  - fixed-attempt yield matches CPU for tested cases when concurrency semantics are aligned
 
 ## Assignment / Order Semantics
 - The POC does perform assignment.
