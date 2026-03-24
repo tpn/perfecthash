@@ -205,7 +205,6 @@ GraphCuAddEdge1(
             PrevVertex3 = *Vertex;
 
             NextDegree = PrevVertex3.Degree + 1;
-            NextDegree += 1;
 
             NextEdges = PrevVertex3.Edges;
             NextEdges ^= Edge;
@@ -808,9 +807,8 @@ GraphCuRemoveVertex(
     //DegreeType Degree;
     Edge3Type Edge3;
     Edge3Type *Edges3 = (decltype(Edges3))Graph->Edges3;
-    //OrderType *Order = (decltype(Order))Graph->Order;
-    //OrderType *OrderAddress;
-    //OrderIndexType OrderIndex;
+    OrderType *Order = (decltype(Order))Graph->Order;
+    OrderIndexType OrderIndex;
     OrderIndexType *GraphOrderIndex =
         (decltype(GraphOrderIndex))&Graph->OrderIndex;
 
@@ -848,19 +846,11 @@ GraphCuRemoveVertex(
 
     if (Removed1 || Removed2) {
         AtomicAggIncCGV(&Graph->DeletedEdgeCount);
-        AtomicAggSubCGV(GraphOrderIndex);
-#if 0
-        OrderIndex = AtomicAggSubCG(GraphOrderIndex);
-        OrderAddress = &Order[OrderIndex];
+        OrderIndex = atomicSub(GraphOrderIndex, 1) - 1;
 
         if (OrderIndex >= 0) {
-            ASSERT(*OrderAddress == 0);
-            ASSERT(Order[OrderIndex] == 0);
-            Order[OrderIndex] = Edge;
-            ASSERT(Order[OrderIndex] == Edge);
-            ASSERT(*OrderAddress == Edge);
+            Order[OrderIndex] = (OrderType)Edge;
         }
-#endif
     }
 
 End:
@@ -897,6 +887,75 @@ GraphCuIsAcyclicPhase1Kernel(
     return;
 }
 
+template<typename GraphType>
+GLOBAL
+VOID
+GraphCuIsAcyclicSerialKernel(
+    GraphType* Graph
+    )
+{
+    using EdgeType = typename GraphType::EdgeType;
+    using Edge3Type = typename GraphType::Edge3Type;
+    using OrderType = typename GraphType::OrderType;
+    using VertexType = typename GraphType::VertexType;
+    using Vertex3Type = typename GraphType::Vertex3Type;
+
+    if (blockIdx.x != 0 || threadIdx.x != 0) {
+        return;
+    }
+
+    auto *Vertices3 = (Vertex3Type *)Graph->Vertices3;
+    auto *Edges3 = (Edge3Type *)Graph->Edges3;
+    auto *Order = (OrderType *)Graph->Order;
+
+    Graph->Flags.Shrinking = TRUE;
+
+    while (TRUE) {
+        bool Progress = false;
+
+        for (uint32_t Index = 0; Index < Graph->NumberOfVertices; Index++) {
+            VertexType VertexIndex = (VertexType)Index;
+            Vertex3Type *Vertex = &Vertices3[VertexIndex];
+
+            if (Vertex->Degree != 1) {
+                continue;
+            }
+
+            EdgeType Edge = Vertex->Edges;
+            Edge3Type *Edge3 = &Edges3[Edge];
+            VertexType Vertex1 = Edge3->Vertex1;
+            VertexType Vertex2 = Edge3->Vertex2;
+
+            if (Vertices3[VertexIndex].Degree != 1) {
+                continue;
+            }
+
+            if (Vertices3[Vertex1].Degree > 0) {
+                --Vertices3[Vertex1].Degree;
+                Vertices3[Vertex1].Edges ^= Edge;
+            }
+
+            if (Vertices3[Vertex2].Degree > 0) {
+                --Vertices3[Vertex2].Degree;
+                Vertices3[Vertex2].Edges ^= Edge;
+            }
+
+            ++Graph->DeletedEdgeCount;
+            Graph->OrderIndex -= 1;
+            Order[Graph->OrderIndex] = (OrderType)Edge;
+            Progress = true;
+        }
+
+        if (!Progress) {
+            break;
+        }
+    }
+
+    if (Graph->DeletedEdgeCount == Graph->NumberOfKeys) {
+        Graph->Flags.IsAcyclic = TRUE;
+    }
+}
+
 EXTERN_C
 HOST
 HRESULT
@@ -908,38 +967,14 @@ GraphCuIsAcyclic(
     )
 {
     BOOLEAN IsAcyclic = FALSE;
-    ULONG Attempts = 0;
-    LONG OrderIndexDelta = 0;
-    LONG PreviousOrderIndex = 0;
     LONG DeviceOrderIndex = 0;
+    ULONG DeviceDeletedEdges = 0;
 
     HRESULT Result;
     PGRAPH DeviceGraph;
     CUstream_st* Stream;
     PPH_CU_SOLVE_CONTEXT SolveContext;
     ULONG SharedMemory = SharedMemoryInBytes;
-
-    //
-    // Get suitable launch parameters for the IsAcyclicPhase1() kernel.
-    //
-
-    if (IsUsingAssigned16(Graph)) {
-        Result = GetKernelConfig(Graph,
-                                 (PVOID)GraphCuIsAcyclicPhase1Kernel<GRAPH16>,
-                                 BlocksPerGrid,
-                                 ThreadsPerBlock,
-                                 SharedMemory);
-    } else {
-        Result = GetKernelConfig(Graph,
-                                 (PVOID)GraphCuIsAcyclicPhase1Kernel<GRAPH32>,
-                                 BlocksPerGrid,
-                                 ThreadsPerBlock,
-                                 SharedMemory);
-    }
-
-    if (FAILED(Result)) {
-        goto End;
-    }
 
     //
     // Initialize aliases.
@@ -949,91 +984,43 @@ GraphCuIsAcyclic(
     DeviceGraph = SolveContext->DeviceGraph;
     Stream = (CUstream_st *)SolveContext->Stream;
 
-    //
-    // Enter the kernel launch loop.
-    //
+    BlocksPerGrid = 1;
+    ThreadsPerBlock = 1;
+    SharedMemory = 0;
 
-    while (TRUE) {
-
-        ++Attempts;
-
-        //
-        // Dispatch the appropriate kernel and wait for completion.
-        //
-
-        if (IsUsingAssigned16(Graph)) {
-            GraphCuIsAcyclicPhase1Kernel<<<BlocksPerGrid,
-                                           ThreadsPerBlock,
-                                           SharedMemory,
-                                           Stream>>>((PGRAPH16)DeviceGraph);
-        } else {
-            GraphCuIsAcyclicPhase1Kernel<<<BlocksPerGrid,
-                                           ThreadsPerBlock,
-                                           SharedMemory,
-                                           Stream>>>((PGRAPH32)DeviceGraph);
-        }
-
-        CUDA_CALL(cudaMemcpyAsync((PVOID)&DeviceOrderIndex,
-                                  (PVOID)&DeviceGraph->OrderIndex,
-                                  sizeof(DeviceOrderIndex),
-                                  cudaMemcpyDeviceToHost,
-                                  Stream));
-
-        CUDA_CALL(cudaStreamSynchronize(Stream));
-
-        //
-        // Check to see if our OrderIndex has reached 0, this is indicative
-        // of an acyclic graph.  (We use <= 0 because we may see -1 or 0 in
-        // some cases.)
-        //
-
-        if (DeviceOrderIndex <= 0) {
-
-            //
-            // We were able to delete all vertices with degree 1, therefore,
-            // our graph is acyclic.
-            //
-
-            IsAcyclic = TRUE;
-            break;
-        }
-
-        //
-        // If this is our first pass, capture the OrderIndex as previous and
-        // continue.
-        //
-
-        if (Attempts == 1) {
-            PreviousOrderIndex = DeviceOrderIndex;
-            continue;
-        }
-
-        //
-        // Calculate the delta between the current OrderIndex and what we saw
-        // on the last pass.  If they haven't changed, it means we weren't able
-        // to find any more vertices with degree 1 to delete, which means the
-        // graph isn't acyclic.
-        //
-
-        OrderIndexDelta = PreviousOrderIndex - DeviceOrderIndex;
-        ASSERT(OrderIndexDelta >= 0);
-        if (OrderIndexDelta == 0) {
-            break;
-        }
-
-        //
-        // Update previous value and continue for another pass.
-        //
-
-        PreviousOrderIndex = DeviceOrderIndex;
+    if (IsUsingAssigned16(Graph)) {
+        GraphCuIsAcyclicSerialKernel<<<BlocksPerGrid,
+                                       ThreadsPerBlock,
+                                       SharedMemory,
+                                       Stream>>>((PGRAPH16)DeviceGraph);
+    } else {
+        GraphCuIsAcyclicSerialKernel<<<BlocksPerGrid,
+                                       ThreadsPerBlock,
+                                       SharedMemory,
+                                       Stream>>>((PGRAPH32)DeviceGraph);
     }
 
-    //
-    // Capture how many attempts were made to determine if the graph was
-    // acyclic.
-    //
+    CUDA_CALL(cudaMemcpyAsync((PVOID)&DeviceOrderIndex,
+                              (PVOID)&DeviceGraph->OrderIndex,
+                              sizeof(DeviceOrderIndex),
+                              cudaMemcpyDeviceToHost,
+                              Stream));
 
-    Graph->CuIsAcyclicPhase1Attempts = Attempts;
+    CUDA_CALL(cudaMemcpyAsync((PVOID)&DeviceDeletedEdges,
+                              (PVOID)&DeviceGraph->DeletedEdgeCount,
+                              sizeof(DeviceDeletedEdges),
+                              cudaMemcpyDeviceToHost,
+                              Stream));
+
+    CUDA_CALL(cudaStreamSynchronize(Stream));
+
+    Graph->CuIsAcyclicPhase1Attempts = 1;
+    Graph->DeletedEdgeCount = DeviceDeletedEdges;
+    Graph->OrderIndex = DeviceOrderIndex;
+
+    if (DeviceOrderIndex <= 0) {
+        IsAcyclic = TRUE;
+    }
 
     //
     // Make a note that we're acyclic if applicable in the graph's flags.

@@ -30,11 +30,16 @@
 - Resolved the CoreUI discrepancy as a CPU concurrency-semantic issue; with `MaximumConcurrency=1`, CPU and POC fixed-attempt yield match.
 - Added a device-resident per-graph solve mode and benchmarked it against the host-roundtrip baseline.
 - Added CUDA memory estimation, headroom enforcement, and auto batch scaling.
+- Added a `Chm02` CUDA repro harness and identified that the default Linux builds were not actually exercising CUDA.
+- Created a CUDA-enabled build tree and pushed the single-graph `Graph.cu` path through add-keys, GPU acyclic detection, and CPU assignment oracle.
 
 ## In Progress
-- Expand the `MaximumConcurrency=1` equivalence checks to more hash functions and datasets.
+- Continue the `Graph.cu` / `Graph.cuh` single-graph correctness bring-up in the CUDA-enabled build.
 
 ## Next
+- Stabilize the `build-cuda` `PerfectHashCreate ... Chm02 ...` path without relying on `--NoFileIo --DisableCsvOutputFile`.
+- Determine why the GPU peel order diverges from the CPU oracle order on the known-good HologramWorld `Mulshrolate3RX` seed.
+- Decide whether the order divergence is acceptable (valid topological order) or indicative of a remaining bug in the serial peel kernel.
 - Decide whether to push the 16-bit idea further:
   - keep only the current light-touch downsizing, or
   - template more of the peel/update state, including `XorEdge`

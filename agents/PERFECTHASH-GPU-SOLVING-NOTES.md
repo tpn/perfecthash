@@ -461,6 +461,39 @@
   - some of the historical GPU code paths were structurally incomplete
   - and parts of the concurrency logic that did exist were not robust enough to preserve the exact CPU semantics
 
+## Graph.cu / Chm02 Bring-Up
+- Important discovery:
+  - the existing Linux builds had `PERFECTHASH_USE_CUDA=OFF`
+  - `Chm02` therefore hit the `E_NOTIMPL` stub in `PerfectHashConstants.c` instead of the real CUDA path
+- A separate CUDA-enabled build tree (`build-cuda/`) is required to exercise `Graph.cu` through `PerfectHashCreate`.
+- With that build:
+  - `Chm02` + `Mulshrolate3RX` + known-good seeds + `--CuConcurrency=1` now reaches:
+    - `LoadInfo()`
+    - `Reset()`
+    - `LoadNewSeeds()`
+    - `GraphCuAddKeys()`
+    - `GraphCuIsAcyclic()`
+  - the path no longer dies at the old `E_NOTIMPL` stub
+- Immediate fixes applied:
+  - fixed the double degree increment in `GraphCuAddEdge1()`
+  - re-enabled GPU `Order[]` capture in `GraphCuRemoveVertex()`
+  - changed `GraphCuIsAcyclic()` to use a serial device-side peel kernel for correctness bring-up
+  - changed `GraphCuIsAcyclic()` / `GraphCuAssign()` bring-up path to feed GPU-generated `Order[]` into the CPU assignment oracle instead of rerunning CPU `IsAcyclic()`
+- Current observed state for the known-good HologramWorld `Mulshrolate3RX` seed:
+  - GPU add-keys succeeds
+  - GPU acyclic stage reports success and now sets host `DeletedEdgeCount` / `OrderIndex`
+  - CPU assignment oracle is entered and returns success
+  - the GPU `Order[]` still differs from the CPU oracle order at index 0, but appears to be a valid peel order for assignment
+- Remaining blocker:
+  - the `PerfectHashCreate` CLI path is still not clean end-to-end in the CUDA-enabled build when normal CSV / file-output behavior is enabled
+  - `--NoFileIo --DisableCsvOutputFile` is currently the cleanest bring-up mode
+- Chosen direction:
+  - continue debugging/fixing the single-graph `Graph.cu` / `Graph.cuh` path through `build-cuda`
+- Deferred direction:
+  - batching / POC work inside `Graph.cu`
+  - cooperative-groups global frontier rewrite
+  - full performance tuning
+
 ## Assignment / Order Semantics
 - The POC does perform assignment.
 - It explicitly verifies order-preserving indexing for actual keys:

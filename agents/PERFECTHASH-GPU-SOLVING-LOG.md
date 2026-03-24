@@ -177,6 +177,34 @@
   - unified-like `Y`
   - estimated bytes `832.16 MiB`
 - 2026-03-23 15:26:56 PDT: Terminated an intentionally oversized benchmark after validating the new guard logic, in order to avoid stressing the shared-memory GB10 system again.
+- 2026-03-23 17:19:22 PDT: Began the narrow `Graph.cu` / `Graph.cuh` correctness bring-up path requested by the user, targeting the `PerfectHashCreate ... Chm02 ... Mulshrolate3RX ...` CLI.
+- 2026-03-23 17:19:22 PDT: Added local repro harness at `tests/run_cli_chm02_cuda_known_seed_test.cmake`.
+- 2026-03-23 17:19:22 PDT: Determined the immediate blocker was not `Graph.cu` logic but build configuration:
+  - existing `build/` and `build-ph314/` trees had `PERFECTHASH_USE_CUDA=OFF`
+  - `Chm02` therefore resolved to the `E_NOTIMPL` stub in `PerfectHashConstants.c`
+- 2026-03-23 17:19:22 PDT: Created a separate CUDA-enabled build tree `build-cuda/` with `PERFECTHASH_USE_CUDA=ON`.
+- 2026-03-23 17:19:22 PDT: After switching to `build-cuda/`, found that `--FixedAttempts=1` in the Chm02 path never reached `Solve()` because `Reset()` returned `PH_S_FIXED_ATTEMPTS_REACHED`; changed bring-up repros to use `--FixedAttempts=2`.
+- 2026-03-23 17:19:22 PDT: Added env-gated diagnostics (`PH_DEBUG_CUDA_CHM02=1`) to:
+  - `GraphEnterSolvingLoop()`
+  - `GraphSolve()`
+  - `GraphCuAddKeys()`
+  - `GraphCuIsAcyclic()`
+  - `GraphCuAssign()`
+- 2026-03-23 17:19:22 PDT: Applied early correctness fixes in the single-graph CUDA path:
+  - fixed double degree increment in `GraphCuAddEdge1()`
+  - re-enabled GPU `Order[]` recording in `GraphCuRemoveVertex()`
+  - replaced host-called concurrent peel with a serial device-side peel kernel in `GraphCuIsAcyclic()` for correctness bring-up
+  - stopped CPU fallback from recomputing `IsAcyclic()` and instead fed the GPU `Order[]` into the CPU assignment oracle
+- 2026-03-23 17:19:22 PDT: Current Chm02 CUDA bring-up trace for HologramWorld known-good `Mulshrolate3RX` seed:
+  - `LoadInfo` success
+  - `Reset` continue
+  - `LoadNewSeeds` success
+  - `GraphCuAddKeys` success
+  - `GraphCuIsAcyclic` success
+  - CPU assignment oracle entered and returned success
+- 2026-03-23 17:19:22 PDT: Added a debug-only CPU/GPU order comparison in `GraphCuIsAcyclic()`:
+  - current status: GPU `Order[]` differs from the CPU oracle at index 0 for the tested seed, but assignment still succeeds, implying a valid but different peel order
+- 2026-03-23 17:19:22 PDT: CSV/file-output behavior in the CUDA-enabled Chm02 path remains unstable; `--NoFileIo --DisableCsvOutputFile` is currently the cleanest mode for continued bring-up.
 - 2026-03-23 16:42:56 PDT: Reviewed the historical `PerfectHashCuda` efforts specifically for parity issues.
 - 2026-03-23 16:42:56 PDT: Main review findings:
   - active `GraphCu` path never owned full parity because it fell back to CPU for `Order[]`, assignment, and verification
