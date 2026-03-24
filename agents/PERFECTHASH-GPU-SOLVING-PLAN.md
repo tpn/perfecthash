@@ -27,6 +27,9 @@ Understand the current CPU and CUDA graph-solving implementations in PerfectHash
   - parameterized known-seed harness
   - non-`Assigned16` replay coverage via `random-33000.keys`
   - full file-I/O HologramWorld regression passing after `Chm02Compat.c` context fix
+- Peel-order divergence checkpoint achieved:
+  - GPU `Order[]` diverges from CPU oracle order on tested seeds
+  - debug oracle confirms the GPU order is still a valid reverse-peel order
 - Current chosen implementation direction:
   - correctness-first single-graph GPU ownership of peel/order/assignment in the legacy `Graph.cu` path
 - Explicitly deferred alternatives:

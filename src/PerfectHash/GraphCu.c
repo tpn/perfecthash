@@ -1330,6 +1330,197 @@ IsCudaDebugEnabled(
 #endif
 }
 
+#define DEFINE_VALIDATE_GPU_ORDER(Name,                               \
+                                  OrderType,                          \
+                                  EdgeType,                           \
+                                  Vertex3Type,                        \
+                                  Edge3Type,                          \
+                                  OrderField,                         \
+                                  VerticesField,                      \
+                                  EdgesField)                         \
+static                                                           \
+HRESULT                                                          \
+Name(                                                            \
+    _In_ PGRAPH Graph,                                           \
+    _Out_opt_ PULONG InvalidIndexPointer,                        \
+    _Out_opt_ PLONG InvalidEdgePointer,                          \
+    _Out_opt_ PULONG Degree1Pointer,                             \
+    _Out_opt_ PULONG Degree2Pointer,                             \
+    _Out_opt_ PCSTR *ReasonPointer                               \
+    )                                                            \
+{                                                                \
+    LONG SignedEdge;                                             \
+    ULONG Index;                                                 \
+    ULONG NumberOfKeys;                                          \
+    ULONG NumberOfVertices;                                      \
+    PGRAPH CpuGraph;                                             \
+    PBYTE Seen = NULL;                                           \
+    HRESULT Result = S_OK;                                       \
+    OrderType *Order;                                            \
+    EdgeType Edge;                                               \
+    Edge3Type *Edge3 = NULL;                                     \
+    Edge3Type *Edges;                                            \
+    Vertex3Type *Vertex1 = NULL;                                 \
+    Vertex3Type *Vertex2 = NULL;                                 \
+    Vertex3Type *ScratchVertices = NULL;                         \
+                                                                 \
+    CpuGraph = Graph->CpuGraph;                                  \
+    NumberOfKeys = CpuGraph->NumberOfKeys;                       \
+    NumberOfVertices = CpuGraph->NumberOfVertices;               \
+    Order = (OrderType *)Graph->OrderField;                      \
+    Edges = (Edge3Type *)CpuGraph->EdgesField;                   \
+                                                                 \
+    if (InvalidIndexPointer) {                                   \
+        *InvalidIndexPointer = (ULONG)-1;                        \
+    }                                                            \
+    if (InvalidEdgePointer) {                                    \
+        *InvalidEdgePointer = -1;                                \
+    }                                                            \
+    if (Degree1Pointer) {                                        \
+        *Degree1Pointer = 0;                                     \
+    }                                                            \
+    if (Degree2Pointer) {                                        \
+        *Degree2Pointer = 0;                                     \
+    }                                                            \
+    if (ReasonPointer) {                                         \
+        *ReasonPointer = "unknown";                              \
+    }                                                            \
+                                                                 \
+    ScratchVertices = (Vertex3Type *)(                           \
+        calloc(NumberOfVertices, sizeof(*ScratchVertices))        \
+    );                                                           \
+    Seen = (PBYTE)calloc(NumberOfKeys, sizeof(*Seen));           \
+                                                                 \
+    if (!ScratchVertices || !Seen) {                             \
+        Result = E_OUTOFMEMORY;                                  \
+        if (ReasonPointer) {                                     \
+            *ReasonPointer = "oom";                              \
+        }                                                        \
+        goto End;                                                \
+    }                                                            \
+                                                                 \
+    CopyMemory(ScratchVertices,                                  \
+               CpuGraph->VerticesField,                          \
+               NumberOfVertices * sizeof(*ScratchVertices));      \
+                                                                 \
+    for (Index = NumberOfKeys; Index > 0; Index--) {             \
+        ULONG OrderIndex;                                        \
+                                                                 \
+        OrderIndex = Index - 1;                                  \
+                                                                 \
+        SignedEdge = (LONG)Order[OrderIndex];                    \
+                                                                 \
+        if (SignedEdge < 0 || (ULONG)SignedEdge >= NumberOfKeys) { \
+            Result = PH_E_INVARIANT_CHECK_FAILED;                \
+            if (ReasonPointer) {                                 \
+                *ReasonPointer = "out_of_range";                 \
+            }                                                    \
+            goto Invalid;                                        \
+        }                                                        \
+                                                                 \
+        Edge = (EdgeType)SignedEdge;                             \
+                                                                 \
+        if (Seen[Edge]) {                                        \
+            Result = PH_E_INVARIANT_CHECK_FAILED;                \
+            if (ReasonPointer) {                                 \
+                *ReasonPointer = "duplicate_edge";               \
+            }                                                    \
+            goto Invalid;                                        \
+        }                                                        \
+                                                                 \
+        Seen[Edge] = TRUE;                                       \
+        Edge3 = &Edges[Edge];                                    \
+        Vertex1 = &ScratchVertices[Edge3->Vertex1];              \
+        Vertex2 = &ScratchVertices[Edge3->Vertex2];              \
+                                                                 \
+        if (Vertex1->Degree == 0 || Vertex2->Degree == 0) {      \
+            Result = PH_E_INVARIANT_CHECK_FAILED;                \
+            if (ReasonPointer) {                                 \
+                *ReasonPointer = "edge_already_removed";         \
+            }                                                    \
+            goto Invalid;                                        \
+        }                                                        \
+                                                                 \
+        if (Vertex1->Degree != 1 && Vertex2->Degree != 1) {      \
+            Result = PH_E_INVARIANT_CHECK_FAILED;                \
+            if (ReasonPointer) {                                 \
+                *ReasonPointer = "no_degree1_endpoint";          \
+            }                                                    \
+            goto Invalid;                                        \
+        }                                                        \
+                                                                 \
+        Vertex1->Degree -= 1;                                    \
+        Vertex1->Edges ^= Edge;                                  \
+        Vertex2->Degree -= 1;                                    \
+        Vertex2->Edges ^= Edge;                                  \
+    }                                                            \
+                                                                 \
+    for (Index = 0; Index < NumberOfVertices; Index++) {         \
+        if (ScratchVertices[Index].Degree != 0) {                \
+            Result = PH_E_INVARIANT_CHECK_FAILED;                \
+            if (ReasonPointer) {                                 \
+                *ReasonPointer = "residual_degree";              \
+            }                                                    \
+            if (InvalidIndexPointer) {                           \
+                *InvalidIndexPointer = Index;                    \
+            }                                                    \
+            if (Degree1Pointer) {                                \
+                *Degree1Pointer = ScratchVertices[Index].Degree; \
+            }                                                    \
+            if (InvalidEdgePointer) {                            \
+                *InvalidEdgePointer = -1;                        \
+            }                                                    \
+            goto End;                                            \
+        }                                                        \
+    }                                                            \
+                                                                 \
+    if (ReasonPointer) {                                         \
+        *ReasonPointer = "ok";                                   \
+    }                                                            \
+    goto End;                                                    \
+                                                                 \
+Invalid:                                                         \
+    if (InvalidIndexPointer) {                                   \
+        *InvalidIndexPointer = (Index > 0 ? Index - 1 : 0);      \
+    }                                                            \
+    if (InvalidEdgePointer) {                                    \
+        *InvalidEdgePointer = SignedEdge;                        \
+    }                                                            \
+    if (Degree1Pointer) {                                        \
+        *Degree1Pointer = Vertex1 ? (ULONG)Vertex1->Degree : 0;  \
+    }                                                            \
+    if (Degree2Pointer) {                                        \
+        *Degree2Pointer = Vertex2 ? (ULONG)Vertex2->Degree : 0;  \
+    }                                                            \
+                                                                 \
+End:                                                             \
+    if (Seen) {                                                  \
+        free(Seen);                                              \
+    }                                                            \
+    if (ScratchVertices) {                                       \
+        free(ScratchVertices);                                   \
+    }                                                            \
+    return Result;                                               \
+}
+
+DEFINE_VALIDATE_GPU_ORDER(ValidateGpuOrder16,
+                          ORDER16,
+                          EDGE16,
+                          VERTEX163,
+                          EDGE163,
+                          Order16,
+                          Vertices163,
+                          Edges163);
+
+DEFINE_VALIDATE_GPU_ORDER(ValidateGpuOrder32,
+                          ORDER,
+                          EDGE,
+                          VERTEX3,
+                          EDGE3,
+                          Order,
+                          Vertices3,
+                          Edges3);
+
 HRESULT
 GraphCuAddKeys(
     _In_ PGRAPH Graph,
@@ -1487,9 +1678,14 @@ GraphCuIsAcyclic(
 
     if (IsCudaDebugEnabled()) {
         HRESULT CpuAcyclicResult;
+        HRESULT GpuOrderValidationResult;
+        LONG InvalidEdge;
+        ULONG Degree1;
+        ULONG Degree2;
         ULONG MismatchIndex;
         ULONG CpuOrder;
         ULONG GpuOrder;
+        PCSTR Reason;
 
         CpuAcyclicResult = Graph->CpuGraph->Vtbl->IsAcyclic(Graph->CpuGraph);
         fprintf(stderr,
@@ -1547,6 +1743,44 @@ GraphCuIsAcyclic(
                                                 Keys);
         if (FAILED(Result)) {
             return Result;
+        }
+
+        MismatchIndex = (ULONG)-1;
+        InvalidEdge = -1;
+        Degree1 = 0;
+        Degree2 = 0;
+        Reason = "unknown";
+
+        if (IsUsingAssigned16(Graph)) {
+            GpuOrderValidationResult = ValidateGpuOrder16(Graph,
+                                                          &MismatchIndex,
+                                                          &InvalidEdge,
+                                                          &Degree1,
+                                                          &Degree2,
+                                                          &Reason);
+        } else {
+            GpuOrderValidationResult = ValidateGpuOrder32(Graph,
+                                                          &MismatchIndex,
+                                                          &InvalidEdge,
+                                                          &Degree1,
+                                                          &Degree2,
+                                                          &Reason);
+        }
+
+        if (SUCCEEDED(GpuOrderValidationResult)) {
+            fprintf(stderr,
+                    "[GraphCuIsAcyclic] GpuOrderValidationResult=0x%08x\n",
+                    (unsigned)GpuOrderValidationResult);
+        } else {
+            fprintf(stderr,
+                    "[GraphCuIsAcyclic] GpuOrderValidationResult=0x%08x "
+                    "reason=%s index=%u edge=%ld degree1=%u degree2=%u\n",
+                    (unsigned)GpuOrderValidationResult,
+                    Reason,
+                    (unsigned)MismatchIndex,
+                    (long)InvalidEdge,
+                    (unsigned)Degree1,
+                    (unsigned)Degree2);
         }
     }
 

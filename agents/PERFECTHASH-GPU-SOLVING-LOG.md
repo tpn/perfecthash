@@ -299,3 +299,20 @@
   - original HologramWorld `Assigned16` no-file-I/O GPU-assignment regression passes
   - `random-33000` non-`Assigned16` no-file-I/O GPU-assignment regression passes
   - full file-I/O HologramWorld regression now passes
+- 2026-03-24 12:01:59 PDT: Added a new regression mode to the known-seed harness that requires a GPU-order validation log from `GraphCuIsAcyclic()`.
+- 2026-03-24 12:01:59 PDT: Verified the new order-validation regression initially failed, even though assignment and CPU verify still passed:
+  - first naive validator replayed `Order[]` in forward order
+  - reported `no_degree1_endpoint` at index `0`
+- 2026-03-24 12:01:59 PDT: Root-caused the apparent order-validation failure to the semantics of `Order[]` itself:
+  - `GraphImpl3` stores edges in reverse peel order
+  - first peeled edge is written at the end of the array
+  - last peeled edge is written at index `0`
+- 2026-03-24 12:01:59 PDT: Implemented a CPU-side debug oracle in `GraphCu.c` that replays the GPU `Order[]` against a scratch copy of the CPU-built graph in the correct reverse-peel direction.
+- 2026-03-24 12:01:59 PDT: Re-verified order validity:
+  - HologramWorld known-good `Assigned16` case: `GpuOrderValidationResult=0x00000000`
+  - `random-33000` non-`Assigned16` case: `GpuOrderValidationResult=0x00000000`
+  - full file-I/O HologramWorld case: `GpuOrderValidationResult=0x00000000`
+- 2026-03-24 12:01:59 PDT: Conclusion:
+  - the GPU `Order[]` divergence from the CPU oracle is benign on the tested cases
+  - it represents a different but valid reverse-peel order
+  - the remaining open question is no longer “is the order invalid?” but whether to keep CPU `Verify()` as the long-lived oracle or port verification onto the GPU

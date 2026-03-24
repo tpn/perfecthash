@@ -45,8 +45,6 @@
 - Continue the `Graph.cu` / `Graph.cuh` single-graph correctness bring-up in the CUDA-enabled build.
 
 ## Next
-- Determine why the GPU peel order diverges from the CPU oracle order on the known-good HologramWorld `Mulshrolate3RX` seed.
-- Decide whether the order divergence is acceptable (valid topological order) or indicative of a remaining bug in the serial peel kernel.
 - Decide whether CPU `Verify()` should remain the long-lived oracle for this legacy path or whether a minimal GPU verify stage is worth adding.
 - Consider promoting the parameterized known-seed harness into a first-class test target for CUDA-enabled builds.
 - Decide whether to push the 16-bit idea further:

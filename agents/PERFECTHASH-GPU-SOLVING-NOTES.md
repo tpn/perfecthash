@@ -563,6 +563,21 @@
   - GPU assignment succeeded
   - CPU verify succeeded
 
+## Peel-Order Divergence
+- The GPU `Order[]` does diverge from the CPU oracle order on the tested seeds.
+- That divergence is now understood and validated:
+  - `GraphImpl3` stores `Order[]` in reverse peel order
+  - the first peeled edge lands at the end of the array
+  - the last peeled edge lands at index `0`
+- A debug-only CPU-side oracle in `GraphCu.c` now replays the GPU `Order[]` against a scratch copy of the CPU-built graph in the correct direction.
+- Result on the tested cases:
+  - HologramWorld `Assigned16`: valid
+  - `random-33000` non-`Assigned16`: valid
+  - HologramWorld full file-I/O run: valid
+- So the current interpretation is:
+  - GPU peel order mismatch does not imply incorrectness
+  - the GPU path is producing a different but valid reverse-peel order
+
 ## Assignment / Order Semantics
 - The POC does perform assignment.
 - It explicitly verifies order-preserving indexing for actual keys:
