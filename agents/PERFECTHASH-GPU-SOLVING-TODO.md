@@ -49,7 +49,6 @@
   - keep only the current light-touch downsizing, or
   - template more of the peel/update state, including `XorEdge`
 - Decide whether the current minimal GPU verify is sufficient long-term or whether it should be extended to match the CPU verifier's diagnostics more closely.
-- Add a self-contained >32767-key CUDA regression if we want first-class non-`Assigned16` coverage in `ctest` without relying on the external `perfecthash-keys` checkout.
 - Improve random attempt quality for real hash families:
   - add weighted seed-mask count behavior analogous to `GraphApplyWeightedSeedMasks()`
   - compare Philox-only yield against actual CLI / library solve yield

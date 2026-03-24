@@ -615,11 +615,12 @@
 - Current first-class `ctest` coverage is intentionally self-contained to this repo:
   - `perfecthash.cuda.chm02.hologram.nofileio`
   - `perfecthash.cuda.chm02.hologram.fileio`
-- The external `random-33000.keys` non-`Assigned16` replay is still valuable, but remains manual for now because it depends on the external `perfecthash-keys` checkout.
+  - `perfecthash.cuda.chm02.generated33000.nofileio`
+- The non-`Assigned16` `ctest` case is now self-contained:
+  - generated deterministically at test time
+  - no dependency on the external `perfecthash-keys` checkout
 - Chosen now:
   - keep first-class CUDA tests repo-local and deterministic
-- Deferred:
-  - add a generated in-repo >32767-key fixture or equivalent self-contained 32-bit CUDA regression
 
 ## Immediate Follow-On Improvements
 - Replace the host round loop with cooperative launch / grid-synchronous or device-side work queues.

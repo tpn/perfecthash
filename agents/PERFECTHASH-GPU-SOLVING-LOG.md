@@ -340,3 +340,15 @@
   - `ctest -N -R 'perfecthash\\.cuda\\.chm02'` now lists 2 tests
   - `ctest --output-on-failure -R 'perfecthash\\.cuda\\.chm02'` passes both tests
 - 2026-03-24 12:53:55 PDT: Deliberately deferred baking the external `random-33000.keys` non-`Assigned16` replay into `ctest` because that keyset currently lives outside the repo; keeping the first-class tests self-contained avoids a hidden external dependency.
+- 2026-03-24 14:24:46 PDT: Added a self-contained generated >32767-key CUDA regression:
+  - new script `tests/run_cli_chm02_cuda_generated_33000_test.cmake`
+  - generates a deterministic 33,000-key fixture at test time
+  - reuses a baked known-good `Mulshrolate3RX` seed for that exact generator
+- 2026-03-24 14:24:46 PDT: Extended `tests/CMakeLists.txt` with:
+  - `perfecthash.cuda.chm02.generated33000.nofileio`
+- 2026-03-24 14:24:46 PDT: Reconfigured `build-cuda` and verified:
+  - `ctest -N -R 'perfecthash\\.cuda\\.chm02'` now lists 3 tests
+  - `ctest --output-on-failure -R 'perfecthash\\.cuda\\.chm02'` passes all 3 tests
+- 2026-03-24 14:24:46 PDT: The first-class CUDA `ctest` coverage is now self-contained on both sides of the `Assigned16` boundary:
+  - repo-local HologramWorld `Assigned16`
+  - generated 33,000-key non-`Assigned16`
