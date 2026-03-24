@@ -2125,6 +2125,16 @@ typedef PERFECT_HASH_CUDA_ASSIGN *PPERFECT_HASH_CUDA_ASSIGN;
 
 typedef
 HRESULT
+(PERFECT_HASH_CUDA_VERIFY)(
+    _Inout_ struct _GRAPH *Graph,
+    _In_ ULONG BlocksPerGrid,
+    _In_ ULONG ThreadsPerBlock,
+    _In_ ULONG SharedMemoryInBytes
+    );
+typedef PERFECT_HASH_CUDA_VERIFY *PPERFECT_HASH_CUDA_VERIFY;
+
+typedef
+HRESULT
 (PERFECT_HASH_CUDA_IS_GRAPH_ACYCLIC)(
     _Inout_ struct _GRAPH *Graph,
     _In_ ULONG BlocksPerGrid,
@@ -2153,6 +2163,8 @@ typedef PERFECT_HASH_CUDA_COUNT_NONEMPTY
     FIRST_ENTRY(ADD_KEYS, AddKeys)                                       \
                                                                          \
     ENTRY(ASSIGN, Assign)                                                \
+                                                                         \
+    ENTRY(VERIFY, Verify)                                                \
                                                                          \
     LAST_ENTRY(IS_GRAPH_ACYCLIC, IsAcyclic)
 

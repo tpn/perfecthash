@@ -1854,16 +1854,22 @@ GraphCuVerify(
     _In_ PGRAPH Graph
     )
 {
+    PCU Cu;
     HRESULT Result;
 
     if (IsCudaDebugEnabled()) {
         fprintf(stderr, "[GraphCuVerify] Enter\n");
     }
 
-    Result = Graph->CpuGraph->Vtbl->Verify(Graph->CpuGraph);
+    Cu = Graph->CuSolveContext->DeviceContext->Cu;
+
+    Result = Cu->Verify(Graph,
+                        Graph->CuBlocksPerGrid,
+                        Graph->CuThreadsPerBlock,
+                        Graph->CuSharedMemory);
 
     if (IsCudaDebugEnabled()) {
-        fprintf(stderr, "[GraphCuVerify] CpuVerifyResult=0x%08x\n", (unsigned)Result);
+        fprintf(stderr, "[GraphCuVerify] GpuVerifyResult=0x%08x\n", (unsigned)Result);
     }
 
     return Result;

@@ -588,7 +588,27 @@
   - it relaxes the verification target and may open up more GPU-friendly formulations
   - it could reduce assignment constraints if the downstream consumer only needs a stable collision-free placement plus a values array
   - however, it is a semantic change relative to the existing PerfectHash model and compiled-table expectations
-  - it is probably best treated as a parallel design branch, not as a silent change to CHM behavior
+- it is probably best treated as a parallel design branch, not as a silent change to CHM behavior
+
+## Minimal GPU Verify
+- The legacy `Graph.cu` path now has a minimal GPU `Verify()` stage as well.
+- Scope is deliberately narrow:
+  - one thread per key
+  - recompute the hash on device
+  - load `Assigned[u]` and `Assigned[v]`
+  - compute the final index
+  - fail if the computed index is not equal to the key's ordinal
+- This is sufficient for the current ordered-index bring-up because:
+  - it directly checks the semantic we care about
+  - if every key maps to its own ordinal, uniqueness is implied
+- It is simpler than the current CPU verify implementation:
+  - no `Values[]` scratch array
+  - no assigned bitmap / collision replay logic
+  - no host copy-back
+- Current validation:
+  - HologramWorld `Assigned16`: pass
+  - `random-33000` non-`Assigned16`: pass
+  - HologramWorld full file-I/O: pass
 
 ## Immediate Follow-On Improvements
 - Replace the host round loop with cooperative launch / grid-synchronous or device-side work queues.

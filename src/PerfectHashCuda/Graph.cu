@@ -1037,6 +1037,56 @@ GraphCuAssignSerialKernel(
     }
 }
 
+template<typename GraphType>
+GLOBAL
+VOID
+GraphCuVerifyKernel(
+    _In_ GraphType *Graph,
+    _Inout_ uint32_t *Failures
+    )
+{
+    using AssignedType = typename GraphType::AssignedType;
+    using IndexType = typename GraphType::IndexType;
+    using KeyType = typename GraphType::KeyType;
+    using VertexPairType = typename GraphType::VertexPairType;
+
+    uint32_t Index;
+    KeyType Key;
+    KeyType *Keys;
+    VertexPairType Hash;
+    const uint32_t NumberOfKeys = Graph->NumberOfKeys;
+    const int32_t Stride = gridDim.x * blockDim.x;
+    const typename GraphType::HashVertexType HashMask =
+        (typename GraphType::HashVertexType)(Graph->NumberOfVertices - 1);
+    const IndexType IndexMask = (IndexType)(Graph->NumberOfEdges - 1);
+    auto HashFunction = GraphGetHashFunction(Graph);
+    auto *Assigned = (AssignedType *)Graph->Assigned;
+
+    Keys = (KeyType *)Graph->DeviceKeys;
+    Index = GlobalThreadIndex();
+
+    while (Index < NumberOfKeys) {
+        Key = Keys[Index];
+        Hash = HashFunction(Key, HashMask);
+
+        if (Hash.Vertex1 == Hash.Vertex2) {
+            atomicAdd(Failures, 1u);
+            Index += Stride;
+            continue;
+        }
+
+        IndexType Result = (IndexType)(
+            (Assigned[Hash.Vertex1] + Assigned[Hash.Vertex2]) & IndexMask
+        );
+
+        if ((uint32_t)Result != Index) {
+            atomicAdd(Failures, 1u);
+        }
+
+        Index += Stride;
+    }
+}
+
 EXTERN_C
 HOST
 HRESULT
@@ -1182,6 +1232,82 @@ GraphCuAssign(
     }
 
     CUDA_CALL(cudaStreamSynchronize(Stream));
+
+    return Result;
+}
+
+EXTERN_C
+HOST
+HRESULT
+GraphCuVerify(
+    _In_ PGRAPH Graph,
+    _In_ ULONG BlocksPerGrid,
+    _In_ ULONG ThreadsPerBlock,
+    _In_ ULONG SharedMemoryInBytes
+    )
+{
+    HRESULT Result = S_OK;
+    uint32_t Failures = 0;
+    uint32_t *DeviceFailures = nullptr;
+    PGRAPH DeviceGraph;
+    CUstream_st *Stream;
+    PPH_CU_SOLVE_CONTEXT SolveContext;
+    ULONG SharedMemory = SharedMemoryInBytes;
+
+    SolveContext = Graph->CuSolveContext;
+    DeviceGraph = SolveContext->DeviceGraph;
+    Stream = (CUstream_st *)SolveContext->Stream;
+
+    if (IsUsingAssigned16(Graph)) {
+        Result = GetKernelConfig(Graph,
+                                 (PVOID)GraphCuVerifyKernel<GRAPH16>,
+                                 BlocksPerGrid,
+                                 ThreadsPerBlock,
+                                 SharedMemory);
+    } else {
+        Result = GetKernelConfig(Graph,
+                                 (PVOID)GraphCuVerifyKernel<GRAPH32>,
+                                 BlocksPerGrid,
+                                 ThreadsPerBlock,
+                                 SharedMemory);
+    }
+
+    if (FAILED(Result)) {
+        goto End;
+    }
+
+    CUDA_CALL(cudaMalloc((void **)&DeviceFailures, sizeof(*DeviceFailures)));
+    CUDA_CALL(cudaMemsetAsync(DeviceFailures, 0, sizeof(*DeviceFailures), Stream));
+
+    if (IsUsingAssigned16(Graph)) {
+        GraphCuVerifyKernel<GRAPH16><<<BlocksPerGrid,
+                                       ThreadsPerBlock,
+                                       SharedMemory,
+                                       Stream>>>((PGRAPH16)DeviceGraph,
+                                                 DeviceFailures);
+    } else {
+        GraphCuVerifyKernel<GRAPH32><<<BlocksPerGrid,
+                                       ThreadsPerBlock,
+                                       SharedMemory,
+                                       Stream>>>((PGRAPH32)DeviceGraph,
+                                                 DeviceFailures);
+    }
+
+    CUDA_CALL(cudaMemcpyAsync(&Failures,
+                              DeviceFailures,
+                              sizeof(Failures),
+                              cudaMemcpyDeviceToHost,
+                              Stream));
+    CUDA_CALL(cudaStreamSynchronize(Stream));
+
+    if (Failures > 0) {
+        Result = PH_E_TABLE_VERIFICATION_FAILED;
+    }
+
+End:
+    if (DeviceFailures) {
+        cudaFree(DeviceFailures);
+    }
 
     return Result;
 }

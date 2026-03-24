@@ -316,3 +316,19 @@
   - the GPU `Order[]` divergence from the CPU oracle is benign on the tested cases
   - it represents a different but valid reverse-peel order
   - the remaining open question is no longer “is the order invalid?” but whether to keep CPU `Verify()` as the long-lived oracle or port verification onto the GPU
+- 2026-03-24 12:51:08 PDT: Added a new regression mode to the known-seed harness that requires a GPU verify log from `GraphCuVerify()`.
+- 2026-03-24 12:51:08 PDT: Verified the new GPU-verify regression initially failed against the pre-change path:
+  - `GraphCuVerify` still logged `CpuVerifyResult=0x00000000`
+  - no GPU verify log was present
+- 2026-03-24 12:51:08 PDT: Added a new exported CUDA entrypoint `GraphCuVerify` and wired it through `Cu.h` / `PerfectHashCuda.def`.
+- 2026-03-24 12:51:08 PDT: Implemented a minimal GPU verify kernel in `src/PerfectHashCuda/Graph.cu`:
+  - one thread per key
+  - recompute the hash on device
+  - read `Assigned[u]` and `Assigned[v]`
+  - compute `index = (a + b) & (NumberOfEdges - 1)`
+  - fail if `index != edge_id`
+- 2026-03-24 12:51:08 PDT: Switched `GraphCuVerify()` in `src/PerfectHash/GraphCu.c` from CPU verify oracle to GPU verify.
+- 2026-03-24 12:51:08 PDT: Re-verified the minimal GPU verify path:
+  - HologramWorld `Assigned16` no-file-I/O regression passes with `GpuVerifyResult=0x00000000`
+  - `random-33000` non-`Assigned16` regression passes with `GpuVerifyResult=0x00000000`
+  - full file-I/O HologramWorld regression passes with `GpuVerifyResult=0x00000000`

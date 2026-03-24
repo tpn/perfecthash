@@ -45,11 +45,11 @@
 - Continue the `Graph.cu` / `Graph.cuh` single-graph correctness bring-up in the CUDA-enabled build.
 
 ## Next
-- Decide whether CPU `Verify()` should remain the long-lived oracle for this legacy path or whether a minimal GPU verify stage is worth adding.
 - Consider promoting the parameterized known-seed harness into a first-class test target for CUDA-enabled builds.
 - Decide whether to push the 16-bit idea further:
   - keep only the current light-touch downsizing, or
   - template more of the peel/update state, including `XorEdge`
+- Decide whether the current minimal GPU verify is sufficient long-term or whether it should be extended to match the CPU verifier's diagnostics more closely.
 - Improve random attempt quality for real hash families:
   - add weighted seed-mask count behavior analogous to `GraphApplyWeightedSeedMasks()`
   - compare Philox-only yield against actual CLI / library solve yield
