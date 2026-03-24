@@ -1,0 +1,44 @@
+if(NOT DEFINED TEST_EXE)
+  message(FATAL_ERROR "TEST_EXE is required")
+endif()
+if(NOT DEFINED TEST_KEYS)
+  message(FATAL_ERROR "TEST_KEYS is required")
+endif()
+if(NOT DEFINED TEST_OUTPUT)
+  message(FATAL_ERROR "TEST_OUTPUT is required")
+endif()
+
+file(TO_NATIVE_PATH "${TEST_EXE}" test_exe_native)
+file(TO_NATIVE_PATH "${TEST_KEYS}" test_keys_native)
+file(TO_NATIVE_PATH "${TEST_OUTPUT}" test_output_native)
+
+file(MAKE_DIRECTORY "${test_output_native}")
+
+set(args
+  "Chm02"
+  "Mulshrolate3RX"
+  "And"
+  "1"
+  "--CuConcurrency=1"
+  "--FixedAttempts=1"
+  "--Seeds=0xF0192B55,0xD9C83970,0x0C1E0D10,0xD11A5847"
+)
+
+execute_process(
+  COMMAND "${test_exe_native}" "${test_keys_native}" "${test_output_native}" ${args}
+  RESULT_VARIABLE result
+  OUTPUT_VARIABLE stdout
+  ERROR_VARIABLE stderr
+)
+
+message(STATUS "stdout: ${stdout}")
+message(STATUS "stderr: ${stderr}")
+
+if(NOT result EQUAL 0)
+  message(FATAL_ERROR "Command failed with exit code ${result}")
+endif()
+
+string(FIND "${stderr}" "PerfectHashTableCreate failed" failure_index)
+if(failure_index EQUAL -1)
+  message(FATAL_ERROR "Expected Chm02 CUDA known-seed repro to fail, but it did not.")
+endif()
