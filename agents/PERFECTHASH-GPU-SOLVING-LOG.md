@@ -205,6 +205,10 @@
 - 2026-03-23 17:19:22 PDT: Added a debug-only CPU/GPU order comparison in `GraphCuIsAcyclic()`:
   - current status: GPU `Order[]` differs from the CPU oracle at index 0 for the tested seed, but assignment still succeeds, implying a valid but different peel order
 - 2026-03-23 17:19:22 PDT: CSV/file-output behavior in the CUDA-enabled Chm02 path remains unstable; `--NoFileIo --DisableCsvOutputFile` is currently the cleanest mode for continued bring-up.
+- 2026-03-23 17:36:03 PDT: Additional bring-up finding:
+  - even with `--SkipTestAfterCreate`, the CUDA-enabled `Chm02` path still exits with code `133`
+  - current trace shows progress through GPU add-keys, GPU acyclic detection, and CPU assignment oracle
+  - remaining fault is therefore after assignment, not in the post-create table test
 - 2026-03-23 16:42:56 PDT: Reviewed the historical `PerfectHashCuda` efforts specifically for parity issues.
 - 2026-03-23 16:42:56 PDT: Main review findings:
   - active `GraphCu` path never owned full parity because it fell back to CPU for `Order[]`, assignment, and verification
