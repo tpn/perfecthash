@@ -20,8 +20,10 @@ set(args
   "And"
   "1"
   "--CuConcurrency=1"
-  "--FixedAttempts=1"
+  "--FixedAttempts=2"
   "--Seeds=0xF0192B55,0xD9C83970,0x0C1E0D10,0xD11A5847"
+  "--NoFileIo"
+  "--DisableCsvOutputFile"
 )
 
 execute_process(
@@ -39,6 +41,6 @@ if(NOT result EQUAL 0)
 endif()
 
 string(FIND "${stderr}" "PerfectHashTableCreate failed" failure_index)
-if(failure_index EQUAL -1)
-  message(FATAL_ERROR "Expected Chm02 CUDA known-seed repro to fail, but it did not.")
+if(NOT failure_index EQUAL -1)
+  message(FATAL_ERROR "Expected Chm02 CUDA known-seed run to succeed, but stderr reported failure.")
 endif()

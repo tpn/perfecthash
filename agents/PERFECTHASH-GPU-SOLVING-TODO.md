@@ -32,6 +32,9 @@
 - Added CUDA memory estimation, headroom enforcement, and auto batch scaling.
 - Added a `Chm02` CUDA repro harness and identified that the default Linux builds were not actually exercising CUDA.
 - Created a CUDA-enabled build tree and pushed the single-graph `Graph.cu` path through add-keys, GPU acyclic detection, and CPU assignment oracle.
+- Fixed the `NoFileIo()` table-data copy bug in `Chm02.c`.
+- Fixed the no-spare-graph trap in `GraphRegisterSolved16NoBestCoverage()` for the narrow single-GPU fixed-attempt bring-up path.
+- Converted the `Chm02` CUDA harness from failing repro to passing regression for the no-file-I/O bring-up case.
 
 ## In Progress
 - Continue the `Graph.cu` / `Graph.cuh` single-graph correctness bring-up in the CUDA-enabled build.

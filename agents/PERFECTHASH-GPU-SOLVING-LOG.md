@@ -215,6 +215,27 @@
   - GPU `Order[]` still differs from CPU oracle at index `0`
   - `GraphCuAssign` enters and returns success
 - 2026-03-23 20:03:36 PDT: `GraphCuVerify()` does not log before the process exits with `133`, which narrows the remaining fault to the post-assignment / pre-verify section of the `Chm02` completion path.
+- 2026-03-23 20:14:05 PDT: Identified and fixed a concrete post-assignment bug in `Chm02.c`:
+  - `NoFileIo()` table-data copy used `KeySizeInBytes` instead of `AssignedElementSizeInBytes`
+  - updated `Chm02.c` to mirror the `Chm01` / `Chm02Compat` logic
+- 2026-03-23 20:14:05 PDT: Identified and fixed a second concrete `Chm02`-path issue:
+  - `GraphRegisterSolved16NoBestCoverage()` assumed `Context->SpareGraph` existed
+  - in the single-GPU `Chm02` fixed-attempt configuration there is no spare graph
+  - adjusted the path to stop solving cleanly after the first solved graph instead of trapping
+- 2026-03-23 20:14:05 PDT: Resulting state:
+  - the CUDA-enabled `Chm02` path now exits cleanly for the narrow bring-up case when run with `--NoFileIo --DisableCsvOutputFile`
+  - updated local harness `tests/run_cli_chm02_cuda_known_seed_test.cmake` to assert success instead of failure
+- 2026-03-23 20:14:05 PDT: Passing regression command now uses:
+  - `build-cuda/bin/PerfectHashCreate`
+  - `keys/HologramWorld-31016.keys`
+  - `Chm02`
+  - `Mulshrolate3RX`
+  - `And`
+  - maximum concurrency `1`
+  - `--CuConcurrency=1`
+  - `--FixedAttempts=2`
+  - `--Seeds=0xF0192B55,0xD9C83970,0x0C1E0D10,0xD11A5847`
+  - `--NoFileIo --DisableCsvOutputFile`
 - 2026-03-23 17:36:03 PDT: Additional bring-up finding:
   - even with `--SkipTestAfterCreate`, the CUDA-enabled `Chm02` path still exits with code `133`
   - current trace shows progress through GPU add-keys, GPU acyclic detection, and CPU assignment oracle

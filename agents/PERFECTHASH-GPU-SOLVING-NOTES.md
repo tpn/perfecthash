@@ -486,13 +486,36 @@
   - the GPU `Order[]` still differs from the CPU oracle order at index 0, but appears to be a valid peel order for assignment
 - Remaining blocker:
   - the `PerfectHashCreate` CLI path is still not clean end-to-end in the CUDA-enabled build when normal CSV / file-output behavior is enabled
-  - `--NoFileIo --DisableCsvOutputFile` is currently the cleanest bring-up mode
+  - however, the narrow bring-up target now works cleanly with:
+    - `--NoFileIo`
+    - `--DisableCsvOutputFile`
+    - `MaximumConcurrency=1`
+    - `--CuConcurrency=1`
+    - known-good seed set
 - Chosen direction:
   - continue debugging/fixing the single-graph `Graph.cu` / `Graph.cuh` path through `build-cuda`
 - Deferred direction:
   - batching / POC work inside `Graph.cu`
   - cooperative-groups global frontier rewrite
   - full performance tuning
+
+## Current Working Regression
+- CUDA-enabled build tree: `build-cuda/`
+- Stable single-graph CUDA regression:
+  - `PerfectHashCreate`
+  - `Chm02`
+  - `Mulshrolate3RX`
+  - `And`
+  - maximum concurrency `1`
+  - `--CuConcurrency=1`
+  - `--FixedAttempts=2`
+  - known-good HologramWorld seed set
+  - `--NoFileIo --DisableCsvOutputFile`
+- Local harness:
+  - `tests/run_cli_chm02_cuda_known_seed_test.cmake`
+- Current scope of success:
+  - single-graph CUDA add-keys + GPU acyclic detection + CPU assignment oracle path succeeds
+  - this is a correctness bring-up checkpoint, not a full production-ready CUDA integration
 
 ## Assignment / Order Semantics
 - The POC does perform assignment.
