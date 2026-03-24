@@ -610,6 +610,17 @@
   - `random-33000` non-`Assigned16`: pass
   - HologramWorld full file-I/O: pass
 
+## First-Class Test Coverage
+- The parameterized CUDA known-seed harness is now promoted into `tests/CMakeLists.txt` for CUDA-enabled builds.
+- Current first-class `ctest` coverage is intentionally self-contained to this repo:
+  - `perfecthash.cuda.chm02.hologram.nofileio`
+  - `perfecthash.cuda.chm02.hologram.fileio`
+- The external `random-33000.keys` non-`Assigned16` replay is still valuable, but remains manual for now because it depends on the external `perfecthash-keys` checkout.
+- Chosen now:
+  - keep first-class CUDA tests repo-local and deterministic
+- Deferred:
+  - add a generated in-repo >32767-key fixture or equivalent self-contained 32-bit CUDA regression
+
 ## Immediate Follow-On Improvements
 - Replace the host round loop with cooperative launch / grid-synchronous or device-side work queues.
 - Add `GraphImpl3`-compatible hashing routines so the prototype can use real PerfectHash hash functions and seeds.

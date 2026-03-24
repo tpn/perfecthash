@@ -332,3 +332,11 @@
   - HologramWorld `Assigned16` no-file-I/O regression passes with `GpuVerifyResult=0x00000000`
   - `random-33000` non-`Assigned16` regression passes with `GpuVerifyResult=0x00000000`
   - full file-I/O HologramWorld regression passes with `GpuVerifyResult=0x00000000`
+- 2026-03-24 12:53:55 PDT: Promoted the parameterized CUDA known-seed harness into first-class `ctest` coverage in `tests/CMakeLists.txt`.
+- 2026-03-24 12:53:55 PDT: Added self-contained CUDA-enabled test targets:
+  - `perfecthash.cuda.chm02.hologram.nofileio`
+  - `perfecthash.cuda.chm02.hologram.fileio`
+- 2026-03-24 12:53:55 PDT: Reconfigured `build-cuda` and verified:
+  - `ctest -N -R 'perfecthash\\.cuda\\.chm02'` now lists 2 tests
+  - `ctest --output-on-failure -R 'perfecthash\\.cuda\\.chm02'` passes both tests
+- 2026-03-24 12:53:55 PDT: Deliberately deferred baking the external `random-33000.keys` non-`Assigned16` replay into `ctest` because that keyset currently lives outside the repo; keeping the first-class tests self-contained avoids a hidden external dependency.
