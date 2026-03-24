@@ -37,16 +37,18 @@
 - Converted the `Chm02` CUDA harness from failing repro to passing regression for the no-file-I/O bring-up case.
 - Replaced the `GraphCuAssign()` CPU fallback with a real GPU assignment stage for the known-good HologramWorld `Chm02` regression.
 - Added a regression mode that requires a GPU assignment log and fails if the old CPU assign fallback is still being used.
+- Validated the single-graph CUDA path on a non-`Assigned16` case (`random-33000.keys`) with a CPU-known-good `Mulshrolate3RX` seed.
+- Fixed the Linux full-file-I/O crash in `Chm02Compat.c` by populating `FILE_WORK_ITEM.Context` before queueing file work.
+- Confirmed the full file-I/O HologramWorld `Chm02` regression now passes.
 
 ## In Progress
 - Continue the `Graph.cu` / `Graph.cuh` single-graph correctness bring-up in the CUDA-enabled build.
 
 ## Next
-- Validate the new GPU assignment path on a 32-bit / non-`Assigned16` known-good seed case.
-- Stabilize the `build-cuda` `PerfectHashCreate ... Chm02 ...` path without relying on `--NoFileIo --DisableCsvOutputFile`.
 - Determine why the GPU peel order diverges from the CPU oracle order on the known-good HologramWorld `Mulshrolate3RX` seed.
 - Decide whether the order divergence is acceptable (valid topological order) or indicative of a remaining bug in the serial peel kernel.
 - Decide whether CPU `Verify()` should remain the long-lived oracle for this legacy path or whether a minimal GPU verify stage is worth adding.
+- Consider promoting the parameterized known-seed harness into a first-class test target for CUDA-enabled builds.
 - Decide whether to push the 16-bit idea further:
   - keep only the current light-touch downsizing, or
   - template more of the peel/update state, including `XorEdge`

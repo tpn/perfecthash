@@ -14,17 +14,58 @@ file(TO_NATIVE_PATH "${TEST_OUTPUT}" test_output_native)
 
 file(MAKE_DIRECTORY "${test_output_native}")
 
+set(test_algorithm "Chm02")
+if(DEFINED TEST_ALGORITHM)
+  set(test_algorithm "${TEST_ALGORITHM}")
+endif()
+
+set(test_hash "Mulshrolate3RX")
+if(DEFINED TEST_HASH)
+  set(test_hash "${TEST_HASH}")
+endif()
+
+set(test_mask "And")
+if(DEFINED TEST_MASK)
+  set(test_mask "${TEST_MASK}")
+endif()
+
+set(test_concurrency "1")
+if(DEFINED TEST_CONCURRENCY)
+  set(test_concurrency "${TEST_CONCURRENCY}")
+endif()
+
+set(test_cu_concurrency "--CuConcurrency=1")
+if(DEFINED TEST_CU_CONCURRENCY)
+  set(test_cu_concurrency "${TEST_CU_CONCURRENCY}")
+endif()
+
+set(test_fixed_attempts "--FixedAttempts=2")
+if(DEFINED TEST_FIXED_ATTEMPTS)
+  set(test_fixed_attempts "${TEST_FIXED_ATTEMPTS}")
+endif()
+
+set(test_seeds "--Seeds=0xF0192B55,0xD9C83970,0x0C1E0D10,0xD11A5847")
+if(DEFINED TEST_SEEDS)
+  set(test_seeds "${TEST_SEEDS}")
+endif()
+
 set(args
-  "Chm02"
-  "Mulshrolate3RX"
-  "And"
-  "1"
-  "--CuConcurrency=1"
-  "--FixedAttempts=2"
-  "--Seeds=0xF0192B55,0xD9C83970,0x0C1E0D10,0xD11A5847"
-  "--NoFileIo"
-  "--DisableCsvOutputFile"
+  "${test_algorithm}"
+  "${test_hash}"
+  "${test_mask}"
+  "${test_concurrency}"
+  "${test_cu_concurrency}"
+  "${test_fixed_attempts}"
+  "${test_seeds}"
 )
+
+if(DEFINED TEST_FLAGS)
+  foreach(flag IN LISTS TEST_FLAGS)
+    list(APPEND args "${flag}")
+  endforeach()
+else()
+  list(APPEND args "--NoFileIo" "--DisableCsvOutputFile")
+endif()
 
 execute_process(
   COMMAND ${CMAKE_COMMAND} -E env PH_DEBUG_CUDA_CHM02=1

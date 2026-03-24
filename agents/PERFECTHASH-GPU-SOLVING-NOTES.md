@@ -541,6 +541,28 @@
   - revisiting batching/performance work inside `Graph.cu`
   - cooperative-groups/global-frontier variants for this legacy path
 
+## Linux Compat Findings
+- On Linux, the relevant file-I/O path for `Chm02` is `Chm02Compat.c`, not the Windows-style `Chm02.c` threadpool/file-work path.
+- The full file-I/O crash was not a solver bug:
+  - GPU add-keys, GPU peel/order, GPU assignment, and CPU verify were already succeeding
+  - the crash happened afterwards on a BS threadpool file-work callback
+- Root cause:
+  - `Chm02Compat.c` submitted `FILE_WORK_ITEM`s directly to `FileWorkItemCallbackChm01`
+  - unlike `Chm01Compat.c`, it did not populate `Item->Context`
+  - `FileWorkItemCallbackChm01()` immediately dereferenced `Item->Context`, causing a null-context segfault
+- Minimal durable fix:
+  - set `Verb##Name.Context = Context` in both compat file-work submission macros
+  - keep a non-Windows `FileWorkCallbackChm01()` wrapper in `Chm01FileWork.c` / `Chm01FileWorkStub.c`
+
+## 32-bit Coverage
+- The single-graph CUDA path is now validated on both sides of the `Assigned16` boundary:
+  - `HologramWorld-31016.keys` with known-good `Mulshrolate3RX` seed
+  - `random-33000.keys` with CPU-generated known-good `Mulshrolate3RX` seed `0x7EFEA947,0xC649CF69,0x0C03170F,0xF87EDD5E`
+- In both cases:
+  - GPU acyclic detection succeeded
+  - GPU assignment succeeded
+  - CPU verify succeeded
+
 ## Assignment / Order Semantics
 - The POC does perform assignment.
 - It explicitly verifies order-preserving indexing for actual keys:

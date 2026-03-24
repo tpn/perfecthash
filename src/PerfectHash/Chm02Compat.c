@@ -375,6 +375,7 @@ Return Value:
     ASSERT(!NoFileIo(Table));                         \
     ZeroStructInline(Verb##Name);                     \
     Verb##Name.FileWorkId = FileWork##Verb##Name##Id; \
+    Verb##Name.Context = Context;                     \
     ThreadpoolAddWork(FileWorkThreadpool,             \
                       FileWorkItemCallbackChm01,      \
                       &Verb##Name);
@@ -1010,6 +1011,7 @@ End:
     ASSERT(!NoFileIo(Table));                           \
     ZeroStructInline(Verb##Name);                       \
     Verb##Name.FileWorkId = FileWork##Verb##Name##Id;   \
+    Verb##Name.Context = Context;                       \
     Verb##Name.EndOfFile = EndOfFile;                   \
     ThreadpoolAddWork(FileWorkThreadpool,               \
                       FileWorkItemCallbackChm01,        \

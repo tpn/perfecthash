@@ -23,6 +23,10 @@ Understand the current CPU and CUDA graph-solving implementations in PerfectHash
   - GPU acyclic / peel-order capture
   - GPU assignment
   - CPU verify as oracle
+- Linux compat full-file-I/O checkpoint achieved:
+  - parameterized known-seed harness
+  - non-`Assigned16` replay coverage via `random-33000.keys`
+  - full file-I/O HologramWorld regression passing after `Chm02Compat.c` context fix
 - Current chosen implementation direction:
   - correctness-first single-graph GPU ownership of peel/order/assignment in the legacy `Graph.cu` path
 - Explicitly deferred alternatives:

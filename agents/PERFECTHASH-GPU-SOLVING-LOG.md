@@ -267,3 +267,35 @@
   - debug trace shows `GraphCuAssign` logging `GpuAssignResult=0x00000000`
   - debug trace no longer shows `CpuAssignResult=...`
   - `GraphCuVerify` still returns `CpuVerifyResult=0x00000000`
+- 2026-03-24 11:24:49 PDT: Generated a CPU-known-good non-`Assigned16` seed for `/home/trent/src/perfecthash-keys/random/random-33000.keys` using:
+  - `Chm01`
+  - `Mulshrolate3RX`
+  - fixed attempts `256`
+  - resulting seeds: `0x7EFEA947,0xC649CF69,0x0C03170F,0xF87EDD5E`
+- 2026-03-24 11:24:49 PDT: Replayed that `random-33000` seed through the CUDA-enabled `Chm02` path:
+  - GPU add-keys success
+  - GPU acyclic / order capture success
+  - GPU assignment success
+  - CPU verify success
+- 2026-03-24 11:24:49 PDT: Parameterized `tests/run_cli_chm02_cuda_known_seed_test.cmake` so it can override:
+  - keys file
+  - algorithm/hash/mask
+  - concurrency / cu concurrency
+  - fixed attempts
+  - seeds
+  - optional extra flags
+- 2026-03-24 11:24:49 PDT: Established a clean failing repro for the full file-I/O path on Linux:
+  - same known-good HologramWorld seed
+  - removed `--NoFileIo --DisableCsvOutputFile`
+  - reproducible `Segmentation fault`
+- 2026-03-24 11:24:49 PDT: Used `gdb` to narrow the crash to `FileWorkItemCallbackChm01()` on a BS threadpool worker thread.
+- 2026-03-24 11:24:49 PDT: Root-caused the Linux file-I/O crash to `src/PerfectHash/Chm02Compat.c`:
+  - compat file work items were queued with `ThreadpoolAddWork(..., FileWorkItemCallbackChm01, &Verb##Name)`
+  - unlike `Chm01Compat.c`, the `Verb##Name.Context = Context` field was never set
+  - `FileWorkItemCallbackChm01()` therefore dereferenced `Item->Context == NULL`
+- 2026-03-24 11:24:49 PDT: Fixed the compat bug by setting `Verb##Name.Context = Context` for both normal and close file-work submissions in `Chm02Compat.c`.
+- 2026-03-24 11:24:49 PDT: Also kept the Linux `FileWorkCallbackChm01()` wrapper in `Chm01FileWork.c` / `Chm01FileWorkStub.c` so the non-Windows path now has a proper three-argument entrypoint too.
+- 2026-03-24 11:24:49 PDT: Re-verified after the compat fix:
+  - original HologramWorld `Assigned16` no-file-I/O GPU-assignment regression passes
+  - `random-33000` non-`Assigned16` no-file-I/O GPU-assignment regression passes
+  - full file-I/O HologramWorld regression now passes
