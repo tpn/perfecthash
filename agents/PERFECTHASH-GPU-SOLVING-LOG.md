@@ -245,3 +245,25 @@
   - active `GraphCu` path never owned full parity because it fell back to CPU for `Order[]`, assignment, and verification
   - `PerfectHashCuda/GraphThrust.cu` path was incomplete / stubbed in multiple stages
   - lock-based concurrent peel path in `PerfectHashCuda/Graph.cu` had correctness hazards, including stale vertex reads and missing `Order[]` recording
+- 2026-03-23 21:45:01 PDT: Added a GPU-assignment regression mode to `tests/run_cli_chm02_cuda_known_seed_test.cmake`:
+  - runs with `PH_DEBUG_CUDA_CHM02=1`
+  - optionally requires `[GraphCuAssign] GpuAssignResult=0x00000000`
+  - fails if the old CPU assignment fallback log is still present
+- 2026-03-23 21:45:01 PDT: Verified the new regression initially failed against the pre-change path:
+  - `GraphCuAssign` still logged `CpuAssignResult=0x00000000`
+  - no GPU assignment log was present
+- 2026-03-23 21:45:01 PDT: Added a new exported CUDA entrypoint `GraphCuAssign` and wired it through `Cu.h` / `PerfectHashCuda.def`.
+- 2026-03-23 21:45:01 PDT: Implemented a serial single-thread GPU assignment kernel in `src/PerfectHashCuda/Graph.cu` mirroring `GraphImpl3.c`:
+  - walks `Order[]` from `OrderIndex`
+  - uses `VisitedVerticesBitmap` to choose the owner vertex
+  - computes `Assigned[owner] = edge - Assigned[other] (mod NumberOfEdges)`
+  - marks both vertices visited
+- 2026-03-23 21:45:01 PDT: Switched `GraphCuAssign()` in `src/PerfectHash/GraphCu.c` from CPU assignment oracle to GPU assignment:
+  - launches `Cu->Assign(...)`
+  - copies the GPU-produced `Assigned[]` into `CpuGraph->Assigned`
+  - leaves CPU `Verify()` in place as the ordered-index oracle
+- 2026-03-23 21:45:01 PDT: Rebuilt `build-cuda/` and reran the known-good HologramWorld `Chm02` CUDA regression with `REQUIRE_GPU_ASSIGN=1`:
+  - command passed
+  - debug trace shows `GraphCuAssign` logging `GpuAssignResult=0x00000000`
+  - debug trace no longer shows `CpuAssignResult=...`
+  - `GraphCuVerify` still returns `CpuVerifyResult=0x00000000`

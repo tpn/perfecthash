@@ -15,22 +15,27 @@ Understand the current CPU and CUDA graph-solving implementations in PerfectHash
 - Benchmarking on hardware in this session unless lightweight local inspection is enough.
 
 ## Current Status
-- Session started.
-- No prior ledgers existed for this subproject in `agents/`.
-- Code and repository reconnaissance completed.
-- Active CUDA backend understood as a hybrid GPU+CPU path.
-- External GPU MPHF / AMQ literature survey completed.
+- Repository reconnaissance and literature survey completed.
+- Standalone batched GPU POC exists and is functioning as a separate track.
+- Legacy `Graph.cu` / `Graph.cuh` bring-up is now exercising the real CUDA-enabled `Chm02` CLI path through `build-cuda/`.
+- Narrow single-graph correctness checkpoint achieved for a known-good HologramWorld `Mulshrolate3RX` seed:
+  - GPU add-keys
+  - GPU acyclic / peel-order capture
+  - GPU assignment
+  - CPU verify as oracle
 - Current chosen implementation direction:
-  - device-resident per-graph solve loop (`device-serial`)
-- Explicitly deferred alternative:
+  - correctness-first single-graph GPU ownership of peel/order/assignment in the legacy `Graph.cu` path
+- Explicitly deferred alternatives:
+  - GPU verify for the legacy path
+  - batching/performance work inside legacy `Graph.cu`
   - cooperative-groups / global frontier device-side convergence across the full batch
-  - deferred because it is more invasive and harder to validate quickly against the current baseline
 
 ## Phases
 1. Inspect existing CPU and CUDA solver implementations.
 2. Identify structural bottlenecks, branchiness, serial regions, and memory layout issues.
 3. Research modern GPU approaches relevant to batched graph peeling, assignment, and filtering.
-4. Synthesize a recommended design and staged prototype plan.
+4. Build a correctness-first standalone batched GPU prototype.
+5. Repair the legacy single-graph `Graph.cu` path enough to regain GPU/CPU parity through the CLI.
 
 ## Dependencies
 - Local repo sources under `src/PerfectHash/` and `src/PerfectHashCuda/`.

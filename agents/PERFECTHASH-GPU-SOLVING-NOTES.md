@@ -514,8 +514,32 @@
 - Local harness:
   - `tests/run_cli_chm02_cuda_known_seed_test.cmake`
 - Current scope of success:
-  - single-graph CUDA add-keys + GPU acyclic detection + CPU assignment oracle path succeeds
+  - single-graph CUDA add-keys + GPU acyclic detection + GPU assignment path succeeds
+  - CPU `Verify()` still succeeds after consuming the GPU-produced `Assigned[]`
   - this is a correctness bring-up checkpoint, not a full production-ready CUDA integration
+
+## Current Single-Graph CUDA Assignment Status
+- The narrow `Graph.cu` / `Chm02` bring-up path now owns assignment on the GPU as well as peel/order.
+- The implemented GPU assignment is intentionally conservative:
+  - one serial CUDA kernel
+  - one graph
+  - no batching
+  - no attempt yet at performance
+- It mirrors the CPU `GraphImpl3` logic directly:
+  - iterate `Order[]` from `OrderIndex`
+  - choose the unvisited endpoint as the owner vertex
+  - compute the owner assignment modulo `NumberOfEdges`
+  - mark both vertices visited in `VisitedVerticesBitmap`
+- Ordered-index semantics are still what is being validated:
+  - GPU produces `Assigned[]`
+  - `GraphCuAssign()` copies that `Assigned[]` into `CpuGraph`
+  - CPU `Verify()` confirms the resulting table is order-preserving
+- Chosen direction:
+  - keep CPU `Verify()` as the oracle while the single-graph GPU assignment path stabilizes
+- Deferred direction:
+  - porting verification itself onto the GPU
+  - revisiting batching/performance work inside `Graph.cu`
+  - cooperative-groups/global-frontier variants for this legacy path
 
 ## Assignment / Order Semantics
 - The POC does perform assignment.

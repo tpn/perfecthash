@@ -27,7 +27,8 @@ set(args
 )
 
 execute_process(
-  COMMAND "${test_exe_native}" "${test_keys_native}" "${test_output_native}" ${args}
+  COMMAND ${CMAKE_COMMAND} -E env PH_DEBUG_CUDA_CHM02=1
+          "${test_exe_native}" "${test_keys_native}" "${test_output_native}" ${args}
   RESULT_VARIABLE result
   OUTPUT_VARIABLE stdout
   ERROR_VARIABLE stderr
@@ -43,4 +44,16 @@ endif()
 string(FIND "${stderr}" "PerfectHashTableCreate failed" failure_index)
 if(NOT failure_index EQUAL -1)
   message(FATAL_ERROR "Expected Chm02 CUDA known-seed run to succeed, but stderr reported failure.")
+endif()
+
+if(DEFINED REQUIRE_GPU_ASSIGN AND REQUIRE_GPU_ASSIGN)
+  string(FIND "${stderr}" "[GraphCuAssign] GpuAssignResult=0x00000000" gpu_assign_index)
+  if(gpu_assign_index EQUAL -1)
+    message(FATAL_ERROR "Expected GPU assignment success log, but it was not present.")
+  endif()
+
+  string(FIND "${stderr}" "[GraphCuAssign] CpuAssignResult=" cpu_assign_index)
+  if(NOT cpu_assign_index EQUAL -1)
+    message(FATAL_ERROR "Expected GPU assignment path without CPU assign fallback, but CPU assign log was present.")
+  endif()
 endif()

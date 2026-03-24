@@ -1583,7 +1583,7 @@ GraphCuAssign(
     _In_ PGRAPH Graph
     )
 {
-    PRTL Rtl;
+    PCU Cu;
     HRESULT Result;
 
     if (IsCudaDebugEnabled()) {
@@ -1594,17 +1594,22 @@ GraphCuAssign(
                 (long)Graph->CpuGraph->OrderIndex);
     }
 
-    Result = Graph->CpuGraph->Vtbl->Assign(Graph->CpuGraph);
+    Cu = Graph->CuSolveContext->DeviceContext->Cu;
+
+    Result = Cu->Assign(Graph,
+                        Graph->CuBlocksPerGrid,
+                        Graph->CuThreadsPerBlock,
+                        Graph->CuSharedMemory);
+
     if (IsCudaDebugEnabled()) {
-        fprintf(stderr, "[GraphCuAssign] CpuAssignResult=0x%08x\n", (unsigned)Result);
+        fprintf(stderr, "[GraphCuAssign] GpuAssignResult=0x%08x\n", (unsigned)Result);
     }
     if (FAILED(Result)) {
         return Result;
     }
 
-    Rtl = Graph->Context->Rtl;
-    CopyMemory(Graph->Assigned,
-               Graph->CpuGraph->Assigned,
+    CopyMemory(Graph->CpuGraph->Assigned,
+               Graph->Assigned,
                Graph->Info->AssignedSizeInBytes);
 
     return Result;

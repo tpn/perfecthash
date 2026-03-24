@@ -2,3 +2,4 @@ LIBRARY PerfectHashCuda
 EXPORTS
     GraphCuIsAcyclic
     GraphCuAddKeys
+    GraphCuAssign
