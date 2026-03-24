@@ -205,6 +205,16 @@
 - 2026-03-23 17:19:22 PDT: Added a debug-only CPU/GPU order comparison in `GraphCuIsAcyclic()`:
   - current status: GPU `Order[]` differs from the CPU oracle at index 0 for the tested seed, but assignment still succeeds, implying a valid but different peel order
 - 2026-03-23 17:19:22 PDT: CSV/file-output behavior in the CUDA-enabled Chm02 path remains unstable; `--NoFileIo --DisableCsvOutputFile` is currently the cleanest mode for continued bring-up.
+- 2026-03-23 20:03:36 PDT: Added env-gated tracing to `GraphEnterSolvingLoop()`, `GraphSolve()`, and `GraphCuVerify()` for the CUDA-enabled `Chm02` path.
+- 2026-03-23 20:03:36 PDT: Current narrowed bring-up trace for the known-good HologramWorld `Mulshrolate3RX` seed:
+  - `LoadInfo` success
+  - `Reset` continue
+  - `LoadNewSeeds` success
+  - `GraphCuAddKeys` success
+  - `GraphCuIsAcyclic` success
+  - GPU `Order[]` still differs from CPU oracle at index `0`
+  - `GraphCuAssign` enters and returns success
+- 2026-03-23 20:03:36 PDT: `GraphCuVerify()` does not log before the process exits with `133`, which narrows the remaining fault to the post-assignment / pre-verify section of the `Chm02` completion path.
 - 2026-03-23 17:36:03 PDT: Additional bring-up finding:
   - even with `--SkipTestAfterCreate`, the CUDA-enabled `Chm02` path still exits with code `133`
   - current trace shows progress through GPU add-keys, GPU acyclic detection, and CPU assignment oracle

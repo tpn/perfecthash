@@ -1617,7 +1617,16 @@ GraphCuVerify(
 {
     HRESULT Result;
 
+    if (IsCudaDebugEnabled()) {
+        fprintf(stderr, "[GraphCuVerify] Enter\n");
+    }
+
     Result = Graph->CpuGraph->Vtbl->Verify(Graph->CpuGraph);
+
+    if (IsCudaDebugEnabled()) {
+        fprintf(stderr, "[GraphCuVerify] CpuVerifyResult=0x%08x\n", (unsigned)Result);
+    }
+
     return Result;
 }
 
