@@ -42,9 +42,11 @@
 - Confirmed the full file-I/O HologramWorld `Chm02` regression now passes.
 
 ## In Progress
-- Continue the `Graph.cu` / `Graph.cuh` single-graph correctness bring-up in the CUDA-enabled build.
+- Execute the GPU solver performance exploration plan safely on GB10 and `nv1`.
 
 ## Next
+- Extend the benchmark runner from dry-run planning to actual execution of selected safe variants.
+- Decide whether to checkpoint the current performance bootstrap before adding legacy `Chm02` phase timing capture.
 - Decide whether to push the 16-bit idea further:
   - keep only the current light-touch downsizing, or
   - template more of the peel/update state, including `XorEdge`

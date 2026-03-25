@@ -622,6 +622,29 @@
 - Chosen now:
   - keep first-class CUDA tests repo-local and deterministic
 
+## Performance Exploration Bootstrap
+- The performance-plan execution has now started, but still in a deliberately safe mode:
+  - no broad benchmark matrices launched yet
+  - no large batch experiments launched yet
+  - only dry-run planning and tiny POC verification runs so far
+- The benchmark-runner scaffold now exists:
+  - `scripts/benchmark_gpu_solver.py`
+  - `scripts/benchmark_gpu_solver_config.json`
+  - `tests/test_benchmark_gpu_solver.py`
+- Current runner behavior:
+  - validates `datasets`, `variants`, and `output_options`
+  - emits a machine-readable dry-run plan
+  - refuses to pretend real execution is implemented when non-empty runs are requested without `--dry-run`
+- The batched POC now exposes the minimum data needed for fair GPU-vs-CPU performance exploration:
+  - `--output-format json`
+  - `--allocation-mode explicit-device|managed-default|managed-prefetch-gpu`
+  - per-stage timings:
+    - `stage_timings_ms.add_build`
+    - `stage_timings_ms.peel`
+    - `stage_timings_ms.assign`
+    - `stage_timings_ms.verify`
+- This puts the branch in a good place to start the actual benchmark runner work without risking oversubscription on GB10.
+
 ## Immediate Follow-On Improvements
 - Replace the host round loop with cooperative launch / grid-synchronous or device-side work queues.
 - Add `GraphImpl3`-compatible hashing routines so the prototype can use real PerfectHash hash functions and seeds.

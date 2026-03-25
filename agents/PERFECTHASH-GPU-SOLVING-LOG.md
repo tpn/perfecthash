@@ -352,3 +352,24 @@
 - 2026-03-24 14:24:46 PDT: The first-class CUDA `ctest` coverage is now self-contained on both sides of the `Assigned16` boundary:
   - repo-local HologramWorld `Assigned16`
   - generated 33,000-key non-`Assigned16`
+- 2026-03-24 17:41:03 PDT: Began executing the GPU solver performance exploration plan.
+- 2026-03-24 17:41:03 PDT: Added local benchmark-runner scaffold:
+  - `scripts/benchmark_gpu_solver.py`
+  - `scripts/benchmark_gpu_solver_config.json`
+  - `tests/test_benchmark_gpu_solver.py`
+- 2026-03-24 17:41:03 PDT: Hardened the runner after review:
+  - config top-level must be a mapping
+  - required sections now include `datasets`, `variants`, and `output_options`
+  - non-dry-run with planned runs now fails before writing an output file
+  - added regression coverage for missing-file, missing-sections, non-mapping, dry-run matrix expansion, and non-dry-run behavior
+- 2026-03-24 17:41:03 PDT: Verified the runner locally with:
+  - `python -m unittest discover -s tests -p 'test_benchmark_gpu_solver.py' -v`
+  - `python scripts/benchmark_gpu_solver.py --config scripts/benchmark_gpu_solver_config.json --machine-label gb10 --output /tmp/gpu-solver-bench-dryrun.json --dry-run`
+- 2026-03-24 17:41:03 PDT: Added POC instrumentation for performance exploration:
+  - structured JSON output via `--output-format json`
+  - `--allocation-mode explicit-device|managed-default|managed-prefetch-gpu`
+  - per-stage GPU timings for `add_build`, `peel`, `assign`, and `verify`
+- 2026-03-24 17:41:03 PDT: Rebuilt the POC and verified a tiny safe run:
+  - `cmake --build build/gpu-batched-peeling-poc -j2`
+  - `./build/gpu-batched-peeling-poc/gpu_batched_peeling_poc --edges 16 --batch 1 --threads 32 --output-format json --allocation-mode managed-prefetch-gpu`
+  - JSON output included `allocation_mode`, `gpu_total_ms`, `cpu_total_ms`, `peel_rounds`, and nested `stage_timings_ms`
