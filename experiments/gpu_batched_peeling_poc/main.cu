@@ -10,6 +10,7 @@
 #include <iomanip>
 #include <iostream>
 #include <limits>
+#include <sstream>
 #include <string>
 #include <type_traits>
 #include <vector>
@@ -28,6 +29,17 @@ enum class StorageMode {
 enum class SolveMode {
     HostRoundTrip,
     DeviceSerial,
+};
+
+enum class AllocationMode {
+    ExplicitDevice,
+    ManagedDefault,
+    ManagedPrefetchGpu,
+};
+
+enum class OutputFormat {
+    Human,
+    Json,
 };
 
 enum class HashFunctionKind {
@@ -54,6 +66,8 @@ struct Options {
     StorageMode Storage = StorageMode::Auto;
     SolveMode Solve = SolveMode::HostRoundTrip;
     HashFunctionKind HashFunction = HashFunctionKind::MultiplyShiftR;
+    AllocationMode Allocation = AllocationMode::ExplicitDevice;
+    OutputFormat Output = OutputFormat::Human;
     double MemoryHeadroomPct = 10.0;
     bool AutoScaleBatchToFit = true;
     bool Verbose = false;
@@ -110,6 +124,7 @@ struct CpuResult {
 };
 
 struct ExperimentResult {
+    std::string DatasetName;
     uint32_t KeyCount = 0;
     uint32_t EdgeCapacity = 0;
     uint32_t Vertices = 0;
@@ -121,10 +136,15 @@ struct ExperimentResult {
     uint32_t CpuVerifyIssues = 0;
     float GpuMilliseconds = 0.0f;
     double CpuMilliseconds = 0.0;
+    double AddBuildMilliseconds = 0.0;
+    double PeelMilliseconds = 0.0;
+    double AssignMilliseconds = 0.0;
+    double VerifyMilliseconds = 0.0;
     uint32_t StorageBits = 0;
     const char *HashFunctionName = nullptr;
     StorageMode SelectedStorage = StorageMode::Auto;
     const char *SolveModeName = nullptr;
+    const char *AllocationModeName = nullptr;
     size_t EstimatedDeviceBytes = 0;
     size_t DeviceFreeBytes = 0;
     size_t DeviceTotalBytes = 0;
@@ -347,6 +367,34 @@ SolveModeToString(SolveMode Mode)
     }
 }
 
+const char *
+AllocationModeToString(AllocationMode Mode)
+{
+    switch (Mode) {
+        case AllocationMode::ExplicitDevice:
+            return "explicit-device";
+        case AllocationMode::ManagedDefault:
+            return "managed-default";
+        case AllocationMode::ManagedPrefetchGpu:
+            return "managed-prefetch-gpu";
+        default:
+            return "unknown";
+    }
+}
+
+const char *
+OutputFormatToString(OutputFormat Mode)
+{
+    switch (Mode) {
+        case OutputFormat::Human:
+            return "human";
+        case OutputFormat::Json:
+            return "json";
+        default:
+            return "unknown";
+    }
+}
+
 HashFunctionKind
 ParseHashFunctionKind(const std::string &Value)
 {
@@ -370,6 +418,113 @@ ParseHashFunctionKind(const std::string &Value)
 
     std::cerr << "Invalid --hash-function value: " << Value << "\n";
     std::exit(EXIT_FAILURE);
+}
+
+AllocationMode
+ParseAllocationMode(const std::string &Value)
+{
+    const std::string Lower = ToLower(Value);
+
+    if (Lower == "explicit-device") {
+        return AllocationMode::ExplicitDevice;
+    } else if (Lower == "managed-default") {
+        return AllocationMode::ManagedDefault;
+    } else if (Lower == "managed-prefetch-gpu") {
+        return AllocationMode::ManagedPrefetchGpu;
+    }
+
+    std::cerr << "Invalid --allocation-mode value: " << Value << "\n";
+    std::exit(EXIT_FAILURE);
+}
+
+OutputFormat
+ParseOutputFormat(const std::string &Value)
+{
+    const std::string Lower = ToLower(Value);
+
+    if (Lower == "human") {
+        return OutputFormat::Human;
+    } else if (Lower == "json") {
+        return OutputFormat::Json;
+    }
+
+    std::cerr << "Invalid --output-format value: " << Value << "\n";
+    std::exit(EXIT_FAILURE);
+}
+
+std::string
+BaseName(const std::string &Path)
+{
+    const size_t Slash = Path.find_last_of("/\\");
+    if (Slash == std::string::npos) {
+        return Path;
+    }
+
+    return Path.substr(Slash + 1);
+}
+
+std::string
+JsonEscape(const std::string &Value)
+{
+    std::string Result;
+    Result.reserve(Value.size() + 8);
+
+    for (char Ch : Value) {
+        switch (Ch) {
+            case '\\':
+                Result += "\\\\";
+                break;
+            case '"':
+                Result += "\\\"";
+                break;
+            case '\b':
+                Result += "\\b";
+                break;
+            case '\f':
+                Result += "\\f";
+                break;
+            case '\n':
+                Result += "\\n";
+                break;
+            case '\r':
+                Result += "\\r";
+                break;
+            case '\t':
+                Result += "\\t";
+                break;
+            default:
+                Result.push_back(Ch);
+                break;
+        }
+    }
+
+    return Result;
+}
+
+template<typename T>
+void
+AllocateGpuMemory(T **Ptr, size_t Count, AllocationMode Mode, const char *Name)
+{
+    if (Mode == AllocationMode::ExplicitDevice) {
+        CheckCuda(cudaMalloc(reinterpret_cast<void **>(Ptr), Count * sizeof(T)), Name);
+    } else {
+        CheckCuda(cudaMallocManaged(reinterpret_cast<void **>(Ptr), Count * sizeof(T)), Name);
+    }
+}
+
+template<typename T>
+void
+PrefetchGpuMemory(T *Ptr, size_t Count, int Device, const char *Name)
+{
+    if (Count == 0) {
+        return;
+    }
+
+    cudaMemLocation Location = {};
+    Location.type = cudaMemLocationTypeDevice;
+    Location.id = Device;
+
+    CheckCuda(cudaMemPrefetchAsync(Ptr, Count * sizeof(T), Location, 0), Name);
 }
 
 Options
@@ -436,6 +591,10 @@ ParseOptions(int argc, char **argv)
             Opts.AutoScaleBatchToFit = false;
         } else if (Arg == "--hash-function") {
             Opts.HashFunction = ParseHashFunctionKind(RequireValue("--hash-function"));
+        } else if (Arg == "--allocation-mode") {
+            Opts.Allocation = ParseAllocationMode(RequireValue("--allocation-mode"));
+        } else if (Arg == "--output-format") {
+            Opts.Output = ParseOutputFormat(RequireValue("--output-format"));
         } else if (Arg == "--verbose") {
             Opts.Verbose = true;
         } else if (Arg == "--help" || Arg == "-h") {
@@ -457,6 +616,9 @@ ParseOptions(int argc, char **argv)
                 << "  --hash-function <x>   SplitMix, MultiplyShiftR, MultiplyShiftRX,\n"
                 << "                        Mulshrolate1RX, Mulshrolate2RX, Mulshrolate3RX,\n"
                 << "                        or Mulshrolate4RX\n"
+                << "  --allocation-mode <x> explicit-device, managed-default, or\n"
+                << "                        managed-prefetch-gpu\n"
+                << "  --output-format <x>   human or json\n"
                 << "  --key-seed <x>        Base seed for generated keys\n"
                 << "  --graph-seed <x>      Philox seed for per-graph hash seeds\n"
                 << "  --rng-subsequence <x> Philox subsequence base for graph seeds\n"
@@ -1475,6 +1637,7 @@ RunExperiment(const Options &Opts,
               const std::vector<uint32_t> &Keys,
               const std::vector<GraphSeeds> &GraphSeedsVector,
               const std::string &RequestedKeys,
+              const std::string &DatasetName,
               StorageMode SelectedStorage)
 {
     using FrontierItem = FrontierItemT<StorageT>;
@@ -1491,10 +1654,12 @@ RunExperiment(const Options &Opts,
     Result.EdgeCapacity = EdgeCapacity;
     Result.Vertices = Vertices;
     Result.Batch = Batch;
+    Result.DatasetName = DatasetName;
     Result.StorageBits = static_cast<uint32_t>(sizeof(StorageT) * 8);
     Result.HashFunctionName = HashTraits<Kind>::Name;
     Result.SelectedStorage = SelectedStorage;
     Result.SolveModeName = SolveModeToString(Opts.Solve);
+    Result.AllocationModeName = AllocationModeToString(Opts.Allocation);
 
     const uint64_t TotalEdges = static_cast<uint64_t>(KeyCount) * Batch;
     const uint64_t TotalVertices = static_cast<uint64_t>(Vertices) * Batch;
@@ -1517,26 +1682,27 @@ RunExperiment(const Options &Opts,
     uint32_t *DFrontierCount = nullptr;
     uint32_t *DGraphRounds = nullptr;
 
-    CheckCuda(cudaMalloc(&DKeys, Keys.size() * sizeof(Keys[0])), "cudaMalloc(DKeys)");
-    CheckCuda(cudaMalloc(&DGraphSeeds,
-                         GraphSeedsVector.size() * sizeof(GraphSeedsVector[0])),
-              "cudaMalloc(DGraphSeeds)");
-    CheckCuda(cudaMalloc(&DEdgeU, TotalEdges * sizeof(StorageT)), "cudaMalloc(DEdgeU)");
-    CheckCuda(cudaMalloc(&DEdgeV, TotalEdges * sizeof(StorageT)), "cudaMalloc(DEdgeV)");
-    CheckCuda(cudaMalloc(&DDegree, TotalVertices * sizeof(uint32_t)), "cudaMalloc(DDegree)");
-    CheckCuda(cudaMalloc(&DXorEdge, TotalVertices * sizeof(uint32_t)), "cudaMalloc(DXorEdge)");
-    CheckCuda(cudaMalloc(&DInvalidGraphs, Batch * sizeof(uint32_t)), "cudaMalloc(DInvalidGraphs)");
-    CheckCuda(cudaMalloc(&DEdgePeeled, TotalEdges * sizeof(uint32_t)), "cudaMalloc(DEdgePeeled)");
-    CheckCuda(cudaMalloc(&DOwnerVertex, TotalEdges * sizeof(StorageT)), "cudaMalloc(DOwnerVertex)");
-    CheckCuda(cudaMalloc(&DPeelOrder, TotalEdges * sizeof(StorageT)), "cudaMalloc(DPeelOrder)");
-    CheckCuda(cudaMalloc(&DPeeledCount, Batch * sizeof(uint32_t)), "cudaMalloc(DPeeledCount)");
-    CheckCuda(cudaMalloc(&DAssigned, TotalVertices * sizeof(StorageT)), "cudaMalloc(DAssigned)");
-    CheckCuda(cudaMalloc(&DVerifyFailures, Batch * sizeof(uint32_t)), "cudaMalloc(DVerifyFailures)");
-    CheckCuda(cudaMalloc(&DGraphRounds, Batch * sizeof(uint32_t)), "cudaMalloc(DGraphRounds)");
+    AllocateGpuMemory(&DKeys, Keys.size(), Opts.Allocation, "cudaMalloc(DKeys)");
+    AllocateGpuMemory(&DGraphSeeds,
+                      GraphSeedsVector.size(),
+                      Opts.Allocation,
+                      "cudaMalloc(DGraphSeeds)");
+    AllocateGpuMemory(&DEdgeU, TotalEdges, Opts.Allocation, "cudaMalloc(DEdgeU)");
+    AllocateGpuMemory(&DEdgeV, TotalEdges, Opts.Allocation, "cudaMalloc(DEdgeV)");
+    AllocateGpuMemory(&DDegree, TotalVertices, Opts.Allocation, "cudaMalloc(DDegree)");
+    AllocateGpuMemory(&DXorEdge, TotalVertices, Opts.Allocation, "cudaMalloc(DXorEdge)");
+    AllocateGpuMemory(&DInvalidGraphs, Batch, Opts.Allocation, "cudaMalloc(DInvalidGraphs)");
+    AllocateGpuMemory(&DEdgePeeled, TotalEdges, Opts.Allocation, "cudaMalloc(DEdgePeeled)");
+    AllocateGpuMemory(&DOwnerVertex, TotalEdges, Opts.Allocation, "cudaMalloc(DOwnerVertex)");
+    AllocateGpuMemory(&DPeelOrder, TotalEdges, Opts.Allocation, "cudaMalloc(DPeelOrder)");
+    AllocateGpuMemory(&DPeeledCount, Batch, Opts.Allocation, "cudaMalloc(DPeeledCount)");
+    AllocateGpuMemory(&DAssigned, TotalVertices, Opts.Allocation, "cudaMalloc(DAssigned)");
+    AllocateGpuMemory(&DVerifyFailures, Batch, Opts.Allocation, "cudaMalloc(DVerifyFailures)");
+    AllocateGpuMemory(&DGraphRounds, Batch, Opts.Allocation, "cudaMalloc(DGraphRounds)");
 
     if (Opts.Solve == SolveMode::HostRoundTrip) {
-        CheckCuda(cudaMalloc(&DFrontier, FrontierCapacity * sizeof(FrontierItem)), "cudaMalloc(DFrontier)");
-        CheckCuda(cudaMalloc(&DFrontierCount, sizeof(uint32_t)), "cudaMalloc(DFrontierCount)");
+        AllocateGpuMemory(&DFrontier, FrontierCapacity, Opts.Allocation, "cudaMalloc(DFrontier)");
+        AllocateGpuMemory(&DFrontierCount, 1, Opts.Allocation, "cudaMalloc(DFrontierCount)");
     }
 
     CheckCuda(cudaMemcpy(DKeys, Keys.data(), Keys.size() * sizeof(Keys[0]), cudaMemcpyHostToDevice),
@@ -1564,27 +1730,62 @@ RunExperiment(const Options &Opts,
         CheckCuda(cudaMemset(DFrontierCount, 0, sizeof(uint32_t)), "cudaMemset(DFrontierCount)");
     }
 
-    cudaEvent_t Start = nullptr;
-    cudaEvent_t Stop = nullptr;
-    CheckCuda(cudaEventCreate(&Start), "cudaEventCreate(Start)");
-    CheckCuda(cudaEventCreate(&Stop), "cudaEventCreate(Stop)");
+    if (Opts.Allocation == AllocationMode::ManagedPrefetchGpu) {
+        int Device = 0;
+        CheckCuda(cudaGetDevice(&Device), "cudaGetDevice");
+
+        PrefetchGpuMemory(DKeys, Keys.size(), Device, "cudaMemPrefetchAsync(DKeys)");
+        PrefetchGpuMemory(DGraphSeeds, GraphSeedsVector.size(), Device, "cudaMemPrefetchAsync(DGraphSeeds)");
+        PrefetchGpuMemory(DEdgeU, TotalEdges, Device, "cudaMemPrefetchAsync(DEdgeU)");
+        PrefetchGpuMemory(DEdgeV, TotalEdges, Device, "cudaMemPrefetchAsync(DEdgeV)");
+        PrefetchGpuMemory(DDegree, TotalVertices, Device, "cudaMemPrefetchAsync(DDegree)");
+        PrefetchGpuMemory(DXorEdge, TotalVertices, Device, "cudaMemPrefetchAsync(DXorEdge)");
+        PrefetchGpuMemory(DInvalidGraphs, Batch, Device, "cudaMemPrefetchAsync(DInvalidGraphs)");
+        PrefetchGpuMemory(DEdgePeeled, TotalEdges, Device, "cudaMemPrefetchAsync(DEdgePeeled)");
+        PrefetchGpuMemory(DOwnerVertex, TotalEdges, Device, "cudaMemPrefetchAsync(DOwnerVertex)");
+        PrefetchGpuMemory(DPeelOrder, TotalEdges, Device, "cudaMemPrefetchAsync(DPeelOrder)");
+        PrefetchGpuMemory(DPeeledCount, Batch, Device, "cudaMemPrefetchAsync(DPeeledCount)");
+        PrefetchGpuMemory(DAssigned, TotalVertices, Device, "cudaMemPrefetchAsync(DAssigned)");
+        PrefetchGpuMemory(DVerifyFailures, Batch, Device, "cudaMemPrefetchAsync(DVerifyFailures)");
+        PrefetchGpuMemory(DGraphRounds, Batch, Device, "cudaMemPrefetchAsync(DGraphRounds)");
+        if (Opts.Solve == SolveMode::HostRoundTrip) {
+            PrefetchGpuMemory(DFrontier, FrontierCapacity, Device, "cudaMemPrefetchAsync(DFrontier)");
+            PrefetchGpuMemory(DFrontierCount, 1, Device, "cudaMemPrefetchAsync(DFrontierCount)");
+        }
+        CheckCuda(cudaDeviceSynchronize(), "cudaDeviceSynchronize(prefetch)");
+    }
+
+    cudaEvent_t StageStart = nullptr;
+    cudaEvent_t StageStop = nullptr;
+    CheckCuda(cudaEventCreate(&StageStart), "cudaEventCreate(StageStart)");
+    CheckCuda(cudaEventCreate(&StageStop), "cudaEventCreate(StageStop)");
 
     const uint32_t BuildBlocks = static_cast<uint32_t>((TotalEdges + Opts.Threads - 1) / Opts.Threads);
     const uint32_t VertexBlocks = static_cast<uint32_t>((TotalVertices + Opts.Threads - 1) / Opts.Threads);
 
-    CheckCuda(cudaEventRecord(Start), "cudaEventRecord(Start)");
+    auto MeasureStage = [&](auto &&Launch) -> double {
+        float StageMilliseconds = 0.0f;
+        CheckCuda(cudaEventRecord(StageStart), "cudaEventRecord(StageStart)");
+        Launch();
+        CheckCuda(cudaEventRecord(StageStop), "cudaEventRecord(StageStop)");
+        CheckCuda(cudaEventSynchronize(StageStop), "cudaEventSynchronize(StageStop)");
+        CheckCuda(cudaEventElapsedTime(&StageMilliseconds, StageStart, StageStop), "cudaEventElapsedTime");
+        return static_cast<double>(StageMilliseconds);
+    };
 
-    BuildGraphsKernel<Kind, StorageT><<<BuildBlocks, Opts.Threads>>>(KeyCount,
-                                                                     Vertices,
-                                                                     Batch,
-                                                                     DKeys,
-                                                                     DGraphSeeds,
-                                                                     DEdgeU,
-                                                                     DEdgeV,
-                                                                     DDegree,
-                                                                     DXorEdge,
-                                                                     DInvalidGraphs);
-    CheckCuda(cudaGetLastError(), "BuildGraphsKernel launch");
+    Result.AddBuildMilliseconds = MeasureStage([&]() {
+        BuildGraphsKernel<Kind, StorageT><<<BuildBlocks, Opts.Threads>>>(KeyCount,
+                                                                         Vertices,
+                                                                         Batch,
+                                                                         DKeys,
+                                                                         DGraphSeeds,
+                                                                         DEdgeU,
+                                                                         DEdgeV,
+                                                                         DDegree,
+                                                                         DXorEdge,
+                                                                         DInvalidGraphs);
+        CheckCuda(cudaGetLastError(), "BuildGraphsKernel launch");
+    });
 
     if (Opts.Solve == SolveMode::HostRoundTrip) {
         uint32_t FrontierCount = 0;
@@ -1592,14 +1793,17 @@ RunExperiment(const Options &Opts,
         for (;;) {
             CheckCuda(cudaMemset(DFrontierCount, 0, sizeof(uint32_t)), "cudaMemset(DFrontierCount)");
 
-            CollectFrontierKernel<StorageT><<<VertexBlocks, Opts.Threads>>>(Vertices,
-                                                                            Batch,
-                                                                            DDegree,
-                                                                            DXorEdge,
-                                                                            DInvalidGraphs,
-                                                                            DFrontier,
-                                                                            DFrontierCount);
-            CheckCuda(cudaGetLastError(), "CollectFrontierKernel launch");
+            Result.PeelMilliseconds += MeasureStage([&]() {
+                CollectFrontierKernel<StorageT><<<VertexBlocks, Opts.Threads>>>(Vertices,
+                                                                                Batch,
+                                                                                DDegree,
+                                                                                DXorEdge,
+                                                                                DInvalidGraphs,
+                                                                                DFrontier,
+                                                                                DFrontierCount);
+                CheckCuda(cudaGetLastError(), "CollectFrontierKernel launch");
+            });
+
             CheckCuda(cudaMemcpy(&FrontierCount, DFrontierCount, sizeof(uint32_t), cudaMemcpyDeviceToHost),
                       "cudaMemcpy(FrontierCount)");
 
@@ -1610,68 +1814,77 @@ RunExperiment(const Options &Opts,
             ++Result.Rounds;
 
             const uint32_t PeelBlocks = static_cast<uint32_t>((FrontierCount + Opts.Threads - 1) / Opts.Threads);
-            PeelFrontierKernel<StorageT><<<PeelBlocks, Opts.Threads>>>(KeyCount,
-                                                                       Vertices,
-                                                                       FrontierCount,
-                                                                       DFrontier,
-                                                                       DEdgeU,
-                                                                       DEdgeV,
-                                                                       DDegree,
-                                                                       DXorEdge,
-                                                                       DEdgePeeled,
-                                                                       DOwnerVertex,
-                                                                       DPeelOrder,
-                                                                       DPeeledCount);
-            CheckCuda(cudaGetLastError(), "PeelFrontierKernel launch");
+            Result.PeelMilliseconds += MeasureStage([&]() {
+                PeelFrontierKernel<StorageT><<<PeelBlocks, Opts.Threads>>>(KeyCount,
+                                                                           Vertices,
+                                                                           FrontierCount,
+                                                                           DFrontier,
+                                                                           DEdgeU,
+                                                                           DEdgeV,
+                                                                           DDegree,
+                                                                           DXorEdge,
+                                                                           DEdgePeeled,
+                                                                           DOwnerVertex,
+                                                                           DPeelOrder,
+                                                                           DPeeledCount);
+                CheckCuda(cudaGetLastError(), "PeelFrontierKernel launch");
+            });
         }
 
-        AssignGraphsKernel<StorageT><<<Batch, 1>>>(KeyCount,
-                                                   Vertices,
-                                                   EdgeMask,
-                                                   DInvalidGraphs,
-                                                   DEdgeU,
-                                                   DEdgeV,
-                                                   DOwnerVertex,
-                                                   DPeelOrder,
-                                                   DPeeledCount,
-                                                   DAssigned);
-        CheckCuda(cudaGetLastError(), "AssignGraphsKernel launch");
+        Result.AssignMilliseconds = MeasureStage([&]() {
+            AssignGraphsKernel<StorageT><<<Batch, 1>>>(KeyCount,
+                                                       Vertices,
+                                                       EdgeMask,
+                                                       DInvalidGraphs,
+                                                       DEdgeU,
+                                                       DEdgeV,
+                                                       DOwnerVertex,
+                                                       DPeelOrder,
+                                                       DPeeledCount,
+                                                       DAssigned);
+            CheckCuda(cudaGetLastError(), "AssignGraphsKernel launch");
+        });
 
         const uint32_t VerifyBlocks = static_cast<uint32_t>((TotalEdges + Opts.Threads - 1) / Opts.Threads);
-        VerifyGraphsKernel<StorageT><<<VerifyBlocks, Opts.Threads>>>(KeyCount,
-                                                                     Vertices,
-                                                                     Batch,
-                                                                     EdgeMask,
-                                                                     DInvalidGraphs,
-                                                                     DEdgeU,
-                                                                     DEdgeV,
-                                                                     DAssigned,
-                                                                     DPeeledCount,
-                                                                     DVerifyFailures);
-        CheckCuda(cudaGetLastError(), "VerifyGraphsKernel launch");
+        Result.VerifyMilliseconds = MeasureStage([&]() {
+            VerifyGraphsKernel<StorageT><<<VerifyBlocks, Opts.Threads>>>(KeyCount,
+                                                                         Vertices,
+                                                                         Batch,
+                                                                         EdgeMask,
+                                                                         DInvalidGraphs,
+                                                                         DEdgeU,
+                                                                         DEdgeV,
+                                                                         DAssigned,
+                                                                         DPeeledCount,
+                                                                         DVerifyFailures);
+            CheckCuda(cudaGetLastError(), "VerifyGraphsKernel launch");
+        });
     } else {
-        SolveGraphsDeviceSerialKernel<StorageT><<<Batch, 1>>>(KeyCount,
-                                                              Vertices,
-                                                              Batch,
-                                                              EdgeMask,
-                                                              DInvalidGraphs,
-                                                              DEdgeU,
-                                                              DEdgeV,
-                                                              DDegree,
-                                                              DXorEdge,
-                                                              DEdgePeeled,
-                                                              DOwnerVertex,
-                                                              DPeelOrder,
-                                                              DPeeledCount,
-                                                              DAssigned,
-                                                              DVerifyFailures,
-                                                              DGraphRounds);
-        CheckCuda(cudaGetLastError(), "SolveGraphsDeviceSerialKernel launch");
+        Result.PeelMilliseconds = MeasureStage([&]() {
+            SolveGraphsDeviceSerialKernel<StorageT><<<Batch, 1>>>(KeyCount,
+                                                                  Vertices,
+                                                                  Batch,
+                                                                  EdgeMask,
+                                                                  DInvalidGraphs,
+                                                                  DEdgeU,
+                                                                  DEdgeV,
+                                                                  DDegree,
+                                                                  DXorEdge,
+                                                                  DEdgePeeled,
+                                                                  DOwnerVertex,
+                                                                  DPeelOrder,
+                                                                  DPeeledCount,
+                                                                  DAssigned,
+                                                                  DVerifyFailures,
+                                                                  DGraphRounds);
+            CheckCuda(cudaGetLastError(), "SolveGraphsDeviceSerialKernel launch");
+        });
     }
 
-    CheckCuda(cudaEventRecord(Stop), "cudaEventRecord(Stop)");
-    CheckCuda(cudaEventSynchronize(Stop), "cudaEventSynchronize(Stop)");
-    CheckCuda(cudaEventElapsedTime(&Result.GpuMilliseconds, Start, Stop), "cudaEventElapsedTime");
+    Result.GpuMilliseconds = static_cast<float>(Result.AddBuildMilliseconds +
+                                                Result.PeelMilliseconds +
+                                                Result.AssignMilliseconds +
+                                                Result.VerifyMilliseconds);
 
     std::vector<uint32_t> InvalidGraphs(Batch);
     std::vector<uint32_t> PeeledCount(Batch);
@@ -1757,14 +1970,15 @@ RunExperiment(const Options &Opts,
         if (ThisGpuSuccess != ThisCpuSuccess) {
             ++Result.Mismatches;
             if (Opts.Verbose) {
-                std::cout << "Mismatch graph=" << Graph
-                          << " gpu_success=" << ThisGpuSuccess
-                          << " cpu_success=" << ThisCpuSuccess
-                          << " invalid=" << InvalidGraphs[Graph]
-                          << " peeled_gpu=" << PeeledCount[Graph]
-                          << " peeled_cpu=" << CpuResults[Graph].Peeled
-                          << " verify_failures=" << VerifyFailures[Graph]
-                          << "\n";
+                std::ostream &Details = (Opts.Output == OutputFormat::Json) ? std::cerr : std::cout;
+                Details << "Mismatch graph=" << Graph
+                        << " gpu_success=" << ThisGpuSuccess
+                        << " cpu_success=" << ThisCpuSuccess
+                        << " invalid=" << InvalidGraphs[Graph]
+                        << " peeled_gpu=" << PeeledCount[Graph]
+                        << " peeled_cpu=" << CpuResults[Graph].Peeled
+                        << " verify_failures=" << VerifyFailures[Graph]
+                        << "\n";
             }
         }
         if (CpuResults[Graph].Success && !CpuResults[Graph].Verified) {
@@ -1772,27 +1986,66 @@ RunExperiment(const Options &Opts,
         }
     }
 
-    std::cout
-        << "GPU Batched Peeling POC\n"
-        << "  Keys file:          "
-        << (Opts.KeysFile.empty() ? "<generated>" : Opts.KeysFile) << "\n"
-        << "  Requested keys:     " << RequestedKeys << "\n"
-        << "  Actual keys:        " << KeyCount << "\n"
-        << "  Edge capacity:      " << EdgeCapacity << "\n"
-        << "  Vertices:           " << Vertices << "\n"
-        << "  Batch size:         " << Batch << "\n"
-        << "  Hash function:      " << Result.HashFunctionName << "\n"
-        << "  Solve mode:         " << Result.SolveModeName << "\n"
-        << "  Storage bits:       " << Result.StorageBits << "\n"
-        << "  Storage mode:       " << StorageModeToString(Result.SelectedStorage) << "\n"
-        << "  Peel rounds:        " << Result.Rounds << "\n"
-        << "  GPU success:        " << Result.GpuSuccess << "/" << Batch << "\n"
-        << "  CPU success:        " << Result.CpuSuccess << "/" << Batch << "\n"
-        << "  Success mismatches: " << Result.Mismatches << "\n"
-        << "  CPU verify issues:  " << Result.CpuVerifyIssues << "\n"
-        << std::fixed << std::setprecision(3)
-        << "  GPU time (ms):      " << Result.GpuMilliseconds << "\n"
-        << "  CPU time (ms):      " << Result.CpuMilliseconds << "\n";
+    if (Opts.Output == OutputFormat::Json) {
+        std::ostringstream Json;
+        Json << std::fixed << std::setprecision(3);
+        Json << "{"
+             << "\"dataset\":\"" << JsonEscape(Result.DatasetName) << "\","
+             << "\"batch\":" << Result.Batch << ","
+             << "\"solve_mode\":\"" << JsonEscape(Result.SolveModeName) << "\","
+             << "\"threads\":" << Opts.Threads << ","
+             << "\"storage_bits\":" << Result.StorageBits << ","
+             << "\"storage_mode\":\"" << JsonEscape(StorageModeToString(Result.SelectedStorage)) << "\","
+             << "\"hash_function\":\"" << JsonEscape(Result.HashFunctionName) << "\","
+             << "\"allocation_mode\":\"" << JsonEscape(Result.AllocationModeName) << "\","
+             << "\"output_format\":\"" << JsonEscape(OutputFormatToString(Opts.Output)) << "\","
+             << "\"edge_capacity\":" << Result.EdgeCapacity << ","
+             << "\"vertices\":" << Result.Vertices << ","
+             << "\"gpu_total_ms\":" << Result.GpuMilliseconds << ","
+             << "\"cpu_total_ms\":" << Result.CpuMilliseconds << ","
+             << "\"solved_count\":" << Result.GpuSuccess << ","
+             << "\"gpu_success\":" << Result.GpuSuccess << ","
+             << "\"cpu_success\":" << Result.CpuSuccess << ","
+             << "\"mismatches\":" << Result.Mismatches << ","
+             << "\"cpu_verify_issues\":" << Result.CpuVerifyIssues << ","
+             << "\"peel_rounds\":" << Result.Rounds << ","
+             << "\"stage_timings_ms\":{"
+             << "\"add_build\":" << Result.AddBuildMilliseconds << ","
+             << "\"peel\":" << Result.PeelMilliseconds << ","
+             << "\"assign\":" << Result.AssignMilliseconds << ","
+             << "\"verify\":" << Result.VerifyMilliseconds
+             << "}"
+             << "}";
+        std::cout << Json.str() << "\n";
+    } else {
+        std::cout
+            << "GPU Batched Peeling POC\n"
+            << "  Dataset:           " << Result.DatasetName << "\n"
+            << "  Keys file:         "
+            << (Opts.KeysFile.empty() ? "<generated>" : Opts.KeysFile) << "\n"
+            << "  Requested keys:    " << RequestedKeys << "\n"
+            << "  Actual keys:       " << KeyCount << "\n"
+            << "  Edge capacity:     " << EdgeCapacity << "\n"
+            << "  Vertices:          " << Vertices << "\n"
+            << "  Batch size:        " << Batch << "\n"
+            << "  Hash function:     " << Result.HashFunctionName << "\n"
+            << "  Solve mode:        " << Result.SolveModeName << "\n"
+            << "  Allocation mode:   " << Result.AllocationModeName << "\n"
+            << "  Storage bits:      " << Result.StorageBits << "\n"
+            << "  Storage mode:      " << StorageModeToString(Result.SelectedStorage) << "\n"
+            << "  Peel rounds:       " << Result.Rounds << "\n"
+            << "  GPU success:       " << Result.GpuSuccess << "/" << Batch << "\n"
+            << "  CPU success:       " << Result.CpuSuccess << "/" << Batch << "\n"
+            << "  Success mismatches: " << Result.Mismatches << "\n"
+            << "  CPU verify issues: " << Result.CpuVerifyIssues << "\n"
+            << std::fixed << std::setprecision(3)
+            << "  GPU time (ms):     " << Result.GpuMilliseconds << "\n"
+            << "  CPU time (ms):     " << Result.CpuMilliseconds << "\n"
+            << "  Add/build (ms):    " << Result.AddBuildMilliseconds << "\n"
+            << "  Peel (ms):         " << Result.PeelMilliseconds << "\n"
+            << "  Assign (ms):       " << Result.AssignMilliseconds << "\n"
+            << "  Verify (ms):       " << Result.VerifyMilliseconds << "\n";
+    }
 
     if (DFrontierCount) {
         CheckCuda(cudaFree(DFrontierCount), "cudaFree(DFrontierCount)");
@@ -1814,8 +2067,8 @@ RunExperiment(const Options &Opts,
     CheckCuda(cudaFree(DEdgeU), "cudaFree(DEdgeU)");
     CheckCuda(cudaFree(DGraphSeeds), "cudaFree(DGraphSeeds)");
     CheckCuda(cudaFree(DKeys), "cudaFree(DKeys)");
-    CheckCuda(cudaEventDestroy(Stop), "cudaEventDestroy(Stop)");
-    CheckCuda(cudaEventDestroy(Start), "cudaEventDestroy(Start)");
+    CheckCuda(cudaEventDestroy(StageStop), "cudaEventDestroy(StageStop)");
+    CheckCuda(cudaEventDestroy(StageStart), "cudaEventDestroy(StageStart)");
 
     return Result;
 }
@@ -1871,6 +2124,7 @@ ExperimentResult
 RunWithSelectedStorage(const Options &Opts,
                        const std::vector<uint32_t> &Keys,
                        const std::string &RequestedKeys,
+                       const std::string &DatasetName,
                        StorageMode SelectedStorage)
 {
     auto GraphSeedsVector = MakeGraphSeedsVector<Kind>(Opts.Batch,
@@ -1887,12 +2141,14 @@ RunWithSelectedStorage(const Options &Opts,
                                              Keys,
                                              GraphSeedsVector,
                                              RequestedKeys,
+                                             DatasetName,
                                              SelectedStorage);
     } else {
         return RunExperiment<Kind, uint32_t>(Opts,
                                              Keys,
                                              GraphSeedsVector,
                                              RequestedKeys,
+                                             DatasetName,
                                              SelectedStorage);
     }
 }
@@ -1906,10 +2162,12 @@ main(int argc, char **argv)
 
     std::vector<uint32_t> Keys;
     std::string RequestedKeys = std::to_string(Opts.Edges);
+    std::string DatasetName = "generated-" + std::to_string(Opts.Edges);
 
     if (!Opts.KeysFile.empty()) {
         Keys = LoadKeysFromFile(Opts.KeysFile);
         RequestedKeys = "<n/a>";
+        DatasetName = BaseName(Opts.KeysFile);
     } else {
         Keys.resize(Opts.Edges);
         for (uint32_t Edge = 0; Edge < Opts.Edges; ++Edge) {
@@ -2003,14 +2261,16 @@ main(int argc, char **argv)
 
             EffectiveOpts.Batch = static_cast<uint32_t>(MaxBatch);
 
-            std::cout
-                << "Adjusting batch from " << Opts.Batch
-                << " to " << EffectiveOpts.Batch
-                << " to fit available device memory (estimated "
-                << FormatBytes(RequestedBytes)
-                << ", allowed "
-                << FormatBytes(AllowedBytes)
-                << ").\n";
+            if (Opts.Output == OutputFormat::Human) {
+                std::cout
+                    << "Adjusting batch from " << Opts.Batch
+                    << " to " << EffectiveOpts.Batch
+                    << " to fit available device memory (estimated "
+                    << FormatBytes(RequestedBytes)
+                    << ", allowed "
+                    << FormatBytes(AllowedBytes)
+                    << ").\n";
+            }
 
             if (Opts.Solve == SolveMode::HostRoundTrip) {
                 const size_t DeviceSerialBytes = (
@@ -2019,8 +2279,10 @@ main(int argc, char **argv)
                         EstimateDeviceBytes<uint32_t>(KeyCount, Vertices, Opts.Batch, SolveMode::DeviceSerial)
                 );
                 if (DeviceSerialBytes <= AllowedBytes) {
-                    std::cout
-                        << "Hint: requested batch would fit without scaling under --solve-mode device-serial.\n";
+                    if (Opts.Output == OutputFormat::Human) {
+                        std::cout
+                            << "Hint: requested batch would fit without scaling under --solve-mode device-serial.\n";
+                    }
                 }
             }
         }
@@ -2031,14 +2293,16 @@ main(int argc, char **argv)
                 EstimateDeviceBytes<uint32_t>(KeyCount, Vertices, EffectiveOpts.Batch, EffectiveOpts.Solve)
         );
 
-        std::cout
-            << "CUDA memory summary\n"
-            << "  Free:               " << FormatBytes(MemoryInfo.FreeBytes) << "\n"
-            << "  Total:              " << FormatBytes(MemoryInfo.TotalBytes) << "\n"
-            << "  Unified-like:       " << (MemoryInfo.UnifiedLike ? "Y" : "N") << "\n"
-            << "  Headroom target:    " << Opts.MemoryHeadroomPct << "%\n"
-            << "  Estimated bytes:    " << FormatBytes(EffectiveBytes) << "\n"
-            << "  Effective batch:    " << EffectiveOpts.Batch << "\n";
+        if (Opts.Output == OutputFormat::Human) {
+            std::cout
+                << "CUDA memory summary\n"
+                << "  Free:               " << FormatBytes(MemoryInfo.FreeBytes) << "\n"
+                << "  Total:              " << FormatBytes(MemoryInfo.TotalBytes) << "\n"
+                << "  Unified-like:       " << (MemoryInfo.UnifiedLike ? "Y" : "N") << "\n"
+                << "  Headroom target:    " << Opts.MemoryHeadroomPct << "%\n"
+                << "  Estimated bytes:    " << FormatBytes(EffectiveBytes) << "\n"
+                << "  Effective batch:    " << EffectiveOpts.Batch << "\n";
+        }
     }
 
     ExperimentResult Result = {};
@@ -2049,6 +2313,7 @@ main(int argc, char **argv)
                 EffectiveOpts,
                 Keys,
                 RequestedKeys,
+                DatasetName,
                 SelectedStorage
             );
             break;
@@ -2057,6 +2322,7 @@ main(int argc, char **argv)
                 EffectiveOpts,
                 Keys,
                 RequestedKeys,
+                DatasetName,
                 SelectedStorage
             );
             break;
@@ -2065,6 +2331,7 @@ main(int argc, char **argv)
                 EffectiveOpts,
                 Keys,
                 RequestedKeys,
+                DatasetName,
                 SelectedStorage
             );
             break;
@@ -2073,6 +2340,7 @@ main(int argc, char **argv)
                 EffectiveOpts,
                 Keys,
                 RequestedKeys,
+                DatasetName,
                 SelectedStorage
             );
             break;
@@ -2081,6 +2349,7 @@ main(int argc, char **argv)
                 EffectiveOpts,
                 Keys,
                 RequestedKeys,
+                DatasetName,
                 SelectedStorage
             );
             break;
@@ -2089,6 +2358,7 @@ main(int argc, char **argv)
                 EffectiveOpts,
                 Keys,
                 RequestedKeys,
+                DatasetName,
                 SelectedStorage
             );
             break;
@@ -2097,6 +2367,7 @@ main(int argc, char **argv)
                 EffectiveOpts,
                 Keys,
                 RequestedKeys,
+                DatasetName,
                 SelectedStorage
             );
             break;
