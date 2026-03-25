@@ -469,7 +469,7 @@ JsonEscape(const std::string &Value)
     std::string Result;
     Result.reserve(Value.size() + 8);
 
-    for (char Ch : Value) {
+    for (unsigned char Ch : Value) {
         switch (Ch) {
             case '\\':
                 Result += "\\\\";
@@ -493,7 +493,13 @@ JsonEscape(const std::string &Value)
                 Result += "\\t";
                 break;
             default:
-                Result.push_back(Ch);
+                if (Ch < 0x20) {
+                    char Buffer[7];
+                    std::snprintf(Buffer, sizeof(Buffer), "\\u%04x", static_cast<unsigned>(Ch));
+                    Result += Buffer;
+                } else {
+                    Result.push_back(static_cast<char>(Ch));
+                }
                 break;
         }
     }
@@ -1398,22 +1404,20 @@ VerifyGraphsKernel(uint32_t Edges,
 
 template<typename StorageT>
 __global__ void
-SolveGraphsDeviceSerialKernel(uint32_t Edges,
-                              uint32_t Vertices,
-                              uint32_t Batch,
-                              uint32_t EdgeMask,
-                              const uint32_t *InvalidGraphs,
-                              const StorageT *EdgeU,
-                              const StorageT *EdgeV,
-                              uint32_t *Degree,
-                              uint32_t *XorEdge,
-                              uint32_t *EdgePeeled,
-                              StorageT *OwnerVertex,
-                              StorageT *PeelOrder,
-                              uint32_t *PeeledCount,
-                              StorageT *Assigned,
-                              uint32_t *VerifyFailures,
-                              uint32_t *GraphRounds)
+PeelGraphsDeviceSerialKernel(uint32_t Edges,
+                             uint32_t Vertices,
+                             uint32_t Batch,
+                             const uint32_t *InvalidGraphs,
+                             const StorageT *EdgeU,
+                             const StorageT *EdgeV,
+                             uint32_t *Degree,
+                             uint32_t *XorEdge,
+                             uint32_t *EdgePeeled,
+                             StorageT *OwnerVertex,
+                             StorageT *PeelOrder,
+                             uint32_t *PeeledCount,
+                             uint32_t *VerifyFailures,
+                             uint32_t *GraphRounds)
 {
     const uint32_t Graph = blockIdx.x;
 
@@ -1479,38 +1483,7 @@ SolveGraphsDeviceSerialKernel(uint32_t Edges,
 
     if (PeeledCount[Graph] != Edges) {
         VerifyFailures[Graph] = 1;
-        return;
     }
-
-    for (int64_t Index = static_cast<int64_t>(Edges) - 1; Index >= 0; --Index) {
-        const uint32_t Edge =
-            static_cast<uint32_t>(PeelOrder[EdgeBase + static_cast<uint32_t>(Index)]);
-        const uint32_t Owner = static_cast<uint32_t>(OwnerVertex[EdgeBase + Edge]);
-        const uint32_t U = static_cast<uint32_t>(EdgeU[EdgeBase + Edge]);
-        const uint32_t V = static_cast<uint32_t>(EdgeV[EdgeBase + Edge]);
-        const uint32_t Other = (Owner == U) ? V : U;
-        const uint32_t OtherAssigned = static_cast<uint32_t>(Assigned[VertexBase + Other]);
-        const uint32_t Value = (Edge - OtherAssigned) & EdgeMask;
-
-        Assigned[VertexBase + Owner] = static_cast<StorageT>(Value);
-    }
-
-    uint32_t Failures = 0;
-
-    for (uint32_t Edge = 0; Edge < Edges; ++Edge) {
-        const uint32_t U = static_cast<uint32_t>(EdgeU[EdgeBase + Edge]);
-        const uint32_t V = static_cast<uint32_t>(EdgeV[EdgeBase + Edge]);
-        const uint32_t Index = (
-            static_cast<uint32_t>(Assigned[VertexBase + U]) +
-            static_cast<uint32_t>(Assigned[VertexBase + V])
-        ) & EdgeMask;
-
-        if (Index != Edge) {
-            ++Failures;
-        }
-    }
-
-    VerifyFailures[Graph] = Failures;
 }
 
 template<HashFunctionKind Kind, typename StorageT>
@@ -1730,6 +1703,8 @@ RunExperiment(const Options &Opts,
         CheckCuda(cudaMemset(DFrontierCount, 0, sizeof(uint32_t)), "cudaMemset(DFrontierCount)");
     }
 
+    auto GpuStart = std::chrono::steady_clock::now();
+
     if (Opts.Allocation == AllocationMode::ManagedPrefetchGpu) {
         int Device = 0;
         CheckCuda(cudaGetDevice(&Device), "cudaGetDevice");
@@ -1861,30 +1836,52 @@ RunExperiment(const Options &Opts,
         });
     } else {
         Result.PeelMilliseconds = MeasureStage([&]() {
-            SolveGraphsDeviceSerialKernel<StorageT><<<Batch, 1>>>(KeyCount,
-                                                                  Vertices,
-                                                                  Batch,
-                                                                  EdgeMask,
-                                                                  DInvalidGraphs,
-                                                                  DEdgeU,
-                                                                  DEdgeV,
-                                                                  DDegree,
-                                                                  DXorEdge,
-                                                                  DEdgePeeled,
-                                                                  DOwnerVertex,
-                                                                  DPeelOrder,
-                                                                  DPeeledCount,
-                                                                  DAssigned,
-                                                                  DVerifyFailures,
-                                                                  DGraphRounds);
-            CheckCuda(cudaGetLastError(), "SolveGraphsDeviceSerialKernel launch");
+            PeelGraphsDeviceSerialKernel<StorageT><<<Batch, 1>>>(KeyCount,
+                                                                 Vertices,
+                                                                 Batch,
+                                                                 DInvalidGraphs,
+                                                                 DEdgeU,
+                                                                 DEdgeV,
+                                                                 DDegree,
+                                                                 DXorEdge,
+                                                                 DEdgePeeled,
+                                                                 DOwnerVertex,
+                                                                 DPeelOrder,
+                                                                 DPeeledCount,
+                                                                 DVerifyFailures,
+                                                                 DGraphRounds);
+            CheckCuda(cudaGetLastError(), "PeelGraphsDeviceSerialKernel launch");
+        });
+
+        Result.AssignMilliseconds = MeasureStage([&]() {
+            AssignGraphsKernel<StorageT><<<Batch, 1>>>(KeyCount,
+                                                       Vertices,
+                                                       EdgeMask,
+                                                       DInvalidGraphs,
+                                                       DEdgeU,
+                                                       DEdgeV,
+                                                       DOwnerVertex,
+                                                       DPeelOrder,
+                                                       DPeeledCount,
+                                                       DAssigned);
+            CheckCuda(cudaGetLastError(), "AssignGraphsKernel launch");
+        });
+
+        const uint32_t VerifyBlocks = static_cast<uint32_t>((TotalEdges + Opts.Threads - 1) / Opts.Threads);
+        Result.VerifyMilliseconds = MeasureStage([&]() {
+            VerifyGraphsKernel<StorageT><<<VerifyBlocks, Opts.Threads>>>(KeyCount,
+                                                                         Vertices,
+                                                                         Batch,
+                                                                         EdgeMask,
+                                                                         DInvalidGraphs,
+                                                                         DEdgeU,
+                                                                         DEdgeV,
+                                                                         DAssigned,
+                                                                         DPeeledCount,
+                                                                         DVerifyFailures);
+            CheckCuda(cudaGetLastError(), "VerifyGraphsKernel launch");
         });
     }
-
-    Result.GpuMilliseconds = static_cast<float>(Result.AddBuildMilliseconds +
-                                                Result.PeelMilliseconds +
-                                                Result.AssignMilliseconds +
-                                                Result.VerifyMilliseconds);
 
     std::vector<uint32_t> InvalidGraphs(Batch);
     std::vector<uint32_t> PeeledCount(Batch);
@@ -1907,6 +1904,10 @@ RunExperiment(const Options &Opts,
         }
         Result.Rounds = MaxRounds;
     }
+
+    auto GpuStop = std::chrono::steady_clock::now();
+    Result.GpuMilliseconds =
+        std::chrono::duration<double, std::milli>(GpuStop - GpuStart).count();
 
     auto CpuStart = std::chrono::steady_clock::now();
     std::vector<CpuResult> CpuResults(Batch);
@@ -2001,10 +2002,9 @@ RunExperiment(const Options &Opts,
              << "\"output_format\":\"" << JsonEscape(OutputFormatToString(Opts.Output)) << "\","
              << "\"edge_capacity\":" << Result.EdgeCapacity << ","
              << "\"vertices\":" << Result.Vertices << ","
-             << "\"gpu_total_ms\":" << Result.GpuMilliseconds << ","
-             << "\"cpu_total_ms\":" << Result.CpuMilliseconds << ","
-             << "\"solved_count\":" << Result.GpuSuccess << ","
-             << "\"gpu_success\":" << Result.GpuSuccess << ","
+             << "\"gpu_ms\":" << Result.GpuMilliseconds << ","
+             << "\"cpu_ms\":" << Result.CpuMilliseconds << ","
+             << "\"solved\":" << Result.GpuSuccess << ","
              << "\"cpu_success\":" << Result.CpuSuccess << ","
              << "\"mismatches\":" << Result.Mismatches << ","
              << "\"cpu_verify_issues\":" << Result.CpuVerifyIssues << ","
