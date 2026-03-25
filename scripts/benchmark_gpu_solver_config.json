@@ -1,4 +1,54 @@
 {
-  "datasets": [],
-  "variants": []
+  "datasets": [
+    {
+      "name": "hologram31016",
+      "kind": "repo",
+      "path": "keys/HologramWorld-31016.keys"
+    },
+    {
+      "name": "generated8193",
+      "kind": "generated",
+      "count": 8193,
+      "salt": 2779096485
+    },
+    {
+      "name": "generated33000",
+      "kind": "generated",
+      "count": 33000,
+      "salt": 324508639
+    }
+  ],
+  "variants": [
+    {
+      "name": "cpu-cli-chm01-single",
+      "solver_family": "cpu-cli",
+      "algorithm": "Chm01",
+      "hash_function": "Mulshrolate3RX",
+      "mask_function": "And",
+      "fixed_attempts": 128
+    },
+    {
+      "name": "cuda-chm02-single",
+      "solver_family": "cuda-chm02",
+      "algorithm": "Chm02",
+      "hash_function": "Mulshrolate3RX",
+      "mask_function": "And",
+      "fixed_attempts": 128,
+      "allocation_mode": "explicit-device"
+    },
+    {
+      "name": "gpu-poc-device-serial",
+      "solver_family": "gpu-poc",
+      "solve_mode": "device-serial",
+      "hash_function": "Mulshrolate3RX",
+      "batch": 128,
+      "threads": 128,
+      "storage_bits": "auto",
+      "allocation_mode": "managed-default"
+    }
+  ],
+  "output_options": {
+    "format": "json",
+    "include_stage_timings": true
+  }
 }

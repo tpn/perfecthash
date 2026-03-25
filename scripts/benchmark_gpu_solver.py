@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 
-REQUIRED_TOP_LEVEL_SECTIONS = ("datasets", "variants")
+REQUIRED_TOP_LEVEL_SECTIONS = ("datasets", "variants", "output_options")
 
 
 def parse_args():
@@ -33,8 +33,13 @@ def load_config(path: Path):
         payload = json.loads(path.read_text(encoding="utf-8"))
     except FileNotFoundError:
         raise ValueError(f"Config file does not exist: {path}") from None
+    except OSError as exc:
+        raise ValueError(f"Unable to read config file {path}: {exc}") from None
     except json.JSONDecodeError as exc:
         raise ValueError(f"Invalid JSON in config file {path}: {exc}") from None
+
+    if not isinstance(payload, dict):
+        raise ValueError("Config file top-level value must be an object/mapping")
 
     missing = [name for name in REQUIRED_TOP_LEVEL_SECTIONS if name not in payload]
     if missing:
@@ -46,6 +51,8 @@ def load_config(path: Path):
         raise ValueError("Config section 'datasets' must be a list")
     if not isinstance(payload["variants"], list):
         raise ValueError("Config section 'variants' must be a list")
+    if not isinstance(payload["output_options"], dict):
+        raise ValueError("Config section 'output_options' must be an object/mapping")
 
     return payload
 
@@ -80,14 +87,14 @@ def main():
         "machine_label": args.machine_label,
         "config_path": str(config_path),
         "dry_run": bool(args.dry_run),
+        "output_options": config["output_options"],
         "run_count": len(runs),
         "runs": runs,
     }
 
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-
     if args.dry_run or not runs:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         return 0
 
     print(
