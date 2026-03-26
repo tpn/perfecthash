@@ -700,6 +700,17 @@ FinishedSolution:
 
     COPY_GRAPH_COUNTERS_FROM_GRAPH_TO_TABLE();
 
+#ifdef PH_USE_CUDA
+    Table->CuAddKeysElapsedMicroseconds.QuadPart =
+        Graph->CuAddKeysElapsedMicroseconds.QuadPart;
+    Table->CuIsAcyclicElapsedMicroseconds.QuadPart =
+        Graph->CuIsAcyclicElapsedMicroseconds.QuadPart;
+    Table->CuAssignElapsedMicroseconds.QuadPart =
+        Graph->CuAssignElapsedMicroseconds.QuadPart;
+    Table->CuVerifyElapsedMicroseconds.QuadPart =
+        Graph->CuVerifyElapsedMicroseconds.QuadPart;
+#endif
+
     //
     // Capture RNG details from the winning graph if the RNG used was not the
     // System one.

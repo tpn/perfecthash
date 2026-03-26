@@ -1081,6 +1081,10 @@ Return Value:
     Graph->TraversalDepth = 0;
     Graph->TotalTraversals = 0;
     Graph->MaximumTraversalDepth = 0;
+    Graph->CuAddKeysElapsedMicroseconds.QuadPart = 0;
+    Graph->CuIsAcyclicElapsedMicroseconds.QuadPart = 0;
+    Graph->CuAssignElapsedMicroseconds.QuadPart = 0;
+    Graph->CuVerifyElapsedMicroseconds.QuadPart = 0;
 
     Graph->SolvedTime.AsULongLong = 0;
 
@@ -1330,6 +1334,23 @@ IsCudaDebugEnabled(
 #endif
 }
 
+FORCEINLINE
+VOID
+CaptureCuElapsedMicroseconds(
+    _In_ PGRAPH Graph,
+    _In_ LARGE_INTEGER Start,
+    _In_ LARGE_INTEGER End,
+    _Out_ PLARGE_INTEGER ElapsedMicroseconds
+    )
+{
+    LONGLONG Cycles;
+
+    Cycles = End.QuadPart - Start.QuadPart;
+    ElapsedMicroseconds->QuadPart = (
+        (Cycles * 1000000) / Graph->Context->Frequency.QuadPart
+    );
+}
+
 #define DEFINE_VALIDATE_GPU_ORDER(Name,                               \
                                   OrderType,                          \
                                   EdgeType,                           \
@@ -1528,6 +1549,8 @@ GraphCuAddKeys(
     _In_reads_(NumberOfKeys) PKEY Keys
     )
 {
+    LARGE_INTEGER Start;
+    LARGE_INTEGER End;
     PCU Cu;
     HRESULT Result;
 
@@ -1541,10 +1564,18 @@ GraphCuAddKeys(
 
     Cu = Graph->CuSolveContext->DeviceContext->Cu;
 
+    QueryPerformanceCounter(&Start);
+
     Result = Cu->AddKeys(Graph,
                          Graph->CuBlocksPerGrid,
                          Graph->CuThreadsPerBlock,
                          Graph->CuSharedMemory);
+
+    QueryPerformanceCounter(&End);
+    CaptureCuElapsedMicroseconds(Graph,
+                                 Start,
+                                 End,
+                                 &Graph->CuAddKeysElapsedMicroseconds);
 
     if (IsCudaDebugEnabled()) {
         fprintf(stderr,
@@ -1564,6 +1595,8 @@ GraphCuIsAcyclic(
     _In_ PGRAPH Graph
     )
 {
+    LARGE_INTEGER Start;
+    LARGE_INTEGER End;
     PCU Cu;
     PRTL Rtl;
     PKEY Keys;
@@ -1583,6 +1616,8 @@ GraphCuIsAcyclic(
 
     SolveContext = Graph->CuSolveContext;
     Cu = SolveContext->DeviceContext->Cu;
+
+    QueryPerformanceCounter(&Start);
 
     Result = Cu->IsAcyclic(Graph,
                            Graph->CuBlocksPerGrid,
@@ -1809,6 +1844,12 @@ GraphCuIsAcyclic(
 
     InterlockedIncrement64(&Context->GpuAndCpuIsAcyclicSuccess);
 
+    QueryPerformanceCounter(&End);
+    CaptureCuElapsedMicroseconds(Graph,
+                                 Start,
+                                 End,
+                                 &Graph->CuIsAcyclicElapsedMicroseconds);
+
     return Result;
 }
 
@@ -1817,6 +1858,8 @@ GraphCuAssign(
     _In_ PGRAPH Graph
     )
 {
+    LARGE_INTEGER Start;
+    LARGE_INTEGER End;
     PCU Cu;
     HRESULT Result;
 
@@ -1829,6 +1872,8 @@ GraphCuAssign(
     }
 
     Cu = Graph->CuSolveContext->DeviceContext->Cu;
+
+    QueryPerformanceCounter(&Start);
 
     Result = Cu->Assign(Graph,
                         Graph->CuBlocksPerGrid,
@@ -1846,6 +1891,12 @@ GraphCuAssign(
                Graph->Assigned,
                Graph->Info->AssignedSizeInBytes);
 
+    QueryPerformanceCounter(&End);
+    CaptureCuElapsedMicroseconds(Graph,
+                                 Start,
+                                 End,
+                                 &Graph->CuAssignElapsedMicroseconds);
+
     return Result;
 }
 
@@ -1854,6 +1905,8 @@ GraphCuVerify(
     _In_ PGRAPH Graph
     )
 {
+    LARGE_INTEGER Start;
+    LARGE_INTEGER End;
     PCU Cu;
     HRESULT Result;
 
@@ -1863,10 +1916,18 @@ GraphCuVerify(
 
     Cu = Graph->CuSolveContext->DeviceContext->Cu;
 
+    QueryPerformanceCounter(&Start);
+
     Result = Cu->Verify(Graph,
                         Graph->CuBlocksPerGrid,
                         Graph->CuThreadsPerBlock,
                         Graph->CuSharedMemory);
+
+    QueryPerformanceCounter(&End);
+    CaptureCuElapsedMicroseconds(Graph,
+                                 Start,
+                                 End,
+                                 &Graph->CuVerifyElapsedMicroseconds);
 
     if (IsCudaDebugEnabled()) {
         fprintf(stderr, "[GraphCuVerify] GpuVerifyResult=0x%08x\n", (unsigned)Result);

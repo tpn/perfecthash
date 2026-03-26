@@ -645,6 +645,22 @@
     - `stage_timings_ms.verify`
 - This puts the branch in a good place to start the actual benchmark runner work without risking oversubscription on GB10.
 
+## Legacy `Chm02` Perf Surface
+- The initial CLI probe showed the existing CSV timing fields were not sufficient for fair comparison:
+  - `SolveMicroseconds` and `VerifyMicroseconds` existed
+  - there was no explicit breakdown for CUDA add-keys / acyclic / assign / verify
+  - compat timing units were wrong because `QueryPerformanceCounter()` returned nanoseconds while `QueryPerformanceFrequency()` reported `1000`
+- That compat timing bug is now fixed, which normalizes all context/graph microsecond fields on Linux.
+- The legacy CUDA path now emits explicit benchmark fields:
+  - `CuAddKeysMicroseconds`
+  - `CuIsAcyclicMicroseconds`
+  - `CuAssignMicroseconds`
+  - `CuVerifyMicroseconds`
+- These are captured at the `GraphCu*()` wrapper level, which means they reflect the current implementation as it actually runs today, including any host-side work that remains inside those stages.
+- A dedicated CUDA perf-surface regression now exists:
+  - `tests/run_cli_chm02_cuda_perf_benchmark.cmake`
+  - `perfecthash.cuda.chm02.perf-surface`
+
 ## Immediate Follow-On Improvements
 - Replace the host round loop with cooperative launch / grid-synchronous or device-side work queues.
 - Add `GraphImpl3`-compatible hashing routines so the prototype can use real PerfectHash hash functions and seeds.

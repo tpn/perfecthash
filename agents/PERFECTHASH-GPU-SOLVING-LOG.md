@@ -373,3 +373,38 @@
   - `cmake --build build/gpu-batched-peeling-poc -j2`
   - `./build/gpu-batched-peeling-poc/gpu_batched_peeling_poc --edges 16 --batch 1 --threads 32 --output-format json --allocation-mode managed-prefetch-gpu`
   - JSON output included `allocation_mode`, `gpu_total_ms`, `cpu_total_ms`, `peel_rounds`, and nested `stage_timings_ms`
+- 2026-03-25 18:37:16 PDT: Reviewed and corrected the initial POC perf instrumentation:
+  - restored end-to-end `gpu_ms` semantics instead of kernel-stage sums
+  - aligned JSON field names with the Task 2 contract (`gpu_ms`, `cpu_ms`, `solved`)
+  - hardened JSON escaping for control bytes
+  - split `device-serial` back into explicit peel / assign / verify stage timings
+- 2026-03-25 18:37:16 PDT: Probed existing CLI CSV timing surfaces with tiny safe runs:
+  - `Chm01` HologramWorld known-good seed, `--NoFileIo --SkipTestAfterCreate`
+  - `Chm02` HologramWorld known-good seed, `--CuConcurrency=1 --NoFileIo --SkipTestAfterCreate`
+- 2026-03-25 18:37:16 PDT: Determined the current CSV timing surface was insufficient for benchmarking:
+  - existing `SolveMicroseconds` / `VerifyMicroseconds` were present
+  - explicit CUDA phase timings were absent
+  - compat `QueryPerformanceFrequency()` was returning `1000` while `QueryPerformanceCounter()` returned nanoseconds, inflating all microsecond values by `1e6`
+- 2026-03-25 18:37:16 PDT: Fixed compat timing frequency in `PerfectHashCompat.c`:
+  - `QueryPerformanceFrequency()` now returns `1000000000`
+- 2026-03-25 18:37:16 PDT: Added explicit legacy CUDA timing fields:
+  - `CuAddKeysMicroseconds`
+  - `CuIsAcyclicMicroseconds`
+  - `CuAssignMicroseconds`
+  - `CuVerifyMicroseconds`
+  - added to graph/table structs
+  - captured in `GraphCuAddKeys()`, `GraphCuIsAcyclic()`, `GraphCuAssign()`, `GraphCuVerify()`
+  - copied to the winning table in `Chm02.c` and `Chm02Compat.c`
+  - exposed in `TableCreateCsv.h` and `BulkCreateCsv.h`
+- 2026-03-25 18:37:16 PDT: Added a first-class CUDA perf-surface regression:
+  - new script `tests/run_cli_chm02_cuda_perf_benchmark.cmake`
+  - new `ctest` target `perfecthash.cuda.chm02.perf-surface`
+- 2026-03-25 18:37:16 PDT: Reverified after the compat timing fix and explicit `Cu*Microseconds` capture:
+  - perf-surface harness passes
+  - `ctest --output-on-failure -R 'perfecthash\\.cuda\\.chm02'` now passes 4 CUDA `Chm02` tests
+  - tiny CSV probe now reports sane-scale values, e.g.:
+    - `Chm01 SolveMicroseconds=1703`
+    - `Chm02 SolveMicroseconds=197556`
+    - `Chm02 CuAddKeysMicroseconds=16930`
+    - `Chm02 CuIsAcyclicMicroseconds=149658`
+    - `Chm02 CuAssignMicroseconds=26877`
