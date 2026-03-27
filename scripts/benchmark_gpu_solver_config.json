@@ -25,7 +25,10 @@
       "algorithm": "Chm01",
       "hash_function": "Mulshrolate3RX",
       "mask_function": "And",
-      "fixed_attempts": 128
+      "fixed_attempts": 2,
+      "known_seeds": {
+        "hologram31016": "0xF0192B55,0xD9C83970,0x0C1E0D10,0xD11A5847"
+      }
     },
     {
       "name": "cuda-chm02-single",
@@ -33,8 +36,11 @@
       "algorithm": "Chm02",
       "hash_function": "Mulshrolate3RX",
       "mask_function": "And",
-      "fixed_attempts": 128,
-      "allocation_mode": "explicit-device"
+      "fixed_attempts": 2,
+      "allocation_mode": "explicit-device",
+      "known_seeds": {
+        "hologram31016": "0xF0192B55,0xD9C83970,0x0C1E0D10,0xD11A5847"
+      }
     },
     {
       "name": "gpu-poc-device-serial",

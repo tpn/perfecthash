@@ -661,6 +661,32 @@
   - `tests/run_cli_chm02_cuda_perf_benchmark.cmake`
   - `perfecthash.cuda.chm02.perf-surface`
 
+## First Actual Safe Runner Output
+- The benchmark runner now executes a tiny safe subset instead of only dry-run planning.
+- Current execution scope is intentionally tiny and explicit:
+  - `hologram31016` + `cpu-cli-chm01-single`
+  - `hologram31016` + `cuda-chm02-single`
+  - `generated8193` + `gpu-poc-device-serial`
+- The runner now records the exact executed command and refuses broader execution shapes.
+- First GB10 results:
+  - CPU CLI HologramWorld known-good single run:
+    - `SolveMicroseconds=1779`
+    - `VerifyMicroseconds=176`
+  - CUDA `Chm02` HologramWorld known-good single run:
+    - `SolveMicroseconds=208808`
+    - `VerifyMicroseconds=245088`
+    - `CuAddKeysMicroseconds=23997`
+    - `CuIsAcyclicMicroseconds=165989`
+    - `CuAssignMicroseconds=15124`
+  - GPU POC generated8193 tiny run:
+    - `gpu_ms=100.256`
+    - `cpu_ms=15.180`
+    - `solved=81`
+- The current large CPU-vs-GPU discrepancy is therefore no longer just theoretical:
+  - for single-table known-good latency, legacy `Chm02` is still roughly two orders of magnitude slower than CPU on HologramWorld
+  - the dominant term in the current `Chm02` path is `CuIsAcyclic`
+  - this strongly supports the hypothesis that the legacy single-graph execution model is the main problem, not hashing or verify
+
 ## Immediate Follow-On Improvements
 - Replace the host round loop with cooperative launch / grid-synchronous or device-side work queues.
 - Add `GraphImpl3`-compatible hashing routines so the prototype can use real PerfectHash hash functions and seeds.

@@ -45,12 +45,11 @@
 - Execute the GPU solver performance exploration plan safely on GB10 and `nv1`.
 
 ## Next
-- Extend the benchmark runner from dry-run planning to actual execution of selected safe variants.
-- Start with a tiny actual execution subset in the runner:
-  - one `cpu-cli-chm01-single` HologramWorld run
-  - one `cuda-chm02-single` HologramWorld run
-  - one `gpu-poc-device-serial` tiny generated run
-  - keep explicit caps on batch size / attempts
+- Extend the benchmark runner from the current tiny safe subset to a slightly broader but still bounded matrix.
+- Next runner expansion should probably be:
+  - add generated33000 `Chm02` known-seed execution
+  - add one `gpu-poc-host-roundtrip` tiny run for contrast with `device-serial`
+  - keep the same hard execution allowlist and size caps
 - Decide whether to push the 16-bit idea further:
   - keep only the current light-touch downsizing, or
   - template more of the peel/update state, including `XorEdge`

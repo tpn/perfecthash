@@ -408,3 +408,38 @@
     - `Chm02 CuAddKeysMicroseconds=16930`
     - `Chm02 CuIsAcyclicMicroseconds=149658`
     - `Chm02 CuAssignMicroseconds=26877`
+- 2026-03-26 17:19:11 PDT: Extended `scripts/benchmark_gpu_solver.py` from dry-run into actual execution for a deliberately tiny safe subset only.
+- 2026-03-26 17:19:11 PDT: Runner safety hardening added:
+  - explicit dataset and variant filters required for execution
+  - safe-execution allowlist is now limited to:
+    - `hologram31016` + `cpu-cli-chm01-single`
+    - `hologram31016` + `cuda-chm02-single`
+    - `generated8193` + `gpu-poc-device-serial`
+  - dataset/variant names must be safe identifiers
+  - repo dataset paths must resolve within the repo root
+  - generated dataset sizes and gpu-poc shapes are explicitly rejected when unsafe
+  - actual executed command is now recorded in runner output
+  - run output directories are cleared before reuse to avoid stale CSV artifacts
+- 2026-03-26 17:19:11 PDT: Added deterministic known-seed support to the runner config for the HologramWorld `Chm01` and `Chm02` single-run cases.
+- 2026-03-26 17:19:11 PDT: Reverified the runner locally with:
+  - `python -m unittest discover -s tests -p 'test_benchmark_gpu_solver.py' -v`
+  - one `cpu-cli-chm01-single` HologramWorld run
+  - one `cuda-chm02-single` HologramWorld run
+  - one `gpu-poc-device-serial` generated8193 run
+- 2026-03-26 17:19:11 PDT: First actual tiny subset output on GB10:
+  - CPU CLI HologramWorld known-good single run:
+    - `TableCreateResult=S_OK`
+    - `SolveMicroseconds=1779`
+    - `VerifyMicroseconds=176`
+  - CUDA `Chm02` HologramWorld known-good single run:
+    - `TableCreateResult=S_OK`
+    - `SolveMicroseconds=208808`
+    - `VerifyMicroseconds=245088`
+    - `CuAddKeysMicroseconds=23997`
+    - `CuIsAcyclicMicroseconds=165989`
+    - `CuAssignMicroseconds=15124`
+  - GPU POC generated8193 tiny run:
+    - `gpu_ms=100.256`
+    - `cpu_ms=15.180`
+    - `solved=81`
+    - `peel_rounds=16`

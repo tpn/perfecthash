@@ -4,6 +4,8 @@ import argparse
 import itertools
 import json
 import os
+import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -15,7 +17,14 @@ SUPPORTED_SOLVER_FAMILIES = {"cpu-cli", "cuda-chm02", "gpu-poc"}
 DEFAULT_SAFE_FIXED_ATTEMPTS = 2
 DEFAULT_SAFE_GPU_POC_BATCH = 128
 DEFAULT_SAFE_GPU_POC_THREADS = 128
+DEFAULT_SAFE_GENERATED_EDGES = 8193
 REPO_ROOT = Path(__file__).resolve().parents[1]
+SAFE_NAME_RE = re.compile(r"^[A-Za-z0-9._-]+$")
+SAFE_EXECUTION_PAIRS = {
+    ("hologram31016", "cpu-cli-chm01-single"),
+    ("hologram31016", "cuda-chm02-single"),
+    ("generated8193", "gpu-poc-device-serial"),
+}
 
 
 def parse_args():
@@ -114,6 +123,11 @@ def _validate_named_mappings(items, item_kind):
         name = item.get("name")
         if not isinstance(name, str) or not name:
             raise ValueError(f"Config {item_kind} entry at index {index} must have a non-empty string 'name'")
+        if not SAFE_NAME_RE.fullmatch(name):
+            raise ValueError(
+                f"Config {item_kind} name '{name}' is not a safe identifier; "
+                "use only letters, digits, dot, underscore, and hyphen"
+            )
         if name in seen_names:
             raise ValueError(f"Config {item_kind} names must be unique: {name}")
         seen_names.add(name)
@@ -200,8 +214,14 @@ def cap_runs_for_dry_run(runs, max_runs):
 def resolve_repo_path(relative_path: str) -> Path:
     candidate = Path(relative_path)
     if candidate.is_absolute():
-        return candidate
-    return (REPO_ROOT / candidate).resolve()
+        resolved = candidate.resolve()
+    else:
+        resolved = (REPO_ROOT / candidate).resolve()
+
+    if not resolved.is_relative_to(REPO_ROOT.resolve()):
+        raise ValueError(f"Repo dataset path resolves outside repo root: {resolved}")
+
+    return resolved
 
 
 def resolve_executable(explicit_path, env_var_name, fallbacks):
@@ -233,7 +253,7 @@ def build_perfect_hash_command(executable: Path, dataset: dict, variant: dict, r
     if not dataset_path.exists():
         raise ValueError(f"Dataset path does not exist: {dataset_path}")
 
-    fixed_attempts = min(int(variant.get("fixed_attempts", DEFAULT_SAFE_FIXED_ATTEMPTS)), DEFAULT_SAFE_FIXED_ATTEMPTS)
+    fixed_attempts = int(variant.get("fixed_attempts", DEFAULT_SAFE_FIXED_ATTEMPTS))
     if fixed_attempts <= 0:
         fixed_attempts = DEFAULT_SAFE_FIXED_ATTEMPTS
 
@@ -248,7 +268,7 @@ def build_perfect_hash_command(executable: Path, dataset: dict, variant: dict, r
     ]
 
     if variant["solver_family"] == "cuda-chm02":
-        command.extend(["--CuConcurrency=1", "--DisableCsvOutputFile"])
+        command.extend(["--CuConcurrency=1"])
 
     command.extend(
         [
@@ -257,6 +277,18 @@ def build_perfect_hash_command(executable: Path, dataset: dict, variant: dict, r
             "--SkipTestAfterCreate",
         ]
     )
+
+    known_seeds = variant.get("known_seeds", {})
+    if not isinstance(known_seeds, dict):
+        raise ValueError(f"Variant '{variant['name']}' has invalid 'known_seeds'; expected an object/mapping")
+
+    seed_value = known_seeds.get(dataset["name"])
+    if seed_value is not None:
+        if not isinstance(seed_value, str) or not seed_value:
+            raise ValueError(
+                f"Variant '{variant['name']}' has invalid known seed value for dataset '{dataset['name']}'"
+            )
+        command.append(f"--Seeds={seed_value}")
 
     return command
 
@@ -276,8 +308,8 @@ def build_gpu_poc_command(executable: Path, dataset: dict, variant: dict):
     else:
         raise ValueError(f"Unsupported dataset kind for gpu-poc: {dataset['kind']}")
 
-    batch = min(int(variant["batch"]), DEFAULT_SAFE_GPU_POC_BATCH)
-    threads = min(int(variant["threads"]), DEFAULT_SAFE_GPU_POC_THREADS)
+    batch = int(variant["batch"])
+    threads = int(variant["threads"])
 
     command.extend(
         [
@@ -328,11 +360,58 @@ def build_execution_command(args, run, run_output_dir):
     raise ValueError(f"Unsupported solver family: {variant['solver_family']}")
 
 
+def validate_safe_run(run):
+    dataset = run["dataset"]
+    variant = run["variant"]
+    pair = (dataset["name"], variant["name"])
+
+    if pair not in SAFE_EXECUTION_PAIRS:
+        raise ValueError(
+            f"Unsupported or unsafe run selection: dataset={dataset['name']} variant={variant['name']}"
+        )
+
+    if variant["solver_family"] in {"cpu-cli", "cuda-chm02"}:
+        if dataset["kind"] != "repo":
+            raise ValueError(
+                f"Unsupported dataset kind '{dataset['kind']}' for solver family '{variant['solver_family']}'"
+            )
+        if int(variant.get("fixed_attempts", 0)) > DEFAULT_SAFE_FIXED_ATTEMPTS:
+            raise ValueError(
+                f"Unsafe fixed_attempts for variant '{variant['name']}'; "
+                f"maximum allowed is {DEFAULT_SAFE_FIXED_ATTEMPTS}"
+            )
+        resolve_repo_path(dataset["path"])
+
+    elif variant["solver_family"] == "gpu-poc":
+        if dataset["kind"] != "generated":
+            raise ValueError(
+                f"Unsupported dataset kind '{dataset['kind']}' for solver family '{variant['solver_family']}'"
+            )
+        if int(dataset["count"]) > DEFAULT_SAFE_GENERATED_EDGES:
+            raise ValueError(
+                f"Unsafe generated dataset size for '{dataset['name']}'; "
+                f"maximum allowed is {DEFAULT_SAFE_GENERATED_EDGES}"
+            )
+        if int(variant["batch"]) > DEFAULT_SAFE_GPU_POC_BATCH or int(variant["threads"]) > DEFAULT_SAFE_GPU_POC_THREADS:
+            raise ValueError(
+                f"Unsafe gpu-poc shape for variant '{variant['name']}'; "
+                f"maximum batch={DEFAULT_SAFE_GPU_POC_BATCH}, threads={DEFAULT_SAFE_GPU_POC_THREADS}"
+            )
+        if variant["solve_mode"] != "device-serial":
+            raise ValueError(
+                f"Unsupported or unsafe gpu-poc solve mode '{variant['solve_mode']}' for safe execution"
+            )
+    else:
+        raise ValueError(f"Unsupported solver family '{variant['solver_family']}'")
+
+
 def execute_runs(args, runs):
     results = []
     for index, run in enumerate(runs, start=1):
+        validate_safe_run(run)
         run_output_dir = Path(args.output).with_suffix("")
         run_output_dir = run_output_dir.parent / f"{run_output_dir.name}.{index:02d}-{run['dataset']['name']}-{run['variant']['name']}"
+        shutil.rmtree(run_output_dir, ignore_errors=True)
         run_output_dir.mkdir(parents=True, exist_ok=True)
         command = build_execution_command(args, run, run_output_dir)
 
@@ -348,7 +427,7 @@ def execute_runs(args, runs):
             {
                 **run,
                 "status": "executed",
-                "command": command,
+                "executed_command": command,
                 "returncode": completed.returncode,
                 "stdout": completed.stdout,
                 "stderr": completed.stderr,

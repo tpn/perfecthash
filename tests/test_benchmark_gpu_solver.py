@@ -101,6 +101,36 @@ class BenchmarkGpuSolverSmokeTests(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("top-level", result.stderr)
 
+    def test_dataset_name_with_path_separator_is_rejected(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            config_path = temp_path / "config.json"
+            output_path = temp_path / "out.json"
+            config_path.write_text(
+                json.dumps(
+                    {
+                        "datasets": [
+                            {"name": "../bad", "kind": "repo", "path": "keys/HologramWorld-31016.keys"}
+                        ],
+                        "variants": [],
+                        "output_options": {},
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            result = self.run_script(
+                "--config",
+                str(config_path),
+                "--machine-label",
+                "local",
+                "--output",
+                str(output_path),
+            )
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("safe identifier", result.stderr)
+
     def test_dry_run_with_empty_matrix_writes_output(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
@@ -322,6 +352,117 @@ class BenchmarkGpuSolverSmokeTests(unittest.TestCase):
             self.assertIn("explicit dataset and variant filters", result.stderr)
             self.assertFalse(output_path.exists())
 
+    def test_non_dry_run_rejects_incompatible_dataset_and_variant_pair(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            config_path = temp_path / "config.json"
+            output_path = temp_path / "out.json"
+            config_path.write_text(
+                json.dumps(
+                    {
+                        "datasets": [
+                            {"name": "generated8193", "kind": "generated", "count": 8193, "salt": 2779096485}
+                        ],
+                        "variants": [
+                            {"name": "cpu-cli-chm01-single", "solver_family": "cpu-cli", "algorithm": "Chm01", "hash_function": "Mulshrolate3RX", "mask_function": "And", "fixed_attempts": 2}
+                        ],
+                        "output_options": {},
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            result = self.run_script(
+                "--config",
+                str(config_path),
+                "--machine-label",
+                "gb10",
+                "--output",
+                str(output_path),
+                "--dataset",
+                "generated8193",
+                "--variant",
+                "cpu-cli-chm01-single",
+            )
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("unsupported", result.stderr.lower())
+            self.assertFalse(output_path.exists())
+
+    def test_non_dry_run_rejects_repo_dataset_outside_repo_root(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            config_path = temp_path / "config.json"
+            output_path = temp_path / "out.json"
+            config_path.write_text(
+                json.dumps(
+                    {
+                        "datasets": [
+                            {"name": "hologram31016", "kind": "repo", "path": "/etc/hosts"}
+                        ],
+                        "variants": [
+                            {"name": "cpu-cli-chm01-single", "solver_family": "cpu-cli", "algorithm": "Chm01", "hash_function": "Mulshrolate3RX", "mask_function": "And", "fixed_attempts": 2, "known_seeds": {"hologram31016": "0xF0192B55,0xD9C83970,0x0C1E0D10,0xD11A5847"}}
+                        ],
+                        "output_options": {},
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            result = self.run_script(
+                "--config",
+                str(config_path),
+                "--machine-label",
+                "gb10",
+                "--output",
+                str(output_path),
+                "--dataset",
+                "hologram31016",
+                "--variant",
+                "cpu-cli-chm01-single",
+            )
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("outside repo root", result.stderr)
+            self.assertFalse(output_path.exists())
+
+    def test_non_dry_run_rejects_unsafe_gpu_poc_shape(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            config_path = temp_path / "config.json"
+            output_path = temp_path / "out.json"
+            config_path.write_text(
+                json.dumps(
+                    {
+                        "datasets": [
+                            {"name": "generated8193", "kind": "generated", "count": 8193, "salt": 2779096485}
+                        ],
+                        "variants": [
+                            {"name": "gpu-poc-device-serial", "solver_family": "gpu-poc", "solve_mode": "device-serial", "hash_function": "Mulshrolate3RX", "batch": 999999, "threads": 999999, "storage_bits": "auto", "allocation_mode": "managed-default"}
+                        ],
+                        "output_options": {},
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            result = self.run_script(
+                "--config",
+                str(config_path),
+                "--machine-label",
+                "gb10",
+                "--output",
+                str(output_path),
+                "--dataset",
+                "generated8193",
+                "--variant",
+                "gpu-poc-device-serial",
+            )
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("unsafe", result.stderr.lower())
+            self.assertFalse(output_path.exists())
+
     def test_cpu_cli_safe_execution_runs_exactly_one_command(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
@@ -336,7 +477,7 @@ class BenchmarkGpuSolverSmokeTests(unittest.TestCase):
                             {"name": "hologram31016", "kind": "repo", "path": "keys/HologramWorld-31016.keys"}
                         ],
                         "variants": [
-                            {"name": "cpu-cli-chm01-single", "solver_family": "cpu-cli", "algorithm": "Chm01", "hash_function": "Mulshrolate3RX", "mask_function": "And", "fixed_attempts": 128}
+                            {"name": "cpu-cli-chm01-single", "solver_family": "cpu-cli", "algorithm": "Chm01", "hash_function": "Mulshrolate3RX", "mask_function": "And", "fixed_attempts": 2, "known_seeds": {"hologram31016": "0xF0192B55,0xD9C83970,0x0C1E0D10,0xD11A5847"}}
                         ],
                         "output_options": {},
                     }
@@ -377,6 +518,8 @@ class BenchmarkGpuSolverSmokeTests(unittest.TestCase):
             stub_log = json.loads(log_path.read_text(encoding="utf-8"))
             self.assertIn("Chm01", stub_log["argv"])
             self.assertIn("Mulshrolate3RX", stub_log["argv"])
+            self.assertIn("--Seeds=0xF0192B55,0xD9C83970,0x0C1E0D10,0xD11A5847", stub_log["argv"])
+            self.assertEqual(payload["runs"][0]["executed_command"][1:], stub_log["argv"])
 
     def test_cuda_chm02_safe_execution_runs_exactly_one_command(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -392,7 +535,7 @@ class BenchmarkGpuSolverSmokeTests(unittest.TestCase):
                             {"name": "hologram31016", "kind": "repo", "path": "keys/HologramWorld-31016.keys"}
                         ],
                         "variants": [
-                            {"name": "cuda-chm02-single", "solver_family": "cuda-chm02", "algorithm": "Chm02", "hash_function": "Mulshrolate3RX", "mask_function": "And", "fixed_attempts": 128, "allocation_mode": "explicit-device"}
+                            {"name": "cuda-chm02-single", "solver_family": "cuda-chm02", "algorithm": "Chm02", "hash_function": "Mulshrolate3RX", "mask_function": "And", "fixed_attempts": 2, "allocation_mode": "explicit-device", "known_seeds": {"hologram31016": "0xF0192B55,0xD9C83970,0x0C1E0D10,0xD11A5847"}}
                         ],
                         "output_options": {},
                     }
@@ -433,6 +576,9 @@ class BenchmarkGpuSolverSmokeTests(unittest.TestCase):
             stub_log = json.loads(log_path.read_text(encoding="utf-8"))
             self.assertIn("Chm02", stub_log["argv"])
             self.assertIn("--CuConcurrency=1", stub_log["argv"])
+            self.assertIn("--Seeds=0xF0192B55,0xD9C83970,0x0C1E0D10,0xD11A5847", stub_log["argv"])
+            self.assertNotIn("--DisableCsvOutputFile", stub_log["argv"])
+            self.assertEqual(payload["runs"][0]["executed_command"][1:], stub_log["argv"])
 
     def test_gpu_poc_safe_execution_runs_exactly_one_command(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -489,6 +635,7 @@ class BenchmarkGpuSolverSmokeTests(unittest.TestCase):
             stub_log = json.loads(log_path.read_text(encoding="utf-8"))
             self.assertIn("--solve-mode", stub_log["argv"])
             self.assertIn("device-serial", stub_log["argv"])
+            self.assertEqual(payload["runs"][0]["executed_command"][1:], stub_log["argv"])
 
     def test_non_dry_run_with_planned_runs_fails_without_writing_output(self):
         with tempfile.TemporaryDirectory() as temp_dir:
