@@ -118,6 +118,10 @@ The default should remain behaviorally equivalent to today:
 - assignment: `thread`
 - device-serial peel: `thread`
 
+The existing `--threads` option remains the CUDA block size for stage 1.
+Geometry selection changes how threads within that block are partitioned across
+graphs; it does not introduce a second block-size parameter yet.
+
 ### Kernel strategy
 
 #### Assignment
@@ -130,6 +134,7 @@ Provide three implementations behind a single selection point:
   - one warp per graph
   - single graph owned by one warp within a block
   - lane-strided reverse peel traversal
+  - `--threads` must be a multiple of 32
 - `block`:
   - one block per graph
   - thread-strided reverse peel traversal
@@ -150,12 +155,29 @@ Provide the same three implementations:
 For stage 1, these may still use global-memory degree/XOR state. The only
 change is who cooperates on a graph and how work is partitioned.
 
+Validation rules for stage 1:
+
+- `thread`:
+  - any positive `--threads` value already accepted by the POC remains valid
+- `warp`:
+  - reject non-multiples of 32 at argument-validation time
+- `block`:
+  - keep using `--threads` as the block size
+  - require `--threads >= 32` so the block mode being measured is not
+    degenerate
+
 ### Measurement
 
 Record the selected geometries in output:
 
 - human output
 - JSON output
+
+JSON should expose explicit fields so the benchmark runner does not need to
+infer them from free-form text:
+
+- `assign_geometry`
+- `device_serial_peel_geometry`
 
 Keep existing stage timings and add no new timing buckets yet. The point is to
 compare geometry choices within the current timing surface.
