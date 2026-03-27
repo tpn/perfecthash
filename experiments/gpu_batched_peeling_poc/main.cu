@@ -660,9 +660,9 @@ ParseOptions(int argc, char **argv)
                 << "                        Write successful graph indices and seeds to a CSV\n"
                 << "  --batch <n>           Number of graph attempts in the batch\n"
                 << "  --threads <n>         Threads per block for build/collect/peel kernels\n"
-                << "  --assign-geometry <x> stage-1 config/reporting only: thread, warp, or block\n"
+                << "  --assign-geometry <x> stage-1 config/reporting only; assignment stays thread mode\n"
                 << "  --device-serial-peel-geometry <x>\n"
-                << "                        stage-1 config/reporting only; device-serial peel: thread, warp, or block\n"
+                << "                        device-serial peel geometry: thread, warp, or block\n"
                 << "  --storage-bits <x>    auto, 16, or 32\n"
                 << "  --solve-mode <x>      host-roundtrip or device-serial\n"
                 << "  --memory-headroom-pct <x>\n"
@@ -694,16 +694,6 @@ ParseOptions(int argc, char **argv)
 
     if (Opts.MemoryHeadroomPct < 0.0 || Opts.MemoryHeadroomPct >= 100.0) {
         std::cerr << "--memory-headroom-pct must be in the range [0, 100).\n";
-        std::exit(EXIT_FAILURE);
-    }
-
-    if (Opts.AssignGeometry == GraphGeometry::Warp && (Opts.Threads % 32u) != 0u) {
-        std::cerr << "--assign-geometry warp requires --threads to be a multiple of 32.\n";
-        std::exit(EXIT_FAILURE);
-    }
-
-    if (Opts.AssignGeometry == GraphGeometry::Block && Opts.Threads < 32u) {
-        std::cerr << "--assign-geometry block requires --threads to be at least 32.\n";
         std::exit(EXIT_FAILURE);
     }
 
@@ -1479,20 +1469,20 @@ VerifyGraphsKernel(uint32_t Edges,
 
 template<typename StorageT>
 __global__ void
-PeelGraphsDeviceSerialKernel(uint32_t Edges,
-                             uint32_t Vertices,
-                             uint32_t Batch,
-                             const uint32_t *InvalidGraphs,
-                             const StorageT *EdgeU,
-                             const StorageT *EdgeV,
-                             uint32_t *Degree,
-                             uint32_t *XorEdge,
-                             uint32_t *EdgePeeled,
-                             StorageT *OwnerVertex,
-                             StorageT *PeelOrder,
-                             uint32_t *PeeledCount,
-                             uint32_t *VerifyFailures,
-                             uint32_t *GraphRounds)
+PeelGraphsDeviceSerialThreadKernel(uint32_t Edges,
+                                   uint32_t Vertices,
+                                   uint32_t Batch,
+                                   const uint32_t *InvalidGraphs,
+                                   const StorageT *EdgeU,
+                                   const StorageT *EdgeV,
+                                   uint32_t *Degree,
+                                   uint32_t *XorEdge,
+                                   uint32_t *EdgePeeled,
+                                   StorageT *OwnerVertex,
+                                   StorageT *PeelOrder,
+                                   uint32_t *PeeledCount,
+                                   uint32_t *VerifyFailures,
+                                   uint32_t *GraphRounds)
 {
     const uint32_t Graph = blockIdx.x;
 
@@ -1558,6 +1548,217 @@ PeelGraphsDeviceSerialKernel(uint32_t Edges,
 
     if (PeeledCount[Graph] != Edges) {
         VerifyFailures[Graph] = 1;
+    }
+}
+
+template<typename StorageT>
+__global__ void
+PeelGraphsDeviceSerialWarpKernel(uint32_t Edges,
+                                 uint32_t Vertices,
+                                 uint32_t Batch,
+                                 const uint32_t *InvalidGraphs,
+                                 const StorageT *EdgeU,
+                                 const StorageT *EdgeV,
+                                 uint32_t *Degree,
+                                 uint32_t *XorEdge,
+                                 uint32_t *EdgePeeled,
+                                 StorageT *OwnerVertex,
+                                 StorageT *PeelOrder,
+                                 uint32_t *PeeledCount,
+                                 FrontierItemT<StorageT> *Frontier,
+                                 uint32_t *FrontierCount,
+                                 uint32_t *VerifyFailures,
+                                 uint32_t *GraphRounds)
+{
+    constexpr uint32_t WarpSize = 32u;
+    const uint32_t Thread = threadIdx.x;
+    const uint32_t WarpId = Thread / WarpSize;
+    const uint32_t Lane = Thread & (WarpSize - 1u);
+    const uint32_t WarpsPerBlock = blockDim.x / WarpSize;
+    const uint32_t Graph = blockIdx.x * WarpsPerBlock + WarpId;
+
+    if (Graph >= Batch) {
+        return;
+    }
+
+    const uint32_t VertexBase = Graph * Vertices;
+    const uint32_t EdgeBase = Graph * Edges;
+    FrontierItemT<StorageT> *GraphFrontier = Frontier + static_cast<size_t>(Graph) * Vertices;
+    uint32_t Rounds = 0;
+
+    if (InvalidGraphs[Graph] != 0) {
+        if (Lane == 0) {
+            VerifyFailures[Graph] = 1;
+            GraphRounds[Graph] = 0;
+        }
+        return;
+    }
+
+    for (;;) {
+        if (Lane == 0) {
+            FrontierCount[Graph] = 0;
+        }
+        __syncwarp();
+
+        for (uint32_t Vertex = Lane; Vertex < Vertices; Vertex += WarpSize) {
+            if (Degree[VertexBase + Vertex] != 1) {
+                continue;
+            }
+
+            const uint32_t Edge = XorEdge[VertexBase + Vertex];
+            const uint32_t EdgeIndex = EdgeBase + Edge;
+
+            if (atomicCAS(&EdgePeeled[EdgeIndex], 0u, 1u) != 0u) {
+                continue;
+            }
+
+            const uint32_t Slot = atomicAdd(&FrontierCount[Graph], 1u);
+            GraphFrontier[Slot].Graph = Graph;
+            GraphFrontier[Slot].Vertex = static_cast<StorageT>(Vertex);
+            GraphFrontier[Slot].Edge = static_cast<StorageT>(Edge);
+        }
+
+        __syncwarp();
+
+        const uint32_t FrontierSize = FrontierCount[Graph];
+        if (FrontierSize == 0) {
+            break;
+        }
+
+        for (uint32_t Index = Lane; Index < FrontierSize; Index += WarpSize) {
+            const FrontierItemT<StorageT> Item = GraphFrontier[Index];
+            const uint32_t Edge = static_cast<uint32_t>(Item.Edge);
+            const uint32_t EdgeIndex = EdgeBase + Edge;
+            const uint32_t Order = atomicAdd(&PeeledCount[Graph], 1u);
+            const uint32_t U = static_cast<uint32_t>(EdgeU[EdgeIndex]);
+            const uint32_t V = static_cast<uint32_t>(EdgeV[EdgeIndex]);
+
+            OwnerVertex[EdgeIndex] = Item.Vertex;
+            PeelOrder[EdgeBase + Order] = static_cast<StorageT>(Edge);
+
+            atomicSub(&Degree[VertexBase + U], 1u);
+            atomicXor(&XorEdge[VertexBase + U], Edge);
+            atomicSub(&Degree[VertexBase + V], 1u);
+            atomicXor(&XorEdge[VertexBase + V], Edge);
+        }
+
+        __syncwarp();
+        ++Rounds;
+    }
+
+    if (Lane == 0) {
+        GraphRounds[Graph] = Rounds;
+        if (PeeledCount[Graph] != Edges) {
+            VerifyFailures[Graph] = 1;
+        }
+    }
+}
+
+template<typename StorageT>
+__global__ void
+PeelGraphsDeviceSerialBlockKernel(uint32_t Edges,
+                                  uint32_t Vertices,
+                                  uint32_t Batch,
+                                  const uint32_t *InvalidGraphs,
+                                  const StorageT *EdgeU,
+                                  const StorageT *EdgeV,
+                                  uint32_t *Degree,
+                                  uint32_t *XorEdge,
+                                  uint32_t *EdgePeeled,
+                                  StorageT *OwnerVertex,
+                                  StorageT *PeelOrder,
+                                  uint32_t *PeeledCount,
+                                  FrontierItemT<StorageT> *Frontier,
+                                  uint32_t *FrontierCount,
+                                  uint32_t *VerifyFailures,
+                                  uint32_t *GraphRounds)
+{
+    const uint32_t Graph = blockIdx.x;
+
+    if (Graph >= Batch) {
+        return;
+    }
+
+    const uint32_t Thread = threadIdx.x;
+    const uint32_t VertexBase = Graph * Vertices;
+    const uint32_t EdgeBase = Graph * Edges;
+    FrontierItemT<StorageT> *GraphFrontier = Frontier + static_cast<size_t>(Graph) * Vertices;
+    __shared__ uint32_t SharedFrontierCount;
+    uint32_t Rounds = 0;
+
+    if (InvalidGraphs[Graph] != 0) {
+        if (Thread == 0) {
+            VerifyFailures[Graph] = 1;
+            GraphRounds[Graph] = 0;
+        }
+        return;
+    }
+
+    for (;;) {
+        if (Thread == 0) {
+            FrontierCount[Graph] = 0;
+        }
+        __syncthreads();
+
+        for (uint32_t Vertex = Thread; Vertex < Vertices; Vertex += blockDim.x) {
+            if (Degree[VertexBase + Vertex] != 1) {
+                continue;
+            }
+
+            const uint32_t Edge = XorEdge[VertexBase + Vertex];
+            const uint32_t EdgeIndex = EdgeBase + Edge;
+
+            if (atomicCAS(&EdgePeeled[EdgeIndex], 0u, 1u) != 0u) {
+                continue;
+            }
+
+            const uint32_t Slot = atomicAdd(&FrontierCount[Graph], 1u);
+            GraphFrontier[Slot].Graph = Graph;
+            GraphFrontier[Slot].Vertex = static_cast<StorageT>(Vertex);
+            GraphFrontier[Slot].Edge = static_cast<StorageT>(Edge);
+        }
+
+        __syncthreads();
+
+        if (Thread == 0) {
+            SharedFrontierCount = FrontierCount[Graph];
+        }
+        __syncthreads();
+
+        if (SharedFrontierCount == 0) {
+            break;
+        }
+
+        for (uint32_t Index = Thread; Index < SharedFrontierCount; Index += blockDim.x) {
+            const FrontierItemT<StorageT> Item = GraphFrontier[Index];
+            const uint32_t Edge = static_cast<uint32_t>(Item.Edge);
+            const uint32_t EdgeIndex = EdgeBase + Edge;
+            const uint32_t Order = atomicAdd(&PeeledCount[Graph], 1u);
+            const uint32_t U = static_cast<uint32_t>(EdgeU[EdgeIndex]);
+            const uint32_t V = static_cast<uint32_t>(EdgeV[EdgeIndex]);
+
+            OwnerVertex[EdgeIndex] = Item.Vertex;
+            PeelOrder[EdgeBase + Order] = static_cast<StorageT>(Edge);
+
+            atomicSub(&Degree[VertexBase + U], 1u);
+            atomicXor(&XorEdge[VertexBase + U], Edge);
+            atomicSub(&Degree[VertexBase + V], 1u);
+            atomicXor(&XorEdge[VertexBase + V], Edge);
+        }
+
+        __syncthreads();
+
+        if (Thread == 0) {
+            ++Rounds;
+        }
+        __syncthreads();
+    }
+
+    if (Thread == 0) {
+        GraphRounds[Graph] = Rounds;
+        if (PeeledCount[Graph] != Edges) {
+            VerifyFailures[Graph] = 1;
+        }
     }
 }
 
@@ -1712,6 +1913,10 @@ RunExperiment(const Options &Opts,
     const uint64_t TotalEdges = static_cast<uint64_t>(KeyCount) * Batch;
     const uint64_t TotalVertices = static_cast<uint64_t>(Vertices) * Batch;
     const uint64_t FrontierCapacity = TotalVertices;
+    const bool NeedsFrontier = (
+        Opts.Solve == SolveMode::HostRoundTrip ||
+        (Opts.Solve == SolveMode::DeviceSerial &&
+         Opts.DeviceSerialPeelGeometry != GraphGeometry::Thread));
 
     uint32_t *DKeys = nullptr;
     GraphSeeds *DGraphSeeds = nullptr;
@@ -1748,9 +1953,9 @@ RunExperiment(const Options &Opts,
     AllocateGpuMemory(&DVerifyFailures, Batch, Opts.Allocation, "cudaMalloc(DVerifyFailures)");
     AllocateGpuMemory(&DGraphRounds, Batch, Opts.Allocation, "cudaMalloc(DGraphRounds)");
 
-    if (Opts.Solve == SolveMode::HostRoundTrip) {
+    if (NeedsFrontier) {
         AllocateGpuMemory(&DFrontier, FrontierCapacity, Opts.Allocation, "cudaMalloc(DFrontier)");
-        AllocateGpuMemory(&DFrontierCount, 1, Opts.Allocation, "cudaMalloc(DFrontierCount)");
+        AllocateGpuMemory(&DFrontierCount, Batch, Opts.Allocation, "cudaMalloc(DFrontierCount)");
     }
 
     CheckCuda(cudaMemcpy(DKeys, Keys.data(), Keys.size() * sizeof(Keys[0]), cudaMemcpyHostToDevice),
@@ -1774,8 +1979,8 @@ RunExperiment(const Options &Opts,
     CheckCuda(cudaMemset(DVerifyFailures, 0, Batch * sizeof(uint32_t)), "cudaMemset(DVerifyFailures)");
     CheckCuda(cudaMemset(DGraphRounds, 0, Batch * sizeof(uint32_t)), "cudaMemset(DGraphRounds)");
 
-    if (Opts.Solve == SolveMode::HostRoundTrip) {
-        CheckCuda(cudaMemset(DFrontierCount, 0, sizeof(uint32_t)), "cudaMemset(DFrontierCount)");
+    if (NeedsFrontier) {
+        CheckCuda(cudaMemset(DFrontierCount, 0, Batch * sizeof(uint32_t)), "cudaMemset(DFrontierCount)");
     }
 
     auto GpuStart = std::chrono::steady_clock::now();
@@ -1798,9 +2003,9 @@ RunExperiment(const Options &Opts,
         PrefetchGpuMemory(DAssigned, TotalVertices, Device, "cudaMemPrefetchAsync(DAssigned)");
         PrefetchGpuMemory(DVerifyFailures, Batch, Device, "cudaMemPrefetchAsync(DVerifyFailures)");
         PrefetchGpuMemory(DGraphRounds, Batch, Device, "cudaMemPrefetchAsync(DGraphRounds)");
-        if (Opts.Solve == SolveMode::HostRoundTrip) {
+        if (NeedsFrontier) {
             PrefetchGpuMemory(DFrontier, FrontierCapacity, Device, "cudaMemPrefetchAsync(DFrontier)");
-            PrefetchGpuMemory(DFrontierCount, 1, Device, "cudaMemPrefetchAsync(DFrontierCount)");
+            PrefetchGpuMemory(DFrontierCount, Batch, Device, "cudaMemPrefetchAsync(DFrontierCount)");
         }
         CheckCuda(cudaDeviceSynchronize(), "cudaDeviceSynchronize(prefetch)");
     }
@@ -1841,7 +2046,7 @@ RunExperiment(const Options &Opts,
         uint32_t FrontierCount = 0;
 
         for (;;) {
-            CheckCuda(cudaMemset(DFrontierCount, 0, sizeof(uint32_t)), "cudaMemset(DFrontierCount)");
+            CheckCuda(cudaMemset(DFrontierCount, 0, Batch * sizeof(uint32_t)), "cudaMemset(DFrontierCount)");
 
             Result.PeelMilliseconds += MeasureStage([&]() {
                 CollectFrontierKernel<StorageT><<<VertexBlocks, Opts.Threads>>>(Vertices,
@@ -1910,23 +2115,67 @@ RunExperiment(const Options &Opts,
             CheckCuda(cudaGetLastError(), "VerifyGraphsKernel launch");
         });
     } else {
-        Result.PeelMilliseconds = MeasureStage([&]() {
-            PeelGraphsDeviceSerialKernel<StorageT><<<Batch, 1>>>(KeyCount,
-                                                                 Vertices,
-                                                                 Batch,
-                                                                 DInvalidGraphs,
-                                                                 DEdgeU,
-                                                                 DEdgeV,
-                                                                 DDegree,
-                                                                 DXorEdge,
-                                                                 DEdgePeeled,
-                                                                 DOwnerVertex,
-                                                                 DPeelOrder,
-                                                                 DPeeledCount,
-                                                                 DVerifyFailures,
-                                                                 DGraphRounds);
-            CheckCuda(cudaGetLastError(), "PeelGraphsDeviceSerialKernel launch");
-        });
+        if (Opts.DeviceSerialPeelGeometry == GraphGeometry::Thread) {
+            Result.PeelMilliseconds = MeasureStage([&]() {
+                PeelGraphsDeviceSerialThreadKernel<StorageT><<<Batch, 1>>>(KeyCount,
+                                                                           Vertices,
+                                                                           Batch,
+                                                                           DInvalidGraphs,
+                                                                           DEdgeU,
+                                                                           DEdgeV,
+                                                                           DDegree,
+                                                                           DXorEdge,
+                                                                           DEdgePeeled,
+                                                                           DOwnerVertex,
+                                                                           DPeelOrder,
+                                                                           DPeeledCount,
+                                                                           DVerifyFailures,
+                                                                           DGraphRounds);
+                CheckCuda(cudaGetLastError(), "PeelGraphsDeviceSerialThreadKernel launch");
+            });
+        } else if (Opts.DeviceSerialPeelGeometry == GraphGeometry::Warp) {
+            const uint32_t WarpsPerBlock = Opts.Threads / 32u;
+            const uint32_t PeelBlocks = static_cast<uint32_t>((Batch + WarpsPerBlock - 1u) / WarpsPerBlock);
+            Result.PeelMilliseconds = MeasureStage([&]() {
+                PeelGraphsDeviceSerialWarpKernel<StorageT><<<PeelBlocks, Opts.Threads>>>(KeyCount,
+                                                                                        Vertices,
+                                                                                        Batch,
+                                                                                        DInvalidGraphs,
+                                                                                        DEdgeU,
+                                                                                        DEdgeV,
+                                                                                        DDegree,
+                                                                                        DXorEdge,
+                                                                                        DEdgePeeled,
+                                                                                        DOwnerVertex,
+                                                                                        DPeelOrder,
+                                                                                        DPeeledCount,
+                                                                                        DFrontier,
+                                                                                        DFrontierCount,
+                                                                                        DVerifyFailures,
+                                                                                        DGraphRounds);
+                CheckCuda(cudaGetLastError(), "PeelGraphsDeviceSerialWarpKernel launch");
+            });
+        } else {
+            Result.PeelMilliseconds = MeasureStage([&]() {
+                PeelGraphsDeviceSerialBlockKernel<StorageT><<<Batch, Opts.Threads>>>(KeyCount,
+                                                                                    Vertices,
+                                                                                    Batch,
+                                                                                    DInvalidGraphs,
+                                                                                    DEdgeU,
+                                                                                    DEdgeV,
+                                                                                    DDegree,
+                                                                                    DXorEdge,
+                                                                                    DEdgePeeled,
+                                                                                    DOwnerVertex,
+                                                                                    DPeelOrder,
+                                                                                    DPeeledCount,
+                                                                                    DFrontier,
+                                                                                    DFrontierCount,
+                                                                                    DVerifyFailures,
+                                                                                    DGraphRounds);
+                CheckCuda(cudaGetLastError(), "PeelGraphsDeviceSerialBlockKernel launch");
+            });
+        }
 
         Result.AssignMilliseconds = MeasureStage([&]() {
             AssignGraphsKernel<StorageT><<<Batch, 1>>>(KeyCount,
@@ -2168,7 +2417,8 @@ size_t
 EstimateDeviceBytes(uint32_t KeyCount,
                     uint32_t Vertices,
                     uint32_t Batch,
-                    SolveMode Mode)
+                    SolveMode Mode,
+                    GraphGeometry DeviceSerialPeelGeometry)
 {
     using FrontierItem = FrontierItemT<StorageT>;
 
@@ -2192,9 +2442,14 @@ EstimateDeviceBytes(uint32_t KeyCount,
     Bytes += static_cast<size_t>(Batch) * sizeof(uint32_t);         // DVerifyFailures
     Bytes += static_cast<size_t>(Batch) * sizeof(uint32_t);         // DGraphRounds
 
-    if (Mode == SolveMode::HostRoundTrip) {
+    const bool UseFrontier = (
+        Mode == SolveMode::HostRoundTrip ||
+        (Mode == SolveMode::DeviceSerial &&
+         DeviceSerialPeelGeometry != GraphGeometry::Thread));
+
+    if (UseFrontier) {
         Bytes += TotalVertices * sizeof(FrontierItem);              // DFrontier
-        Bytes += sizeof(uint32_t);                                  // DFrontierCount
+        Bytes += static_cast<size_t>(Batch) * sizeof(uint32_t);     // DFrontierCount
     }
 
     return Bytes;
@@ -2287,8 +2542,8 @@ main(int argc, char **argv)
     const DeviceMemoryInfo MemoryInfo = QueryDeviceMemoryInfo();
     const size_t RequestedBytes = (
         SelectedStorage == StorageMode::Bits16 ?
-            EstimateDeviceBytes<uint16_t>(KeyCount, Vertices, Opts.Batch, Opts.Solve) :
-            EstimateDeviceBytes<uint32_t>(KeyCount, Vertices, Opts.Batch, Opts.Solve)
+            EstimateDeviceBytes<uint16_t>(KeyCount, Vertices, Opts.Batch, Opts.Solve, Opts.DeviceSerialPeelGeometry) :
+            EstimateDeviceBytes<uint32_t>(KeyCount, Vertices, Opts.Batch, Opts.Solve, Opts.DeviceSerialPeelGeometry)
     );
 
     Options EffectiveOpts = Opts;
@@ -2302,13 +2557,13 @@ main(int argc, char **argv)
         if (RequestedBytes > AllowedBytes) {
             size_t FixedBytes = (
                 SelectedStorage == StorageMode::Bits16 ?
-                    EstimateDeviceBytes<uint16_t>(KeyCount, Vertices, 0, Opts.Solve) :
-                    EstimateDeviceBytes<uint32_t>(KeyCount, Vertices, 0, Opts.Solve)
+                    EstimateDeviceBytes<uint16_t>(KeyCount, Vertices, 0, Opts.Solve, Opts.DeviceSerialPeelGeometry) :
+                    EstimateDeviceBytes<uint32_t>(KeyCount, Vertices, 0, Opts.Solve, Opts.DeviceSerialPeelGeometry)
             );
             size_t OneGraphBytes = (
                 SelectedStorage == StorageMode::Bits16 ?
-                    EstimateDeviceBytes<uint16_t>(KeyCount, Vertices, 1, Opts.Solve) :
-                    EstimateDeviceBytes<uint32_t>(KeyCount, Vertices, 1, Opts.Solve)
+                    EstimateDeviceBytes<uint16_t>(KeyCount, Vertices, 1, Opts.Solve, Opts.DeviceSerialPeelGeometry) :
+                    EstimateDeviceBytes<uint32_t>(KeyCount, Vertices, 1, Opts.Solve, Opts.DeviceSerialPeelGeometry)
             );
 
             if (OneGraphBytes <= FixedBytes || AllowedBytes <= FixedBytes) {
@@ -2356,8 +2611,8 @@ main(int argc, char **argv)
             if (Opts.Solve == SolveMode::HostRoundTrip) {
                 const size_t DeviceSerialBytes = (
                     SelectedStorage == StorageMode::Bits16 ?
-                        EstimateDeviceBytes<uint16_t>(KeyCount, Vertices, Opts.Batch, SolveMode::DeviceSerial) :
-                        EstimateDeviceBytes<uint32_t>(KeyCount, Vertices, Opts.Batch, SolveMode::DeviceSerial)
+                        EstimateDeviceBytes<uint16_t>(KeyCount, Vertices, Opts.Batch, SolveMode::DeviceSerial, Opts.DeviceSerialPeelGeometry) :
+                        EstimateDeviceBytes<uint32_t>(KeyCount, Vertices, Opts.Batch, SolveMode::DeviceSerial, Opts.DeviceSerialPeelGeometry)
                 );
                 if (DeviceSerialBytes <= AllowedBytes) {
                     if (Opts.Output == OutputFormat::Human) {
@@ -2370,8 +2625,8 @@ main(int argc, char **argv)
 
         const size_t EffectiveBytes = (
             SelectedStorage == StorageMode::Bits16 ?
-                EstimateDeviceBytes<uint16_t>(KeyCount, Vertices, EffectiveOpts.Batch, EffectiveOpts.Solve) :
-                EstimateDeviceBytes<uint32_t>(KeyCount, Vertices, EffectiveOpts.Batch, EffectiveOpts.Solve)
+                EstimateDeviceBytes<uint16_t>(KeyCount, Vertices, EffectiveOpts.Batch, EffectiveOpts.Solve, EffectiveOpts.DeviceSerialPeelGeometry) :
+                EstimateDeviceBytes<uint32_t>(KeyCount, Vertices, EffectiveOpts.Batch, EffectiveOpts.Solve, EffectiveOpts.DeviceSerialPeelGeometry)
         );
 
         if (Opts.Output == OutputFormat::Human) {
