@@ -171,6 +171,11 @@ def _validate_named_mappings(items, item_kind):
                     raise ValueError(f"Variant '{name}' must define a positive integer 'batch'")
                 if not isinstance(item["threads"], int) or item["threads"] <= 0:
                     raise ValueError(f"Variant '{name}' must define a positive integer 'threads'")
+                for field in ("assign_geometry", "device_serial_peel_geometry"):
+                    if field in item and (not isinstance(item[field], str) or not item[field]):
+                        raise ValueError(
+                            f"Variant '{name}' has invalid '{field}'; expected a non-empty string"
+                        )
 
 
 def select_named_items(items, selected_names, item_kind):
@@ -329,6 +334,15 @@ def build_gpu_poc_command(executable: Path, dataset: dict, variant: dict):
             "json",
         ]
     )
+
+    assign_geometry = variant.get("assign_geometry")
+    if assign_geometry:
+        command.extend(["--assign-geometry", assign_geometry])
+
+    device_serial_peel_geometry = variant.get("device_serial_peel_geometry")
+    if device_serial_peel_geometry:
+        command.extend(["--device-serial-peel-geometry", device_serial_peel_geometry])
+
     return command
 
 

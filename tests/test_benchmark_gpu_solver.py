@@ -637,6 +637,74 @@ class BenchmarkGpuSolverSmokeTests(unittest.TestCase):
             self.assertIn("device-serial", stub_log["argv"])
             self.assertEqual(payload["runs"][0]["executed_command"][1:], stub_log["argv"])
 
+    def test_gpu_poc_safe_execution_passes_geometry_flags(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            config_path = temp_path / "config.json"
+            output_path = temp_path / "out.json"
+            log_path = temp_path / "poc-geometry-log.json"
+            stub_path, stub_env = self.make_stub_executable(temp_path, "gpu-poc-stub.py", log_path)
+            config_path.write_text(
+                json.dumps(
+                    {
+                        "datasets": [
+                            {"name": "generated8193", "kind": "generated", "count": 8193, "salt": 2779096485}
+                        ],
+                        "variants": [
+                            {
+                                "name": "gpu-poc-device-serial",
+                                "solver_family": "gpu-poc",
+                                "solve_mode": "device-serial",
+                                "hash_function": "Mulshrolate3RX",
+                                "batch": 128,
+                                "threads": 128,
+                                "storage_bits": "auto",
+                                "allocation_mode": "managed-default",
+                                "assign_geometry": "warp",
+                                "device_serial_peel_geometry": "warp",
+                            }
+                        ],
+                        "output_options": {},
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            env = os.environ.copy()
+            env.update(stub_env)
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPT),
+                    "--config",
+                    str(config_path),
+                    "--machine-label",
+                    "gb10",
+                    "--output",
+                    str(output_path),
+                    "--dataset",
+                    "generated8193",
+                    "--variant",
+                    "gpu-poc-device-serial",
+                    "--gpu-poc-exe",
+                    str(stub_path),
+                ],
+                capture_output=True,
+                text=True,
+                cwd=REPO_ROOT,
+                env=env,
+            )
+
+            self.assertEqual(result.returncode, 0, msg=result.stderr)
+            payload = json.loads(output_path.read_text(encoding="utf-8"))
+            self.assertEqual(payload["run_count"], 1)
+            self.assertEqual(payload["runs"][0]["status"], "executed")
+            stub_log = json.loads(log_path.read_text(encoding="utf-8"))
+            self.assertIn("--assign-geometry", stub_log["argv"])
+            self.assertIn("warp", stub_log["argv"])
+            self.assertIn("--device-serial-peel-geometry", stub_log["argv"])
+            self.assertEqual(payload["runs"][0]["executed_command"][1:], stub_log["argv"])
+
     def test_non_dry_run_with_planned_runs_fails_without_writing_output(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)

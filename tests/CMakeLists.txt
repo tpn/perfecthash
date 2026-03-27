@@ -285,13 +285,23 @@ if(TARGET PerfectHashCreateExe AND TARGET PerfectHashBulkCreateExe)
                 -P ${CMAKE_CURRENT_SOURCE_DIR}/run_cli_chm02_cuda_perf_benchmark.cmake
         )
 
+        add_test(
+            NAME perfecthash.gpu.poc.geometry.smoke
+            COMMAND ${CMAKE_COMMAND}
+                -DTEST_EXE=${PERFECTHASH_ROOT_DIR}/build/gpu-batched-peeling-poc/gpu_batched_peeling_poc
+                -DTEST_OUTPUT=${TEST_OUTPUT_DIR}/gpu-poc-geometry-smoke
+                -DTEST_PYTHON=${Python3_EXECUTABLE}
+                -P ${CMAKE_CURRENT_SOURCE_DIR}/run_gpu_poc_geometry_smoke_test.cmake
+        )
+
         set_tests_properties(
             perfecthash.cuda.chm02.hologram.nofileio
             perfecthash.cuda.chm02.hologram.fileio
             perfecthash.cuda.chm02.generated33000.nofileio
             perfecthash.cuda.chm02.perf-surface
+            perfecthash.gpu.poc.geometry.smoke
             PROPERTIES
-                LABELS "cuda"
+                LABELS "cuda;gpu"
         )
     endif()
 else()

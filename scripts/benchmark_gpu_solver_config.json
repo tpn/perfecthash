@@ -46,6 +46,8 @@
       "name": "gpu-poc-device-serial",
       "solver_family": "gpu-poc",
       "solve_mode": "device-serial",
+      "assign_geometry": "warp",
+      "device_serial_peel_geometry": "warp",
       "hash_function": "Mulshrolate3RX",
       "batch": 128,
       "threads": 128,
