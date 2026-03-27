@@ -95,15 +95,27 @@ cmake --build build/gpu-batched-peeling-poc -j
   - `allocation_mode`
   - `gpu_ms`
   - `cpu_ms`
+  - `cpu_stage_timings_ms_all_attempts.add_build`
+  - `cpu_stage_timings_ms_all_attempts.peel`
+  - `cpu_stage_timings_ms_all_attempts.assign`
+  - `cpu_stage_timings_ms_all_attempts.verify`
+  - `cpu_stage_timings_ms_solved_only.add_build`
+  - `cpu_stage_timings_ms_solved_only.peel`
+  - `cpu_stage_timings_ms_solved_only.assign`
+  - `cpu_stage_timings_ms_solved_only.verify`
   - `solved`
   - `peel_rounds`
   - `stage_timings_ms.add_build`
   - `stage_timings_ms.peel`
   - `stage_timings_ms.assign`
   - `stage_timings_ms.verify`
+- `cpu_ms` is the end-to-end wall time for the CPU reference batch.
+- `cpu_stage_timings_ms_all_attempts` accumulates the CPU add/build, peel, assign, and verify stage timings across every graph attempt.
+- `cpu_stage_timings_ms_solved_only` accumulates the same CPU stage timings, but only for graphs where the CPU reference both solved and verified the graph.
 - `gpu_ms` is intended to be an end-to-end solve wall time for the GPU portion of the run.
   It includes mode-specific overhead such as managed-memory prefetch and host-roundtrip frontier synchronization.
 - `stage_timings_ms` are narrower phase timings and may not sum exactly to `gpu_ms`.
+- The CPU stage timings are additive aggregates, not wall-clock spans, so they may exceed `cpu_ms`.
 - `device-serial` now reports a real four-way stage split by launching separate peel, assign, and verify stages.
 - `--device-serial-peel-geometry` validation:
   - `warp` requires `--threads` to be a multiple of 32

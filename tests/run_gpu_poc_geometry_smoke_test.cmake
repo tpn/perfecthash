@@ -41,7 +41,7 @@ endif()
 
 execute_process(
   COMMAND "${TEST_PYTHON}" -c
-          "import json, pathlib, sys; data = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding='utf-8')); assert data['assign_geometry'] == 'warp'; assert data['device_serial_peel_geometry'] == 'warp'; assert data['solve_mode'] == 'device-serial'"
+          "import json, pathlib, sys; data = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding='utf-8')); assert data['assign_geometry'] == 'warp'; assert data['device_serial_peel_geometry'] == 'warp'; assert data['solve_mode'] == 'device-serial'; all_attempts = data['cpu_stage_timings_ms_all_attempts']; solved_only = data['cpu_stage_timings_ms_solved_only']; assert all(k in all_attempts for k in ('add_build', 'peel', 'assign', 'verify')); assert all(k in solved_only for k in ('add_build', 'peel', 'assign', 'verify'))"
           "${stdout_path}"
   RESULT_VARIABLE verify_result
   OUTPUT_VARIABLE verify_stdout

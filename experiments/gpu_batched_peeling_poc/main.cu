@@ -129,6 +129,22 @@ struct CpuResult {
     bool Verified = false;
     bool Invalid = false;
     uint32_t Peeled = 0;
+    double AddBuildMilliseconds = 0.0;
+    double PeelMilliseconds = 0.0;
+    double AssignMilliseconds = 0.0;
+    double VerifyMilliseconds = 0.0;
+};
+
+struct CpuStageTimings {
+    double AddBuildMilliseconds = 0.0;
+    double PeelMilliseconds = 0.0;
+    double AssignMilliseconds = 0.0;
+    double VerifyMilliseconds = 0.0;
+};
+
+struct CpuStageTimingViews {
+    CpuStageTimings AllAttempts;
+    CpuStageTimings SolvedOnly;
 };
 
 struct ExperimentResult {
@@ -144,6 +160,7 @@ struct ExperimentResult {
     uint32_t CpuVerifyIssues = 0;
     float GpuMilliseconds = 0.0f;
     double CpuMilliseconds = 0.0;
+    CpuStageTimingViews CpuStageTimingsMs;
     double AddBuildMilliseconds = 0.0;
     double PeelMilliseconds = 0.0;
     double AssignMilliseconds = 0.0;
@@ -1786,66 +1803,81 @@ RunCpuReference(uint32_t Graph,
     Order.reserve(Edges);
     Queue.reserve(Vertices);
 
-    for (uint32_t Edge = 0; Edge < Edges; ++Edge) {
-        const auto Hash = HashImpl<Kind, StorageT>::Apply(Keys[Edge], Seeds, Vertices - 1);
-        uint32_t U = static_cast<uint32_t>(Hash.Vertex1);
-        uint32_t V = static_cast<uint32_t>(Hash.Vertex2);
+    auto MeasureStage = [&](auto &&Stage) -> double {
+        const auto Start = std::chrono::steady_clock::now();
+        Stage();
+        const auto Stop = std::chrono::steady_clock::now();
+        return std::chrono::duration<double, std::milli>(Stop - Start).count();
+    };
 
-        EdgeU[Edge] = Hash.Vertex1;
-        EdgeV[Edge] = Hash.Vertex2;
+    Result.AddBuildMilliseconds = MeasureStage([&]() {
+        for (uint32_t Edge = 0; Edge < Edges; ++Edge) {
+            const auto Hash = HashImpl<Kind, StorageT>::Apply(Keys[Edge], Seeds, Vertices - 1);
+            const uint32_t U = static_cast<uint32_t>(Hash.Vertex1);
+            const uint32_t V = static_cast<uint32_t>(Hash.Vertex2);
 
-        if (U == V || U >= Vertices || V >= Vertices) {
-            Result.Invalid = true;
-            return Result;
-        }
+            EdgeU[Edge] = Hash.Vertex1;
+            EdgeV[Edge] = Hash.Vertex2;
 
-        ++Degree[U];
-        ++Degree[V];
-        XorEdge[U] ^= Edge;
-        XorEdge[V] ^= Edge;
-    }
+            if (U == V || U >= Vertices || V >= Vertices) {
+                Result.Invalid = true;
+                break;
+            }
 
-    for (uint32_t Vertex = 0; Vertex < Vertices; ++Vertex) {
-        if (Degree[Vertex] == 1) {
-            Queue.push_back(Vertex);
-        }
-    }
-
-    for (size_t Head = 0; Head < Queue.size(); ++Head) {
-        uint32_t Vertex = Queue[Head];
-
-        if (Degree[Vertex] != 1) {
-            continue;
-        }
-
-        uint32_t Edge = XorEdge[Vertex];
-        if (Peeled[Edge] != 0) {
-            continue;
-        }
-
-        Peeled[Edge] = 1;
-        Owner[Edge] = static_cast<StorageT>(Vertex);
-        Order.push_back(static_cast<StorageT>(Edge));
-
-        uint32_t U = static_cast<uint32_t>(EdgeU[Edge]);
-        uint32_t V = static_cast<uint32_t>(EdgeV[Edge]);
-
-        if (Degree[U] > 0) {
-            --Degree[U];
+            ++Degree[U];
+            ++Degree[V];
             XorEdge[U] ^= Edge;
-            if (Degree[U] == 1) {
-                Queue.push_back(U);
+            XorEdge[V] ^= Edge;
+        }
+    });
+
+    if (Result.Invalid) {
+        return Result;
+    }
+
+    Result.PeelMilliseconds = MeasureStage([&]() {
+        for (uint32_t Vertex = 0; Vertex < Vertices; ++Vertex) {
+            if (Degree[Vertex] == 1) {
+                Queue.push_back(Vertex);
             }
         }
 
-        if (Degree[V] > 0) {
-            --Degree[V];
-            XorEdge[V] ^= Edge;
-            if (Degree[V] == 1) {
-                Queue.push_back(V);
+        for (size_t Head = 0; Head < Queue.size(); ++Head) {
+            uint32_t Vertex = Queue[Head];
+
+            if (Degree[Vertex] != 1) {
+                continue;
+            }
+
+            uint32_t Edge = XorEdge[Vertex];
+            if (Peeled[Edge] != 0) {
+                continue;
+            }
+
+            Peeled[Edge] = 1;
+            Owner[Edge] = static_cast<StorageT>(Vertex);
+            Order.push_back(static_cast<StorageT>(Edge));
+
+            uint32_t U = static_cast<uint32_t>(EdgeU[Edge]);
+            uint32_t V = static_cast<uint32_t>(EdgeV[Edge]);
+
+            if (Degree[U] > 0) {
+                --Degree[U];
+                XorEdge[U] ^= Edge;
+                if (Degree[U] == 1) {
+                    Queue.push_back(U);
+                }
+            }
+
+            if (Degree[V] > 0) {
+                --Degree[V];
+                XorEdge[V] ^= Edge;
+                if (Degree[V] == 1) {
+                    Queue.push_back(V);
+                }
             }
         }
-    }
+    });
 
     Result.Peeled = static_cast<uint32_t>(Order.size());
     Result.Success = (Order.size() == Edges);
@@ -1853,29 +1885,33 @@ RunCpuReference(uint32_t Graph,
         return Result;
     }
 
-    for (int64_t Index = static_cast<int64_t>(Order.size()) - 1; Index >= 0; --Index) {
-        uint32_t Edge = static_cast<uint32_t>(Order[static_cast<size_t>(Index)]);
-        uint32_t OwnerVertex = static_cast<uint32_t>(Owner[Edge]);
-        uint32_t U = static_cast<uint32_t>(EdgeU[Edge]);
-        uint32_t V = static_cast<uint32_t>(EdgeV[Edge]);
-        uint32_t Other = (OwnerVertex == U) ? V : U;
-        uint32_t Value = (Edge - static_cast<uint32_t>(Assigned[Other])) & EdgeMask;
+    Result.AssignMilliseconds = MeasureStage([&]() {
+        for (int64_t Index = static_cast<int64_t>(Order.size()) - 1; Index >= 0; --Index) {
+            uint32_t Edge = static_cast<uint32_t>(Order[static_cast<size_t>(Index)]);
+            uint32_t OwnerVertex = static_cast<uint32_t>(Owner[Edge]);
+            uint32_t U = static_cast<uint32_t>(EdgeU[Edge]);
+            uint32_t V = static_cast<uint32_t>(EdgeV[Edge]);
+            uint32_t Other = (OwnerVertex == U) ? V : U;
+            uint32_t Value = (Edge - static_cast<uint32_t>(Assigned[Other])) & EdgeMask;
 
-        Assigned[OwnerVertex] = static_cast<StorageT>(Value);
-    }
+            Assigned[OwnerVertex] = static_cast<StorageT>(Value);
+        }
+    });
 
     Result.Verified = true;
 
-    for (uint32_t Edge = 0; Edge < Edges; ++Edge) {
-        uint32_t Index = (
-            static_cast<uint32_t>(Assigned[static_cast<uint32_t>(EdgeU[Edge])]) +
-            static_cast<uint32_t>(Assigned[static_cast<uint32_t>(EdgeV[Edge])])
-        ) & EdgeMask;
-        if (Index != Edge) {
-            Result.Verified = false;
-            break;
+    Result.VerifyMilliseconds = MeasureStage([&]() {
+        for (uint32_t Edge = 0; Edge < Edges; ++Edge) {
+            uint32_t Index = (
+                static_cast<uint32_t>(Assigned[static_cast<uint32_t>(EdgeU[Edge])]) +
+                static_cast<uint32_t>(Assigned[static_cast<uint32_t>(EdgeV[Edge])])
+            ) & EdgeMask;
+            if (Index != Edge) {
+                Result.Verified = false;
+                break;
+            }
         }
-    }
+    });
 
     return Result;
 }
@@ -2235,6 +2271,8 @@ RunExperiment(const Options &Opts,
 
     auto CpuStart = std::chrono::steady_clock::now();
     std::vector<CpuResult> CpuResults(Batch);
+    CpuStageTimings &CpuAllAttempts = Result.CpuStageTimingsMs.AllAttempts;
+    CpuStageTimings &CpuSolvedOnly = Result.CpuStageTimingsMs.SolvedOnly;
 
     for (uint32_t Graph = 0; Graph < Batch; ++Graph) {
         CpuResults[Graph] = RunCpuReference<Kind, StorageT>(Graph,
@@ -2243,6 +2281,10 @@ RunExperiment(const Options &Opts,
                                                             EdgeMask,
                                                             Keys,
                                                             GraphSeedsVector);
+        CpuAllAttempts.AddBuildMilliseconds += CpuResults[Graph].AddBuildMilliseconds;
+        CpuAllAttempts.PeelMilliseconds += CpuResults[Graph].PeelMilliseconds;
+        CpuAllAttempts.AssignMilliseconds += CpuResults[Graph].AssignMilliseconds;
+        CpuAllAttempts.VerifyMilliseconds += CpuResults[Graph].VerifyMilliseconds;
     }
 
     auto CpuStop = std::chrono::steady_clock::now();
@@ -2276,6 +2318,10 @@ RunExperiment(const Options &Opts,
         }
         if (ThisCpuSuccess) {
             ++Result.CpuSuccess;
+            CpuSolvedOnly.AddBuildMilliseconds += CpuResults[Graph].AddBuildMilliseconds;
+            CpuSolvedOnly.PeelMilliseconds += CpuResults[Graph].PeelMilliseconds;
+            CpuSolvedOnly.AssignMilliseconds += CpuResults[Graph].AssignMilliseconds;
+            CpuSolvedOnly.VerifyMilliseconds += CpuResults[Graph].VerifyMilliseconds;
         }
         if (ThisGpuSuccess && SolvedSeedsFile.is_open()) {
             const GraphSeeds &Seeds = GraphSeedsVector[Graph];
@@ -2331,6 +2377,18 @@ RunExperiment(const Options &Opts,
              << "\"vertices\":" << Result.Vertices << ","
              << "\"gpu_ms\":" << Result.GpuMilliseconds << ","
              << "\"cpu_ms\":" << Result.CpuMilliseconds << ","
+             << "\"cpu_stage_timings_ms_all_attempts\":{"
+             << "\"add_build\":" << Result.CpuStageTimingsMs.AllAttempts.AddBuildMilliseconds << ","
+             << "\"peel\":" << Result.CpuStageTimingsMs.AllAttempts.PeelMilliseconds << ","
+             << "\"assign\":" << Result.CpuStageTimingsMs.AllAttempts.AssignMilliseconds << ","
+             << "\"verify\":" << Result.CpuStageTimingsMs.AllAttempts.VerifyMilliseconds
+             << "},"
+             << "\"cpu_stage_timings_ms_solved_only\":{"
+             << "\"add_build\":" << Result.CpuStageTimingsMs.SolvedOnly.AddBuildMilliseconds << ","
+             << "\"peel\":" << Result.CpuStageTimingsMs.SolvedOnly.PeelMilliseconds << ","
+             << "\"assign\":" << Result.CpuStageTimingsMs.SolvedOnly.AssignMilliseconds << ","
+             << "\"verify\":" << Result.CpuStageTimingsMs.SolvedOnly.VerifyMilliseconds
+             << "},"
              << "\"solved\":" << Result.GpuSuccess << ","
              << "\"cpu_success\":" << Result.CpuSuccess << ","
              << "\"mismatches\":" << Result.Mismatches << ","
@@ -2371,6 +2429,16 @@ RunExperiment(const Options &Opts,
             << std::fixed << std::setprecision(3)
             << "  GPU time (ms):     " << Result.GpuMilliseconds << "\n"
             << "  CPU time (ms):     " << Result.CpuMilliseconds << "\n"
+            << "  CPU stage timings (all attempts):\n"
+            << "    Add/build (ms):  " << Result.CpuStageTimingsMs.AllAttempts.AddBuildMilliseconds << "\n"
+            << "    Peel (ms):       " << Result.CpuStageTimingsMs.AllAttempts.PeelMilliseconds << "\n"
+            << "    Assign (ms):     " << Result.CpuStageTimingsMs.AllAttempts.AssignMilliseconds << "\n"
+            << "    Verify (ms):     " << Result.CpuStageTimingsMs.AllAttempts.VerifyMilliseconds << "\n"
+            << "  CPU stage timings (solved only):\n"
+            << "    Add/build (ms):  " << Result.CpuStageTimingsMs.SolvedOnly.AddBuildMilliseconds << "\n"
+            << "    Peel (ms):       " << Result.CpuStageTimingsMs.SolvedOnly.PeelMilliseconds << "\n"
+            << "    Assign (ms):     " << Result.CpuStageTimingsMs.SolvedOnly.AssignMilliseconds << "\n"
+            << "    Verify (ms):     " << Result.CpuStageTimingsMs.SolvedOnly.VerifyMilliseconds << "\n"
             << "  Add/build (ms):    " << Result.AddBuildMilliseconds << "\n"
             << "  Peel (ms):         " << Result.PeelMilliseconds << "\n"
             << "  Assign (ms):       " << Result.AssignMilliseconds << "\n"
