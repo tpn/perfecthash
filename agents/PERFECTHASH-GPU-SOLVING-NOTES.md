@@ -714,3 +714,24 @@
 - GPH SIGMOD 2025 paper: https://www4.comp.polyu.edu.hk/~csmlyiu/conf/SIGMOD25_GPH.pdf
 - cuCollections repository: https://github.com/NVIDIA/cuCollections
 - `cuda.coop` API docs: https://nvidia.github.io/cccl/python/coop_api.html
+
+## Batched Create Integration Review
+- Reviewed how invasive it would be to support true batched GPU creation attempts inside the current `PerfectHashCreate` / `Chm02` infrastructure.
+- Conclusion:
+  - adding CLI parameters is easy
+  - adding batched-attempt semantics to the current create path is not
+- Main reasons:
+  - `PerfectHashContextTableCreateArgvW()` and `PerfectHashOnlineCreateTableFromKeys()` are table-centric, not batched-attempt-centric
+  - `GraphEnterSolvingLoop()` is explicitly one-graph, one-attempt-at-a-time
+  - solved-graph promotion is built around one `BestGraph` plus an optional `SpareGraph`
+  - `Chm02Shared.c` allocates one host/device graph pair per solve context, not bulk attempt buffers
+  - `Chm02.c` / `Chm02Compat.c` completion, events, finished-work, and file-work all assume a single winning graph and a single table artifact set
+  - CSV/reporting are likewise one-create-one-row today
+- Existing bulk-create does not solve this problem:
+  - it batches many key files / tables, not many attempts for one key set
+- Recommendation:
+  - keep iterating in the standalone batched POC
+  - if the POC needs a more official surface, add a new experimental batched component or CLI before trying to integrate with `PerfectHashCreate`
+  - defer any `Chm03`-inside-`PerfectHashCreate` work until the batched solver contract has stabilized
+- Full write-up:
+  - `docs/superpowers/reports/2026-03-26-gpu-batched-create-integration-review.md`

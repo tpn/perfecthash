@@ -443,3 +443,21 @@
     - `cpu_ms=15.180`
     - `solved=81`
     - `peel_rounds=16`
+- 2026-03-26 18:34:00 PDT: Performed a deep-dive integration review for batched GPU create attempts.
+- Review conclusion:
+  - existing CLI/parameter plumbing is not the main blocker
+  - the real blockers are deeper assumptions in context/graph/solve registration/completion/persistence machinery that every solver lane is a long-lived `GRAPH` instance and that one winning graph is promoted into one final table artifact set
+- Specific pressure points identified:
+  - `PerfectHashContextTableCreateArgvW()` and `PerfectHashOnlineCreateTableFromKeys()` establish one table-create session per run
+  - `GraphEnterSolvingLoop()` is explicitly reset/load-seeds/solve for one graph at a time
+  - `GraphRegisterSolved*()` and context state revolve around singular `BestGraph`, `SpareGraph`, and `SolvedContext`
+  - `Chm02Shared.c` wires one host/device graph pair per CUDA solve context
+  - `Chm02.c` / `Chm02Compat.c` events, finished-work handling, CSV, and file-work assume one winning graph and one artifact set
+- Existing `BulkCreate` is not a direct solution:
+  - it batches many tables, not many attempts for one table
+  - but it suggests that any future batching should likely sit above the current single-create primitive instead of distorting it
+- Recommendation captured:
+  - keep iterating in the batched POC for now
+  - if a more official surface is needed before mainline integration, add a new experimental batched component or CLI instead of forcing the design through current `PerfectHashCreate` / `Graph` plumbing
+- Wrote the full review to:
+  - `docs/superpowers/reports/2026-03-26-gpu-batched-create-integration-review.md`

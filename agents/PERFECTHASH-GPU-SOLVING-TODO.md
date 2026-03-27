@@ -45,6 +45,13 @@
 - Execute the GPU solver performance exploration plan safely on GB10 and `nv1`.
 
 ## Next
+- Keep the batched solver outside current `PerfectHashCreate` / `Graph` plumbing until the solver contract stabilizes.
+- If the batched POC needs a more official integration boundary before full mainline work:
+  - prefer a new experimental batched component or CLI over immediate `Chm03` integration
+- Revisit `Chm03`-inside-`PerfectHashCreate` only after answering:
+  - what is the stable batched request/result contract?
+  - how are winners promoted without one `GRAPH` object per attempt?
+  - how, if at all, should table resize participate in batched GPU solving?
 - Extend the benchmark runner from the current tiny safe subset to a slightly broader but still bounded matrix.
 - Next runner expansion should probably be:
   - add generated33000 `Chm02` known-seed execution
