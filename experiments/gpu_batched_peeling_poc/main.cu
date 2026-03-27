@@ -31,6 +31,12 @@ enum class SolveMode {
     DeviceSerial,
 };
 
+enum class GraphGeometry {
+    Thread,
+    Warp,
+    Block,
+};
+
 enum class AllocationMode {
     ExplicitDevice,
     ManagedDefault,
@@ -65,6 +71,8 @@ struct Options {
     std::string DumpSolvedSeedsFile;
     StorageMode Storage = StorageMode::Auto;
     SolveMode Solve = SolveMode::HostRoundTrip;
+    GraphGeometry AssignGeometry = GraphGeometry::Thread;
+    GraphGeometry DeviceSerialPeelGeometry = GraphGeometry::Thread;
     HashFunctionKind HashFunction = HashFunctionKind::MultiplyShiftR;
     AllocationMode Allocation = AllocationMode::ExplicitDevice;
     OutputFormat Output = OutputFormat::Human;
@@ -368,6 +376,21 @@ SolveModeToString(SolveMode Mode)
 }
 
 const char *
+GraphGeometryToString(GraphGeometry Geometry)
+{
+    switch (Geometry) {
+        case GraphGeometry::Thread:
+            return "thread";
+        case GraphGeometry::Warp:
+            return "warp";
+        case GraphGeometry::Block:
+            return "block";
+        default:
+            return "unknown";
+    }
+}
+
+const char *
 AllocationModeToString(AllocationMode Mode)
 {
     switch (Mode) {
@@ -449,6 +472,23 @@ ParseOutputFormat(const std::string &Value)
     }
 
     std::cerr << "Invalid --output-format value: " << Value << "\n";
+    std::exit(EXIT_FAILURE);
+}
+
+GraphGeometry
+ParseGraphGeometry(const std::string &Value, const char *FlagName)
+{
+    const std::string Lower = ToLower(Value);
+
+    if (Lower == "thread") {
+        return GraphGeometry::Thread;
+    } else if (Lower == "warp") {
+        return GraphGeometry::Warp;
+    } else if (Lower == "block") {
+        return GraphGeometry::Block;
+    }
+
+    std::cerr << "Invalid " << FlagName << " value: " << Value << "\n";
     std::exit(EXIT_FAILURE);
 }
 
@@ -591,6 +631,13 @@ ParseOptions(int argc, char **argv)
                 std::cerr << "Invalid --solve-mode value: " << Value << "\n";
                 std::exit(EXIT_FAILURE);
             }
+        } else if (Arg == "--assign-geometry") {
+            Opts.AssignGeometry = ParseGraphGeometry(RequireValue("--assign-geometry"),
+                                                     "--assign-geometry");
+        } else if (Arg == "--device-serial-peel-geometry") {
+            Opts.DeviceSerialPeelGeometry =
+                ParseGraphGeometry(RequireValue("--device-serial-peel-geometry"),
+                                   "--device-serial-peel-geometry");
         } else if (Arg == "--memory-headroom-pct") {
             Opts.MemoryHeadroomPct = std::stod(RequireValue("--memory-headroom-pct"));
         } else if (Arg == "--disable-auto-batch-scale") {
@@ -613,6 +660,9 @@ ParseOptions(int argc, char **argv)
                 << "                        Write successful graph indices and seeds to a CSV\n"
                 << "  --batch <n>           Number of graph attempts in the batch\n"
                 << "  --threads <n>         Threads per block for build/collect/peel kernels\n"
+                << "  --assign-geometry <x> thread, warp, or block\n"
+                << "  --device-serial-peel-geometry <x>\n"
+                << "                        thread, warp, or block for device-serial peel\n"
                 << "  --storage-bits <x>    auto, 16, or 32\n"
                 << "  --solve-mode <x>      host-roundtrip or device-serial\n"
                 << "  --memory-headroom-pct <x>\n"
@@ -644,6 +694,31 @@ ParseOptions(int argc, char **argv)
 
     if (Opts.MemoryHeadroomPct < 0.0 || Opts.MemoryHeadroomPct >= 100.0) {
         std::cerr << "--memory-headroom-pct must be in the range [0, 100).\n";
+        std::exit(EXIT_FAILURE);
+    }
+
+    if (Opts.AssignGeometry == GraphGeometry::Warp && (Opts.Threads % 32u) != 0u) {
+        std::cerr << "--assign-geometry warp requires --threads to be a multiple of 32.\n";
+        std::exit(EXIT_FAILURE);
+    }
+
+    if (Opts.AssignGeometry == GraphGeometry::Block && Opts.Threads < 32u) {
+        std::cerr << "--assign-geometry block requires --threads to be at least 32.\n";
+        std::exit(EXIT_FAILURE);
+    }
+
+    if (Opts.Solve == SolveMode::DeviceSerial) {
+        if (Opts.DeviceSerialPeelGeometry == GraphGeometry::Warp && (Opts.Threads % 32u) != 0u) {
+            std::cerr << "--device-serial-peel-geometry warp requires --threads to be a multiple of 32.\n";
+            std::exit(EXIT_FAILURE);
+        }
+
+        if (Opts.DeviceSerialPeelGeometry == GraphGeometry::Block && Opts.Threads < 32u) {
+            std::cerr << "--device-serial-peel-geometry block requires --threads to be at least 32.\n";
+            std::exit(EXIT_FAILURE);
+        }
+    } else if (Opts.DeviceSerialPeelGeometry != GraphGeometry::Thread) {
+        std::cerr << "--device-serial-peel-geometry only applies with --solve-mode device-serial.\n";
         std::exit(EXIT_FAILURE);
     }
 
@@ -1995,6 +2070,9 @@ RunExperiment(const Options &Opts,
              << "\"batch\":" << Result.Batch << ","
              << "\"solve_mode\":\"" << JsonEscape(Result.SolveModeName) << "\","
              << "\"threads\":" << Opts.Threads << ","
+             << "\"assign_geometry\":\"" << JsonEscape(GraphGeometryToString(Opts.AssignGeometry)) << "\","
+             << "\"device_serial_peel_geometry\":\""
+             << JsonEscape(GraphGeometryToString(Opts.DeviceSerialPeelGeometry)) << "\","
              << "\"storage_bits\":" << Result.StorageBits << ","
              << "\"storage_mode\":\"" << JsonEscape(StorageModeToString(Result.SelectedStorage)) << "\","
              << "\"hash_function\":\"" << JsonEscape(Result.HashFunctionName) << "\","
@@ -2031,6 +2109,8 @@ RunExperiment(const Options &Opts,
             << "  Hash function:     " << Result.HashFunctionName << "\n"
             << "  Solve mode:        " << Result.SolveModeName << "\n"
             << "  Allocation mode:   " << Result.AllocationModeName << "\n"
+            << "  Assign geometry:   " << GraphGeometryToString(Opts.AssignGeometry) << "\n"
+            << "  Peel geometry:     " << GraphGeometryToString(Opts.DeviceSerialPeelGeometry) << "\n"
             << "  Storage bits:      " << Result.StorageBits << "\n"
             << "  Storage mode:      " << StorageModeToString(Result.SelectedStorage) << "\n"
             << "  Peel rounds:       " << Result.Rounds << "\n"
