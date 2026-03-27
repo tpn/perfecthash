@@ -52,6 +52,16 @@
   - what is the stable batched request/result contract?
   - how are winners promoted without one `GRAPH` object per attempt?
   - how, if at all, should table resize participate in batched GPU solving?
+- Fix the execution-geometry spec/plan to reflect reality:
+  - assignment geometry is deferred
+  - peel geometry is the active stage-1 implementation target
+- Revisit cooperative assignment only after adding enough metadata for reverse-layer assignment:
+  - peel layer or round ids
+  - or equivalent ready-state bookkeeping
+- Start the next optimization pass on the winning peel geometry:
+  - one-block-per-graph
+  - shared-memory staging only where it reduces global traffic
+  - CUB/CCCL block primitives for local frontier handling
 - Extend the benchmark runner from the current tiny safe subset to a slightly broader but still bounded matrix.
 - Next runner expansion should probably be:
   - add generated33000 `Chm02` known-seed execution
@@ -79,7 +89,7 @@
   - vertex/edge ratio
 - Revisit the deferred direction:
   - cooperative-groups / global frontier device-side convergence
-- Evaluate one-warp-per-graph and one-CTA-per-graph assignment kernels.
+- Evaluate one-warp-per-graph and one-CTA-per-graph assignment kernels only after peel-layer metadata exists.
 - Add richer instrumentation:
   - per-graph peel rounds
   - frontier sizes by round

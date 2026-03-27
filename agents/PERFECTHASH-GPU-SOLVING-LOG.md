@@ -461,3 +461,40 @@
   - if a more official surface is needed before mainline integration, add a new experimental batched component or CLI instead of forcing the design through current `PerfectHashCreate` / `Graph` plumbing
 - Wrote the full review to:
   - `docs/superpowers/reports/2026-03-26-gpu-batched-create-integration-review.md`
+- 2026-03-26 20:52:50 PDT: Completed Task 1 of the execution-geometry plan:
+  - added `GraphGeometry`
+  - added `--assign-geometry` and `--device-serial-peel-geometry`
+  - added validation/output/reporting surface for those flags
+  - documented the stage-1 scope in the POC README
+- 2026-03-26 21:06:25 PDT: Attempted Task 2 assignment geometry split, then reverted it after spec review.
+- Root cause:
+  - ordered assignment is currently a reverse-peel dependency chain
+  - simple warp/block wrappers around the existing scalar helper were not a real implementation
+- Revert commit:
+  - `a7e0be6` `Revert "Add GPU POC assignment geometry variants"`
+- 2026-03-26 21:53:50 PDT: Completed Task 3 with real `device-serial` peel geometry variants:
+  - `thread`
+  - `warp`
+  - `block`
+  - assignment intentionally remains scalar/reporting-only
+- 2026-03-26 22:xx PDT: Completed Task 4:
+  - runner now threads optional geometry fields through to the POC
+  - safe gpu-poc config entry now carries explicit geometry values
+  - added `tests/run_gpu_poc_geometry_smoke_test.cmake`
+  - registered `perfecthash.gpu.poc.geometry.smoke`
+  - `python -m unittest discover -s tests -p 'test_benchmark_gpu_solver.py' -v` passes (`18` tests)
+  - `ctest --test-dir build-cuda --output-on-failure -R 'perfecthash\\.gpu\\.poc\\.geometry\\.smoke|perfecthash\\.cuda\\.chm02'` passes (`5/5`)
+- 2026-03-26 22:xx PDT: Ran a bounded local Task 5 baseline on GB10.
+- Generated `8193`, `batch=128`, `threads=128`, `device-serial`, assign `thread`:
+  - peel `thread`: GPU `38.688 ms`, peel `33.154 ms`, solved `15`, rounds `16`
+  - peel `warp`: GPU `13.007 ms`, peel `7.494 ms`, solved `15`, rounds `29`
+  - peel `block`: GPU `7.790 ms`, peel `2.245 ms`, solved `15`, rounds `29`
+- `HologramWorld-31016.keys`, `batch=16`, `threads=128`, `device-serial`, assign `thread`:
+  - peel `thread`: GPU `76.849 ms`, peel `75.735 ms`, solved `0`, rounds `16`
+  - peel `warp`: GPU `16.704 ms`, peel `15.576 ms`, solved `0`, rounds `29`
+  - peel `block`: GPU `5.156 ms`, peel `4.041 ms`, solved `0`, rounds `29`
+- First stage-1 conclusion:
+  - one-block-per-graph is the best current peel geometry target
+  - assignment is now the next obvious bottleneck once peel gets cheaper
+- Wrote the baseline report to:
+  - `docs/superpowers/reports/2026-03-26-gpu-poc-execution-geometry-baseline.md`

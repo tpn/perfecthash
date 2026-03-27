@@ -4,7 +4,7 @@
 
 **Goal:** Add stage-1 execution-geometry modes to the batched GPU POC, verify correctness stays intact, and collect a bounded baseline showing whether `thread`, `warp`, or `block` is the better follow-on target.
 
-**Architecture:** Keep the current POC execution model intact and only change how per-graph work is partitioned. Add explicit geometry selectors for assignment and `device-serial` peel, keep `--threads` as the CUDA block size, reject invalid geometry/thread combinations early, and extend the benchmark surface so geometry choices are recorded in JSON and human output. No shared-memory staging, CUB block primitives, or `ITEMS_PER_THREAD` changes in this plan.
+**Architecture:** Keep the current POC execution model intact and only change how per-graph work is partitioned where it is technically valid. In practice, this plan now implements real geometry variants for `device-serial` peel, while `assign_geometry` remains surfaced but non-operative until the solver records enough metadata to support reverse-layer assignment safely. Keep `--threads` as the CUDA block size, reject invalid geometry/thread combinations early, and extend the benchmark surface so geometry choices are recorded in JSON and human output. No shared-memory staging, CUB block primitives, or `ITEMS_PER_THREAD` changes in this plan.
 
 **Tech Stack:** CUDA C++, existing `experiments/gpu_batched_peeling_poc` binary, Python benchmark runner, CMake/CTest, local GB10 safe-smoke runs.
 
@@ -15,7 +15,8 @@
 - Modify: `experiments/gpu_batched_peeling_poc/main.cu`
   - add new geometry enums/options
   - add argument validation rules
-  - add warp/block variants for assignment and `device-serial` peel
+  - add real warp/block variants for `device-serial` peel
+  - keep assignment geometry surfaced for future work
   - include selected geometries in output
 - Modify: `experiments/gpu_batched_peeling_poc/README.md`
   - document new flags and validation rules
@@ -152,74 +153,27 @@ git add experiments/gpu_batched_peeling_poc/main.cu \
 git commit -m "Add GPU POC execution geometry options"
 ```
 
-## Task 2: Implement Assignment Geometry Variants
+## Task 2: Assignment Geometry Blocker Note
 
 **Files:**
 - Modify: `experiments/gpu_batched_peeling_poc/main.cu`
 
-- [ ] **Step 1: Write the failing correctness check**
+- [ ] **Step 1: Record the blocker**
 
-Pick a tiny safe case and record the current correctness baseline:
+Document the reason assignment geometry is deferred:
 
-```bash
-./build/gpu-batched-peeling-poc/gpu_batched_peeling_poc \
-  --edges 16 \
-  --batch 4 \
-  --threads 64 \
-  --solve-mode device-serial \
-  --assign-geometry thread \
-  --device-serial-peel-geometry thread \
-  --output-format json
-```
+- reverse ordered assignment currently has a loop-carried dependency chain
+- each step reads `Assigned[other]` before writing `Assigned[owner]`
+- simple warp/block wrappers are not a valid implementation
 
-Expected:
-- `mismatches == 0`
+- [ ] **Step 2: Keep `assign_geometry` surfaced but non-operative**
 
-Then run the same command with `--assign-geometry warp` and confirm it fails
-before implementation because the mode is not wired yet or behaves identically
-through the old path.
+Do not reintroduce fake warp/block assignment execution.
 
-- [ ] **Step 2: Split assignment into geometry-specific kernels**
+- [ ] **Step 3: Revisit only after peel-layer metadata exists**
 
-Refactor the current `AssignGraphsKernel` into explicit implementations:
-
-- `AssignGraphsThreadKernel`
-- `AssignGraphsWarpKernel`
-- `AssignGraphsBlockKernel`
-
-Keep the ordered-index assignment formula unchanged.
-
-- [ ] **Step 3: Add a dispatch layer**
-
-Introduce a small host-side dispatch point, e.g.:
-
-```cpp
-switch (Opts.AssignGeometry) {
-    case GraphGeometry::Thread: ...
-    case GraphGeometry::Warp: ...
-    case GraphGeometry::Block: ...
-}
-```
-
-- [ ] **Step 4: Run the tiny correctness case**
-
-Run the tiny case for:
-
-- `thread`
-- `warp`
-- `block`
-
-Expected for all:
-- exit `0`
-- `mismatches == 0`
-- no GPU verify failures on solved graphs
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add experiments/gpu_batched_peeling_poc/main.cu
-git commit -m "Add GPU POC assignment geometry variants"
-```
+Future assignment work should be based on reverse-layer assignment, not direct
+parallelization of the current scalar loop.
 
 ## Task 3: Implement Device-Serial Peel Geometry Variants
 
@@ -263,13 +217,11 @@ switch (Opts.DeviceSerialPeelGeometry) {
 
 - [ ] **Step 4: Run tiny correctness sweeps**
 
-Run all combinations:
+Run all combinations relevant to the current truthful implementation:
 
 - peel `thread`, assign `thread`
 - peel `warp`, assign `thread`
 - peel `block`, assign `thread`
-- peel `warp`, assign `warp`
-- peel `block`, assign `block`
 
 Expected:
 - exit `0`
@@ -383,7 +335,7 @@ Keep:
 
 Run the POC with `device-serial` for:
 
-- assign `thread|warp|block`
+- assign `thread`
 - peel `thread|warp|block`
 
 Keep the matrix small. Record:

@@ -70,9 +70,10 @@ Cons:
 
 Use approach 2.
 
-Stage 1 will add execution-geometry modes and measurement only. Shared-memory
-staging, CUB block primitives, and `ITEMS_PER_THREAD` bulk-loading are
-explicitly deferred to stage 2.
+Stage 1 will add execution-geometry modes and measurement only. In practice,
+the first real implementation target is `device-serial` peel geometry. Shared-
+memory staging, CUB block primitives, `ITEMS_PER_THREAD` bulk-loading, and
+cooperative assignment are explicitly deferred to later work.
 
 ## Scope
 
@@ -80,8 +81,9 @@ explicitly deferred to stage 2.
 
 - Add explicit per-graph execution geometry modes for the kernels that are
   currently scalar per graph:
-  - assignment
   - `device-serial` peel
+- Keep `assign_geometry` as a surfaced configuration/reporting field for future
+  work, but do not require stage 1 to make assignment cooperative
 - Keep current build/collect/verify kernels intact except for any minimal
   parameter exposure needed for measurement
 - Extend JSON/human output so runs record the selected geometry
@@ -126,23 +128,15 @@ graphs; it does not introduce a second block-size parameter yet.
 
 #### Assignment
 
-Provide three implementations behind a single selection point:
+`assign_geometry` remains a surfaced field in stage 1, but assignment execution
+stays on the current scalar/thread path for now.
 
-- `thread`:
-  - current implementation, one thread per graph
-- `warp`:
-  - one warp per graph
-  - single graph owned by one warp within a block
-  - lane-strided reverse peel traversal
-  - `--threads` must be a multiple of 32
-- `block`:
-  - one block per graph
-  - thread-strided reverse peel traversal
+Reason:
 
-Correctness requirements remain unchanged:
-
-- preserve ordered indexing
-- preserve existing verify semantics
+- ordered assignment is currently a reverse-peel dependency chain
+- each step reads `Assigned[other]` before writing `Assigned[owner]`
+- so simple warp/block-per-graph parallelization is not correct without
+  additional peel-layer or ready-state metadata
 
 #### Device-serial peel
 
@@ -192,8 +186,8 @@ compare geometry choices within the current timing surface.
 
 Stage 1 is complete when:
 
-1. the POC supports selecting per-graph geometry for assignment and
-   `device-serial` peel
+1. the POC supports selecting/reporting geometry for assignment and executing
+   real geometry variants for `device-serial` peel
 2. GPU/CPU correctness remains intact on the existing safe regression cases
 3. output clearly identifies the selected geometry
 4. at least one bounded sweep shows whether `thread`, `warp`, or `block` is the
@@ -201,11 +195,14 @@ Stage 1 is complete when:
 
 ## Stage 2 Preview
 
-If stage 1 identifies a promising geometry, stage 2 will target that geometry
-for:
+If stage 1 identifies a promising geometry, the next optimization pass will
+target that geometry for:
 
 - shared-memory staging
 - CUB block primitives
 - possible `ITEMS_PER_THREAD` parameterization
+
+Cooperative assignment should only be revisited after the solver records enough
+metadata to support reverse-layer assignment safely.
 
 That work is intentionally deferred until after stage 1 data exists.

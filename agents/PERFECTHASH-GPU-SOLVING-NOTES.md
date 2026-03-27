@@ -735,3 +735,36 @@
   - defer any `Chm03`-inside-`PerfectHashCreate` work until the batched solver contract has stabilized
 - Full write-up:
   - `docs/superpowers/reports/2026-03-26-gpu-batched-create-integration-review.md`
+
+## Execution Geometry Stage 1
+- Stage 1 geometry option surface is now real:
+  - `--assign-geometry`
+  - `--device-serial-peel-geometry`
+  - JSON fields:
+    - `assign_geometry`
+    - `device_serial_peel_geometry`
+- Important correction:
+  - `assign_geometry` remains configuration/reporting only
+  - real assignment warp/block execution is blocked by the current reverse-peel dependency chain
+  - the first attempt to fake assignment geometry via launch-shape wrappers was reverted
+- `device-serial` peel geometry now has real implementations for:
+  - `thread`
+  - `warp`
+  - `block`
+- The first bounded local baseline shows:
+  - `block` peel is clearly better than `warp`
+  - both beat the scalar `thread` peel path
+  - once peel improves, assignment becomes a much larger share of total GPU time
+- Local GB10 results:
+  - generated `8193`, `batch=128`, `threads=128`:
+    - `thread`: GPU `38.688 ms`, peel `33.154 ms`
+    - `warp`: GPU `13.007 ms`, peel `7.494 ms`
+    - `block`: GPU `7.790 ms`, peel `2.245 ms`
+  - `HologramWorld-31016.keys`, `batch=16`, `threads=128`:
+    - `thread`: GPU `76.849 ms`, peel `75.735 ms`
+    - `warp`: GPU `16.704 ms`, peel `15.576 ms`
+    - `block`: GPU `5.156 ms`, peel `4.041 ms`
+- Recommendation:
+  - keep assignment scalar for now
+  - target one-block-per-graph peel for the next shared-memory / CUB pass
+  - revisit cooperative assignment only after peel-layer metadata exists
