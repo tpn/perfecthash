@@ -498,3 +498,37 @@
   - assignment is now the next obvious bottleneck once peel gets cheaper
 - Wrote the baseline report to:
   - `docs/superpowers/reports/2026-03-26-gpu-poc-execution-geometry-baseline.md`
+- 2026-03-27 00:xx PDT: Added CPU stage timing comparisons to the POC:
+  - `cpu_stage_timings_ms_all_attempts`
+  - `cpu_stage_timings_ms_solved_only`
+  - fields:
+    - `add_build`
+    - `peel`
+    - `assign`
+    - `verify`
+- Verification after the instrumentation:
+  - `cmake --build build/gpu-batched-peeling-poc -j2` passes
+  - `ctest --test-dir build-cuda --output-on-failure -R 'perfecthash\\.gpu\\.poc\\.geometry\\.smoke'` passes
+- Re-ran the bounded local baseline with the new CPU timing fields.
+- Generated `8193`, `batch=128`, `threads=128`, best current GPU mode (`block` peel):
+  - GPU:
+    - add/build `0.983 ms`
+    - peel `2.245 ms`
+    - assign `3.815 ms`
+    - verify `0.457 ms`
+  - CPU all-attempt equivalents:
+    - add/build `1.717 ms`
+    - peel `6.312 ms`
+    - assign `0.112 ms`
+    - verify `0.061 ms`
+- `HologramWorld-31016.keys`, `batch=16`, `threads=128`, best current GPU mode (`block` peel):
+  - GPU:
+    - add/build `0.733 ms`
+    - peel `4.041 ms`
+  - CPU all-attempt equivalents:
+    - add/build `1.036 ms`
+    - peel `2.759 ms`
+- New interpretation:
+  - GPU peel is the first stage with a compelling win on the generated solved case
+  - CPU assignment/verify remain much cheaper than the current scalar GPU assignment
+  - hybrid GPU-peel/CPU-assign is now a serious candidate on GB10

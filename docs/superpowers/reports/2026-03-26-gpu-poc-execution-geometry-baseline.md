@@ -95,6 +95,29 @@ Observations:
   time.
 - Correctness stayed intact across all three modes.
 
+CPU equivalents for the same run shape:
+
+- All attempts:
+  - add/build: `1.717 ms`
+  - peel: `6.312 ms`
+  - assign: `0.112 ms`
+  - verify: `0.061 ms`
+- Solved-only:
+  - add/build: `0.314 ms`
+  - peel: `1.714 ms`
+  - assign: `0.112 ms`
+  - verify: `0.061 ms`
+
+Notable comparison against the best current GPU mode (`block` peel):
+
+- GPU add/build `0.983 ms` vs CPU add/build `1.717 ms` over all attempts
+- GPU peel `2.245 ms` vs CPU peel `6.312 ms` over all attempts
+- GPU assign `3.815 ms` vs CPU assign `0.112 ms`
+- GPU verify `0.457 ms` vs CPU verify `0.061 ms`
+
+So on this generated solved case, GPU peel is now clearly ahead, but assignment
+and verify are still much cheaper on CPU.
+
 ### HologramWorld-31016 (`batch=16`, `threads=128`)
 
 | Peel geometry | GPU ms | Peel ms | Assign ms | Solved | Mismatches | Peel rounds |
@@ -110,6 +133,27 @@ Observations:
 - The zero-solution result here does not reduce the value of the measurement:
   the comparison is still useful because all three modes processed the same
   attempts and stayed correctness-aligned with CPU.
+
+CPU equivalents for the same run shape:
+
+- All attempts:
+  - add/build: `1.036 ms`
+  - peel: `2.759 ms`
+  - assign: `0.000 ms`
+  - verify: `0.000 ms`
+- Solved-only:
+  - add/build: `0.000 ms`
+  - peel: `0.000 ms`
+  - assign: `0.000 ms`
+  - verify: `0.000 ms`
+
+Notable comparison against the best current GPU mode (`block` peel):
+
+- GPU add/build `0.733 ms` vs CPU add/build `1.036 ms`
+- GPU peel `4.041 ms` vs CPU peel `2.759 ms`
+
+So on this harder real-key zero-solution case, the current GPU peel is better
+than the old scalar GPU path, but still not yet beating the CPU peel.
 
 ## Interpretation
 
@@ -132,7 +176,11 @@ Reasoning:
 3. Next optimization pass should target `block` peel with:
    - shared-memory control/state where useful
    - CUB/CCCL block primitives where they simplify local frontier handling
-4. Revisit cooperative assignment only after the solver records enough metadata
+4. Treat hybrid CPU assignment as a serious candidate:
+   - on GB10 there is no PCIe-style copy penalty
+   - current CPU assignment/verify are dramatically cheaper than the current GPU
+     scalar assignment on solved graphs
+5. Revisit cooperative assignment only after the solver records enough metadata
    to support reverse-layer assignment safely.
 
 ## Relevant Commits

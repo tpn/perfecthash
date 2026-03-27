@@ -62,6 +62,10 @@
   - one-block-per-graph
   - shared-memory staging only where it reduces global traffic
   - CUB/CCCL block primitives for local frontier handling
+- Prototype hybrid GPU-peel / CPU-assign explicitly:
+  - compact solved graph ids after peel
+  - measure CPU assignment/verify only for survivors
+  - compare against current scalar GPU assignment on the same solved set
 - Extend the benchmark runner from the current tiny safe subset to a slightly broader but still bounded matrix.
 - Next runner expansion should probably be:
   - add generated33000 `Chm02` known-seed execution

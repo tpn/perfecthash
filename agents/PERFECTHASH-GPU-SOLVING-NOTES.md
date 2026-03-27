@@ -768,3 +768,38 @@
   - keep assignment scalar for now
   - target one-block-per-graph peel for the next shared-memory / CUB pass
   - revisit cooperative assignment only after peel-layer metadata exists
+
+## CPU Step Equivalents
+- Added CPU stage timing instrumentation to the POC:
+  - `cpu_stage_timings_ms_all_attempts`
+  - `cpu_stage_timings_ms_solved_only`
+  - each includes:
+    - `add_build`
+    - `peel`
+    - `assign`
+    - `verify`
+- On generated `8193`, `batch=128`, `threads=128`, best current GPU mode (`block` peel):
+  - GPU:
+    - add/build `0.983 ms`
+    - peel `2.245 ms`
+    - assign `3.815 ms`
+    - verify `0.457 ms`
+  - CPU all-attempt equivalents:
+    - add/build `1.717 ms`
+    - peel `6.312 ms`
+    - assign `0.112 ms`
+    - verify `0.061 ms`
+- On this solved generated case:
+  - GPU peel is now clearly ahead
+  - CPU assignment/verify are still dramatically cheaper
+- On `HologramWorld-31016.keys`, `batch=16`, `threads=128`, best current GPU mode (`block` peel):
+  - GPU:
+    - add/build `0.733 ms`
+    - peel `4.041 ms`
+  - CPU all-attempt equivalents:
+    - add/build `1.036 ms`
+    - peel `2.759 ms`
+- This strengthens the hybrid idea on GB10:
+  - GPU build/peel across many attempts
+  - compact solved graphs
+  - CPU assignment/verify for the survivors
