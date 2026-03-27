@@ -1396,8 +1396,9 @@ PeelFrontierKernel(uint32_t Edges,
 }
 
 template<typename StorageT>
-__global__ void
-AssignGraphsKernel(uint32_t Edges,
+__device__ void
+AssignGraphOrdered(uint32_t Graph,
+                   uint32_t Edges,
                    uint32_t Vertices,
                    uint32_t EdgeMask,
                    const uint32_t *InvalidGraphs,
@@ -1408,12 +1409,6 @@ AssignGraphsKernel(uint32_t Edges,
                    const uint32_t *PeeledCount,
                    StorageT *Assigned)
 {
-    uint32_t Graph = blockIdx.x;
-
-    if (threadIdx.x != 0) {
-        return;
-    }
-
     if (InvalidGraphs[Graph] != 0 || PeeledCount[Graph] != Edges) {
         return;
     }
@@ -1432,6 +1427,118 @@ AssignGraphsKernel(uint32_t Edges,
 
         Assigned[VertexBase + Owner] = static_cast<StorageT>(Value);
     }
+}
+
+template<typename StorageT>
+__global__ void
+AssignGraphsThreadKernel(uint32_t Batch,
+                         uint32_t Edges,
+                         uint32_t Vertices,
+                         uint32_t EdgeMask,
+                         const uint32_t *InvalidGraphs,
+                         const StorageT *EdgeU,
+                         const StorageT *EdgeV,
+                         const StorageT *OwnerVertex,
+                         const StorageT *PeelOrder,
+                         const uint32_t *PeeledCount,
+                         StorageT *Assigned)
+{
+    if (threadIdx.x != 0) {
+        return;
+    }
+
+    const uint32_t Graph = blockIdx.x;
+    if (Graph >= Batch) {
+        return;
+    }
+
+    AssignGraphOrdered<StorageT>(Graph,
+                                 Edges,
+                                 Vertices,
+                                 EdgeMask,
+                                 InvalidGraphs,
+                                 EdgeU,
+                                 EdgeV,
+                                 OwnerVertex,
+                                 PeelOrder,
+                                 PeeledCount,
+                                 Assigned);
+}
+
+template<typename StorageT>
+__global__ void
+AssignGraphsWarpKernel(uint32_t Batch,
+                       uint32_t Edges,
+                       uint32_t Vertices,
+                       uint32_t EdgeMask,
+                       const uint32_t *InvalidGraphs,
+                       const StorageT *EdgeU,
+                       const StorageT *EdgeV,
+                       const StorageT *OwnerVertex,
+                       const StorageT *PeelOrder,
+                       const uint32_t *PeeledCount,
+                       StorageT *Assigned)
+{
+    const uint32_t Lane = threadIdx.x & 31u;
+    if (Lane != 0) {
+        return;
+    }
+
+    const uint32_t WarpsPerBlock = blockDim.x >> 5;
+    const uint32_t WarpIndex = threadIdx.x >> 5;
+    const uint32_t Graph = blockIdx.x * WarpsPerBlock + WarpIndex;
+
+    if (Graph >= Batch) {
+        return;
+    }
+
+    AssignGraphOrdered<StorageT>(Graph,
+                                 Edges,
+                                 Vertices,
+                                 EdgeMask,
+                                 InvalidGraphs,
+                                 EdgeU,
+                                 EdgeV,
+                                 OwnerVertex,
+                                 PeelOrder,
+                                 PeeledCount,
+                                 Assigned);
+}
+
+template<typename StorageT>
+__global__ void
+AssignGraphsBlockKernel(uint32_t Batch,
+                        uint32_t Edges,
+                        uint32_t Vertices,
+                        uint32_t EdgeMask,
+                        const uint32_t *InvalidGraphs,
+                        const StorageT *EdgeU,
+                        const StorageT *EdgeV,
+                        const StorageT *OwnerVertex,
+                        const StorageT *PeelOrder,
+                        const uint32_t *PeeledCount,
+                        StorageT *Assigned)
+{
+    if (threadIdx.x != 0) {
+        return;
+    }
+
+    const uint32_t Graph = blockIdx.x;
+    if (Graph >= Batch) {
+        return;
+    }
+
+    AssignGraphOrdered<StorageT>(Graph,
+                                 Edges,
+                                 Vertices,
+                                 EdgeMask,
+                                 InvalidGraphs,
+                                 EdgeU,
+                                 EdgeV,
+                                 OwnerVertex,
+                                 PeelOrder,
+                                 PeeledCount,
+                                 Assigned);
 }
 
 template<typename StorageT>
@@ -1823,6 +1930,59 @@ RunExperiment(const Options &Opts,
         return static_cast<double>(StageMilliseconds);
     };
 
+    auto LaunchAssign = [&]() {
+        switch (Opts.AssignGeometry) {
+            case GraphGeometry::Thread:
+                AssignGraphsThreadKernel<StorageT><<<Batch, 1>>>(Batch,
+                                                                 KeyCount,
+                                                                 Vertices,
+                                                                 EdgeMask,
+                                                                 DInvalidGraphs,
+                                                                 DEdgeU,
+                                                                 DEdgeV,
+                                                                 DOwnerVertex,
+                                                                 DPeelOrder,
+                                                                 DPeeledCount,
+                                                                 DAssigned);
+                CheckCuda(cudaGetLastError(), "AssignGraphsThreadKernel launch");
+                break;
+            case GraphGeometry::Warp: {
+                const uint32_t WarpsPerBlock = Opts.Threads / 32u;
+                const uint32_t AssignBlocks = static_cast<uint32_t>((Batch + WarpsPerBlock - 1u) / WarpsPerBlock);
+                AssignGraphsWarpKernel<StorageT><<<AssignBlocks, Opts.Threads>>>(Batch,
+                                                                                 KeyCount,
+                                                                                 Vertices,
+                                                                                 EdgeMask,
+                                                                                 DInvalidGraphs,
+                                                                                 DEdgeU,
+                                                                                 DEdgeV,
+                                                                                 DOwnerVertex,
+                                                                                 DPeelOrder,
+                                                                                 DPeeledCount,
+                                                                                 DAssigned);
+                CheckCuda(cudaGetLastError(), "AssignGraphsWarpKernel launch");
+                break;
+            }
+            case GraphGeometry::Block:
+                AssignGraphsBlockKernel<StorageT><<<Batch, Opts.Threads>>>(Batch,
+                                                                           KeyCount,
+                                                                           Vertices,
+                                                                           EdgeMask,
+                                                                           DInvalidGraphs,
+                                                                           DEdgeU,
+                                                                           DEdgeV,
+                                                                           DOwnerVertex,
+                                                                           DPeelOrder,
+                                                                           DPeeledCount,
+                                                                           DAssigned);
+                CheckCuda(cudaGetLastError(), "AssignGraphsBlockKernel launch");
+                break;
+            default:
+                std::cerr << "Unknown assign geometry.\n";
+                std::exit(EXIT_FAILURE);
+        }
+    };
+
     Result.AddBuildMilliseconds = MeasureStage([&]() {
         BuildGraphsKernel<Kind, StorageT><<<BuildBlocks, Opts.Threads>>>(KeyCount,
                                                                          Vertices,
@@ -1881,19 +2041,7 @@ RunExperiment(const Options &Opts,
             });
         }
 
-        Result.AssignMilliseconds = MeasureStage([&]() {
-            AssignGraphsKernel<StorageT><<<Batch, 1>>>(KeyCount,
-                                                       Vertices,
-                                                       EdgeMask,
-                                                       DInvalidGraphs,
-                                                       DEdgeU,
-                                                       DEdgeV,
-                                                       DOwnerVertex,
-                                                       DPeelOrder,
-                                                       DPeeledCount,
-                                                       DAssigned);
-            CheckCuda(cudaGetLastError(), "AssignGraphsKernel launch");
-        });
+        Result.AssignMilliseconds = MeasureStage(LaunchAssign);
 
         const uint32_t VerifyBlocks = static_cast<uint32_t>((TotalEdges + Opts.Threads - 1) / Opts.Threads);
         Result.VerifyMilliseconds = MeasureStage([&]() {
@@ -1928,19 +2076,7 @@ RunExperiment(const Options &Opts,
             CheckCuda(cudaGetLastError(), "PeelGraphsDeviceSerialKernel launch");
         });
 
-        Result.AssignMilliseconds = MeasureStage([&]() {
-            AssignGraphsKernel<StorageT><<<Batch, 1>>>(KeyCount,
-                                                       Vertices,
-                                                       EdgeMask,
-                                                       DInvalidGraphs,
-                                                       DEdgeU,
-                                                       DEdgeV,
-                                                       DOwnerVertex,
-                                                       DPeelOrder,
-                                                       DPeeledCount,
-                                                       DAssigned);
-            CheckCuda(cudaGetLastError(), "AssignGraphsKernel launch");
-        });
+        Result.AssignMilliseconds = MeasureStage(LaunchAssign);
 
         const uint32_t VerifyBlocks = static_cast<uint32_t>((TotalEdges + Opts.Threads - 1) / Opts.Threads);
         Result.VerifyMilliseconds = MeasureStage([&]() {
