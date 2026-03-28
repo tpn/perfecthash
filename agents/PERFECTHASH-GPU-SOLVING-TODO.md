@@ -66,6 +66,13 @@
   - compact solved graph ids after peel
   - measure CPU assignment/verify only for survivors
   - compare against current scalar GPU assignment on the same solved set
+- Extend the new hybrid path to real-key cases with better-yield hash families:
+  - `Mulshrolate3RX`
+  - `Mulshrolate4RX`
+- Add best-coverage / predicate mode on top of the fixed-attempt controller:
+  - track best solved candidate
+  - report best attempt id and metric
+- Decide whether `cpu_ms` should continue to mean “CPU work actually performed by the selected backend” or whether the POC should expose a separate always-on CPU reference wall time for clearer apples-to-apples reporting.
 - Extend the benchmark runner from the current tiny safe subset to a slightly broader but still bounded matrix.
 - Next runner expansion should probably be:
   - add generated33000 `Chm02` known-seed execution

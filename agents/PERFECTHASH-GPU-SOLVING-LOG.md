@@ -532,3 +532,40 @@
   - GPU peel is the first stage with a compelling win on the generated solved case
   - CPU assignment/verify remain much cheaper than the current scalar GPU assignment
   - hybrid GPU-peel/CPU-assign is now a serious candidate on GB10
+- 2026-03-27 01:xx PDT: Added controller-level `fixed-attempts` semantics to the POC:
+  - `--fixed-attempts`
+  - `--first-solution-wins`
+  - global deterministic attempt numbering across batches
+  - reporting:
+    - `requested_fixed_attempts`
+    - `actual_attempts_tried`
+    - `batches_run`
+    - `first_solved_attempt`
+- Tiny controller smoke verified:
+  - requested `5`, actual `6`, batches `2`
+  - requested `100` with `first-solution-wins`, actual `3`, batches `1`
+- 2026-03-27 01:xx PDT: Added `--assignment-backend <gpu|cpu>` to the POC.
+- `assignment_backend=cpu` semantics:
+  - GPU build/peel remains active
+  - CPU assignment/verify run only for solved survivors
+  - GPU assign/verify are skipped
+- Generated `8193`, `batch=128`, `threads=128`, `device-serial`, `block` peel:
+  - `gpu` backend:
+    - GPU `10.431 ms`
+    - CPU `8.809 ms`
+    - solved `15`
+  - `cpu` backend:
+    - GPU `3.945 ms`
+    - CPU `0.265 ms`
+    - solved `15`
+- Generated `8193`, `fixed_attempts=200`, actual `256`, `batch=128`, `device-serial`, `block` peel:
+  - `gpu` backend:
+    - GPU `20.232 ms`
+    - CPU `19.164 ms`
+    - solved `38`
+  - `cpu` backend:
+    - GPU `10.081 ms`
+    - CPU `0.629 ms`
+    - solved `38`
+- Wrote the hybrid/fixed-attempt baseline report to:
+  - `docs/superpowers/reports/2026-03-27-gpu-poc-fixed-attempts-hybrid-baseline.md`

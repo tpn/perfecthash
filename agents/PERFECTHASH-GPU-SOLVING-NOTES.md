@@ -803,3 +803,40 @@
   - GPU build/peel across many attempts
   - compact solved graphs
   - CPU assignment/verify for the survivors
+
+## Fixed Attempts And Hybrid Backend
+- Added controller-level attempt budgeting:
+  - `--fixed-attempts`
+  - `--first-solution-wins`
+- Added explicit reporting:
+  - `requested_fixed_attempts`
+  - `actual_attempts_tried`
+  - `batches_run`
+  - `first_solved_attempt`
+- Added `--assignment-backend <gpu|cpu>`:
+  - `gpu`: current scalar GPU assignment path
+  - `cpu`: GPU peel, then CPU assignment/verify for solved survivors only
+- Important correction:
+  - CPU backend now truly skips GPU assign/verify
+  - earlier partial implementation still launched those stages and was fixed before reporting results
+- Generated `8193`, `batch=128`, `threads=128`, `device-serial`, `block` peel:
+  - `assignment_backend=gpu`:
+    - GPU `10.431 ms`
+    - CPU `8.809 ms`
+    - solved `15`
+  - `assignment_backend=cpu`:
+    - GPU `3.945 ms`
+    - CPU `0.265 ms`
+    - solved `15`
+- Generated `8193`, `fixed_attempts=200`, actual `256`, `batch=128`, `device-serial`, `block` peel:
+  - `assignment_backend=gpu`:
+    - GPU `20.232 ms`
+    - CPU `19.164 ms`
+    - solved `38`
+  - `assignment_backend=cpu`:
+    - GPU `10.081 ms`
+    - CPU `0.629 ms`
+    - solved `38`
+- This is the strongest evidence so far that GB10 hybrid execution is worth pursuing:
+  - GPU peel is useful
+  - CPU assignment/verify are much cheaper than the current scalar GPU path
