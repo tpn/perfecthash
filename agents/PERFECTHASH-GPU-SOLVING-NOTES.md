@@ -840,3 +840,27 @@
 - This is the strongest evidence so far that GB10 hybrid execution is worth pursuing:
   - GPU peel is useful
   - CPU assignment/verify are much cheaper than the current scalar GPU path
+- Real-key fixed-attempt runs with `Mulshrolate3RX` strengthened that conclusion further.
+- `HologramWorld-31016.keys`, `fixed_attempts=2048`, `batch=128`, `block` peel:
+  - `gpu` backend:
+    - GPU `485.840 ms`
+    - CPU reference `659.399 ms`
+    - solved `1`
+  - `cpu` backend:
+    - GPU `421.490 ms`
+    - CPU backend `0.157 ms`
+    - solved `1`
+- `Hydrogen-40147.keys`, `fixed_attempts=2048`, `batch=128`, `block` peel:
+  - `gpu` backend:
+    - GPU `1095.872 ms`
+    - CPU reference `1034.561 ms`
+    - solved `26`
+    - GPU assign `412.507 ms`
+    - GPU verify `45.871 ms`
+  - `cpu` backend:
+    - GPU `694.154 ms`
+    - CPU backend `6.627 ms`
+    - solved `26`
+    - CPU assign `4.356 ms`
+    - CPU verify `0.935 ms`
+- On Hydrogen in particular, the hybrid path is no longer just “promising”; it is clearly superior to the current scalar GPU assignment path.

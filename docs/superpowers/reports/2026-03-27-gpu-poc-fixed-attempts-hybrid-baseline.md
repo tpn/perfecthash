@@ -142,6 +142,71 @@ Interpretation:
 - The hybrid path is already materially better than the current scalar GPU
   assignment path on this case.
 
+### HologramWorld-31016.keys, fixed-attempt controller
+
+Command shape:
+
+```bash
+./build/gpu-batched-peeling-poc/gpu_batched_peeling_poc \
+  --keys-file keys/HologramWorld-31016.keys \
+  --hash-function Mulshrolate3RX \
+  --batch 128 \
+  --fixed-attempts 2048 \
+  --threads 128 \
+  --solve-mode device-serial \
+  --device-serial-peel-geometry block \
+  --assignment-backend {gpu|cpu} \
+  --output-format json
+```
+
+Results:
+
+| Backend | Requested | Actual | Batches | Solved | GPU ms | CPU ms | GPU peel ms | GPU assign ms | GPU verify ms | CPU assign ms | CPU verify ms |
+|---------|-----------|--------|---------|--------|--------|--------|-------------|---------------|---------------|---------------|---------------|
+| `gpu` | `2048` | `2048` | `16` | `1` | `485.840` | `659.399` | `375.614` | `17.937` | `29.753` | `0.048` | `0.020` |
+| `cpu` | `2048` | `2048` | `16` | `1` | `421.490` | `0.157` | `378.038` | `0.000` | `0.000` | `0.084` | `0.020` |
+
+Interpretation:
+
+- Solve counts stayed identical.
+- The hybrid path is still clearly better even though solve yield is only
+  `1/2048`.
+- The scalar GPU assignment/verify tail is already material even at that low
+  yield.
+
+### Hydrogen-40147.keys, fixed-attempt controller
+
+Command shape:
+
+```bash
+./build/gpu-batched-peeling-poc/gpu_batched_peeling_poc \
+  --keys-file /home/trent/src/perfecthash-keys/hard/Hydrogen-40147.keys \
+  --hash-function Mulshrolate3RX \
+  --batch 128 \
+  --fixed-attempts 2048 \
+  --threads 128 \
+  --solve-mode device-serial \
+  --device-serial-peel-geometry block \
+  --assignment-backend {gpu|cpu} \
+  --output-format json
+```
+
+Results:
+
+| Backend | Requested | Actual | Batches | Solved | GPU ms | CPU ms | GPU peel ms | GPU assign ms | GPU verify ms | CPU assign ms | CPU verify ms |
+|---------|-----------|--------|---------|--------|--------|--------|-------------|---------------|---------------|---------------|---------------|
+| `gpu` | `2048` | `2048` | `16` | `26` | `1095.872` | `1034.561` | `539.958` | `412.507` | `45.871` | `3.652` | `0.916` |
+| `cpu` | `2048` | `2048` | `16` | `26` | `694.154` | `6.627` | `591.964` | `0.000` | `0.000` | `4.356` | `0.935` |
+
+Interpretation:
+
+- Solve counts stayed identical.
+- This is the clearest result so far:
+  - the current scalar GPU assignment path is a major problem on a real solved
+    case
+  - hybrid GPU peel + CPU assignment is decisively better
+- The remaining dominant cost in the hybrid path is still peel.
+
 ## Current Conclusion
 
 The next work item should still target `block` peel with shared-memory/CUB
@@ -153,6 +218,7 @@ The updated working recommendation is:
 2. compact solved survivor ids
 3. use CPU assignment/verify for survivors on GB10
 4. only revisit GPU assignment after peel-layer metadata exists
+5. use `Mulshrolate3RX` / `Mulshrolate4RX` for real-key hybrid exploration
 
 ## Relevant Commits
 

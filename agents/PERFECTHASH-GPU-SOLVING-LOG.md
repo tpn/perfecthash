@@ -569,3 +569,29 @@
     - solved `38`
 - Wrote the hybrid/fixed-attempt baseline report to:
   - `docs/superpowers/reports/2026-03-27-gpu-poc-fixed-attempts-hybrid-baseline.md`
+- 2026-03-27 02:xx PDT: Extended the fixed-attempt/hybrid baseline to real-key runs with `Mulshrolate3RX`.
+- `HologramWorld-31016.keys`, `fixed_attempts=2048`, `batch=128`, `device-serial`, `block` peel:
+  - `gpu` backend:
+    - GPU `485.840 ms`
+    - CPU reference `659.399 ms`
+    - solved `1`
+  - `cpu` backend:
+    - GPU `421.490 ms`
+    - CPU backend `0.157 ms`
+    - solved `1`
+- `Hydrogen-40147.keys`, `fixed_attempts=2048`, `batch=128`, `device-serial`, `block` peel:
+  - `gpu` backend:
+    - GPU `1095.872 ms`
+    - CPU reference `1034.561 ms`
+    - solved `26`
+    - GPU assign `412.507 ms`
+    - GPU verify `45.871 ms`
+  - `cpu` backend:
+    - GPU `694.154 ms`
+    - CPU backend `6.627 ms`
+    - solved `26`
+    - CPU assign `4.356 ms`
+    - CPU verify `0.935 ms`
+- These real-key results materially strengthened the hybrid conclusion:
+  - current scalar GPU assignment is a major bottleneck
+  - block peel + CPU assignment/verify is the best current direction on GB10
