@@ -194,6 +194,49 @@ Takeaway:
 - `batch=128` was better than `256` and `512` on this workload.
 - So the next win is unlikely to come from just “make the batch bigger”.
 
+## Follow-On Real-Key Control Runs
+
+I also ran a small control matrix after profiling to check whether the current
+parallel peel paths stay correct on higher-yield real-key cases.
+
+`Mulshrolate4RX`, `fixed_attempts=2048`, `batch=128`, `assignment_backend=cpu`:
+
+- `HologramWorld-31016.keys`
+  - `thread` peel:
+    - solved `36`
+    - `cpu_success = 36`
+    - `mismatches = 0`
+  - `warp` peel:
+    - solved `36`
+    - `cpu_success = 36`
+    - `mismatches = 0`
+  - `block` peel:
+    - solved `36`
+    - `cpu_success = 16`
+    - `mismatches = 20`
+
+- `Hydrogen-40147.keys`
+  - `thread` peel:
+    - solved `258`
+    - `cpu_success = 258`
+    - `mismatches = 0`
+  - `warp` peel:
+    - solved `258`
+    - `cpu_success = 258`
+    - `mismatches = 0`
+  - `block` peel:
+    - solved `258`
+    - `cpu_success = 193`
+    - `mismatches = 65`
+
+Interpretation:
+
+- the current `block` peel path has a real correctness problem on these
+  real-key / higher-yield runs
+- `warp` peel remains correctness-aligned on the same cases
+- so the next block-peel optimization pass should start with a correctness fix,
+  not just further performance work
+
 ## Current Recommendation
 
 The next best GPU algorithm work is:
@@ -205,7 +248,9 @@ The next best GPU algorithm work is:
    - reducing global atomics and global frontier writes
    - using CUB/CCCL block primitives where they simplify local compaction or
      prefix work
-4. Do **not** spend time trying to widen the current ordered GPU assignment
+4. First, fix the current `block` peel correctness issue exposed by
+   `Mulshrolate4RX` real-key runs.
+5. Do **not** spend time trying to widen the current ordered GPU assignment
    kernel without adding peel-layer metadata first.
 
 ## Relevant Files

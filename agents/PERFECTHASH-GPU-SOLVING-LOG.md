@@ -626,3 +626,20 @@
   - optimize `PeelGraphsDeviceSerialBlockKernel` internals next
 - Wrote profiling notes to:
   - `docs/superpowers/reports/2026-03-28-gpu-poc-nsight-profile-notes.md`
+- 2026-03-28 01:xx PDT: Ran follow-on real-key controls with `Mulshrolate4RX`, `fixed_attempts=2048`, `batch=128`, `assignment_backend=cpu`.
+- `thread` and `warp` peel remained correctness-aligned on both:
+  - `HologramWorld-31016.keys`
+  - `Hydrogen-40147.keys`
+- `block` peel did not:
+  - Hologram:
+    - solved `36`
+    - CPU success `16`
+    - mismatches `20`
+  - Hydrogen:
+    - solved `258`
+    - CPU success `193`
+    - mismatches `65`
+- Conclusion:
+  - the current `block` peel path has a real correctness issue on higher-yield real-key runs
+  - `warp` peel remains the safe parallel peel baseline
+  - next block-peel work should start with correctness debugging, not further speed tuning

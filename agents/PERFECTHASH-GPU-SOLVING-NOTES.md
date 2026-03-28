@@ -901,3 +901,17 @@
     - shared-memory frontier staging
     - fewer global atomics / writes
     - CUB/CCCL block primitives
+- Follow-on real-key control runs exposed a correctness caveat:
+  - `Mulshrolate4RX` with `thread` and `warp` peel remains aligned on:
+    - `HologramWorld-31016.keys`
+    - `Hydrogen-40147.keys`
+  - the current `block` peel path does not:
+    - Hologram:
+      - solved `36`
+      - CPU success `16`
+      - mismatches `20`
+    - Hydrogen:
+      - solved `258`
+      - CPU success `193`
+      - mismatches `65`
+- So the next block-peel iteration needs a correctness fix first, then more performance work.
