@@ -52,6 +52,7 @@ cmake --build build/gpu-batched-peeling-poc -j
 ./build/gpu-batched-peeling-poc/gpu_batched_peeling_poc --keys-file keys/HologramWorld-31016.keys --seeds-file keys/HologramWorld-31016.MultiplyShiftR.seeds --batch 1 --storage-bits 16 --hash-function MultiplyShiftR
 ./build/gpu-batched-peeling-poc/gpu_batched_peeling_poc --keys-file keys/HologramWorld-31016.keys --batch 16 --output-format json --allocation-mode managed-prefetch-gpu
 ./build/gpu-batched-peeling-poc/gpu_batched_peeling_poc --edges 16 --batch 1 --threads 64 --solve-mode device-serial --assign-geometry warp --device-serial-peel-geometry warp --output-format json
+./build/gpu-batched-peeling-poc/gpu_batched_peeling_poc --edges 16 --batch 8 --fixed-attempts 10000 --first-solution-wins --output-format json
 ```
 
 ## Notes
@@ -76,6 +77,10 @@ cmake --build build/gpu-batched-peeling-poc -j
   - `explicit-device`: current CUDA device allocations with explicit host/device copies
   - `managed-default`: managed memory with default migration behavior
   - `managed-prefetch-gpu`: managed memory plus a prefetch pass for the hot graph-state buffers before solve
+- `--fixed-attempts` and `--first-solution-wins` add a batch controller around the existing solve path:
+  - `--fixed-attempts <n>` reruns full batches until at least `n` attempts have been tried
+  - `--first-solution-wins` stops at the next batch boundary after any batch with one or more solved attempts
+  - batch-boundary overshoot is expected and reported
 - `--assign-geometry` is a stage-1 configuration/reporting field only; assignment still runs the scalar thread path for now:
   - default: `thread`
   - allowed values: `thread`, `warp`, `block`
@@ -93,6 +98,11 @@ cmake --build build/gpu-batched-peeling-poc -j
   - `storage_bits`
   - `hash_function`
   - `allocation_mode`
+  - `requested_fixed_attempts`
+  - `actual_attempts_tried`
+  - `batches_run`
+  - `first_solution_wins`
+  - `first_solved_attempt`
   - `gpu_ms`
   - `cpu_ms`
   - `cpu_stage_timings_ms_all_attempts.add_build`
@@ -116,6 +126,7 @@ cmake --build build/gpu-batched-peeling-poc -j
   It includes mode-specific overhead such as managed-memory prefetch and host-roundtrip frontier synchronization.
 - `stage_timings_ms` are narrower phase timings and may not sum exactly to `gpu_ms`.
 - The CPU stage timings are additive aggregates, not wall-clock spans, so they may exceed `cpu_ms`.
+- `first_solved_attempt` is a global attempt id, not a per-batch index.
 - `device-serial` now reports a real four-way stage split by launching separate peel, assign, and verify stages.
 - `--device-serial-peel-geometry` validation:
   - `warp` requires `--threads` to be a multiple of 32

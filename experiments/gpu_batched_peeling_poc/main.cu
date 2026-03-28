@@ -66,6 +66,7 @@ struct Options {
     uint64_t GraphSeed = RNG_DEFAULT_SEED;
     uint64_t RngSubsequence = 0;
     uint64_t RngOffset = 0;
+    uint64_t FixedAttempts = 0;
     std::string KeysFile;
     std::string SeedsFile;
     std::string DumpSolvedSeedsFile;
@@ -78,6 +79,7 @@ struct Options {
     OutputFormat Output = OutputFormat::Human;
     double MemoryHeadroomPct = 10.0;
     bool AutoScaleBatchToFit = true;
+    bool FirstSolutionWins = false;
     bool Verbose = false;
 };
 
@@ -153,6 +155,11 @@ struct ExperimentResult {
     uint32_t EdgeCapacity = 0;
     uint32_t Vertices = 0;
     uint32_t Batch = 0;
+    uint64_t RequestedFixedAttempts = 0;
+    uint64_t ActualAttemptsTried = 0;
+    uint64_t BatchesRun = 0;
+    bool FirstSolutionWins = false;
+    int64_t FirstSolvedAttempt = -1;
     uint32_t Rounds = 0;
     uint32_t GpuSuccess = 0;
     uint32_t CpuSuccess = 0;
@@ -181,6 +188,23 @@ struct DeviceMemoryInfo {
     size_t TotalBytes = 0;
     bool Valid = false;
     bool UnifiedLike = false;
+};
+
+struct BatchOutcome {
+    bool GpuHadSuccess = false;
+    uint32_t GpuSuccess = 0;
+    uint32_t CpuSuccess = 0;
+    uint32_t Mismatches = 0;
+    uint32_t CpuVerifyIssues = 0;
+    uint32_t Rounds = 0;
+    double GpuMilliseconds = 0.0;
+    double CpuMilliseconds = 0.0;
+    CpuStageTimings CpuAllAttempts;
+    CpuStageTimings CpuSolvedOnly;
+    double AddBuildMilliseconds = 0.0;
+    double PeelMilliseconds = 0.0;
+    double AssignMilliseconds = 0.0;
+    double VerifyMilliseconds = 0.0;
 };
 
 template<typename T>
@@ -626,6 +650,8 @@ ParseOptions(int argc, char **argv)
             Opts.RngSubsequence = std::stoull(RequireValue("--rng-subsequence"), nullptr, 0);
         } else if (Arg == "--rng-offset") {
             Opts.RngOffset = std::stoull(RequireValue("--rng-offset"), nullptr, 0);
+        } else if (Arg == "--fixed-attempts") {
+            Opts.FixedAttempts = std::stoull(RequireValue("--fixed-attempts"), nullptr, 0);
         } else if (Arg == "--storage-bits") {
             const auto Value = RequireValue("--storage-bits");
             if (Value == "auto") {
@@ -665,6 +691,8 @@ ParseOptions(int argc, char **argv)
             Opts.Allocation = ParseAllocationMode(RequireValue("--allocation-mode"));
         } else if (Arg == "--output-format") {
             Opts.Output = ParseOutputFormat(RequireValue("--output-format"));
+        } else if (Arg == "--first-solution-wins") {
+            Opts.FirstSolutionWins = true;
         } else if (Arg == "--verbose") {
             Opts.Verbose = true;
         } else if (Arg == "--help" || Arg == "-h") {
@@ -696,6 +724,8 @@ ParseOptions(int argc, char **argv)
                 << "  --graph-seed <x>      Philox seed for per-graph hash seeds\n"
                 << "  --rng-subsequence <x> Philox subsequence base for graph seeds\n"
                 << "  --rng-offset <x>      Philox offset base for graph seeds\n"
+                << "  --fixed-attempts <n>  Run repeated batches until at least n attempts\n"
+                << "  --first-solution-wins stop after the first batch with a solved attempt\n"
                 << "  --verbose             Print per-graph mismatch details\n";
             std::exit(EXIT_SUCCESS);
         } else {
@@ -1062,12 +1092,12 @@ RequiresAndMask()
 
 template<HashFunctionKind Kind>
 GraphSeeds
-MakeGraphSeeds(uint64_t GraphSeed, uint32_t GraphIndex)
+MakeGraphSeeds(uint64_t GraphSeed, uint64_t AttemptId)
 {
     GraphSeeds Seeds = {};
     constexpr uint32_t NumberOfSeeds = HashTraits<Kind>::NumberOfSeeds;
     Philox4x32State State = InitializePhiloxState(GraphSeed,
-                                                  static_cast<uint64_t>(GraphIndex),
+                                                  AttemptId,
                                                   0);
 
     Seeds.NumberOfSeeds = NumberOfSeeds;
@@ -1086,7 +1116,8 @@ MakeGraphSeedsVector(uint32_t Batch,
                      uint64_t RngSubsequence,
                      uint64_t RngOffset,
                      uint32_t Vertices,
-                     const std::string &SeedsFile)
+                     const std::string &SeedsFile,
+                     uint64_t AttemptBase)
 {
     if (!SeedsFile.empty()) {
         GraphSeeds Fixed = LoadSeedsFromFile(SeedsFile);
@@ -1101,7 +1132,7 @@ MakeGraphSeedsVector(uint32_t Batch,
     for (uint32_t Graph = 0; Graph < Batch; ++Graph) {
         GraphSeeds Generated = {};
         Philox4x32State State = InitializePhiloxState(GraphSeed,
-                                                      RngSubsequence + Graph,
+                                                      RngSubsequence + AttemptBase + Graph,
                                                       RngOffset);
 
         Generated.NumberOfSeeds = HashTraits<Kind>::NumberOfSeeds;
@@ -1945,6 +1976,8 @@ RunExperiment(const Options &Opts,
     Result.SelectedStorage = SelectedStorage;
     Result.SolveModeName = SolveModeToString(Opts.Solve);
     Result.AllocationModeName = AllocationModeToString(Opts.Allocation);
+    Result.RequestedFixedAttempts = Opts.FixedAttempts;
+    Result.FirstSolutionWins = Opts.FirstSolutionWins;
 
     const uint64_t TotalEdges = static_cast<uint64_t>(KeyCount) * Batch;
     const uint64_t TotalVertices = static_cast<uint64_t>(Vertices) * Batch;
@@ -1996,301 +2029,6 @@ RunExperiment(const Options &Opts,
 
     CheckCuda(cudaMemcpy(DKeys, Keys.data(), Keys.size() * sizeof(Keys[0]), cudaMemcpyHostToDevice),
               "cudaMemcpy(DKeys)");
-    CheckCuda(cudaMemcpy(DGraphSeeds,
-                         GraphSeedsVector.data(),
-                         GraphSeedsVector.size() * sizeof(GraphSeedsVector[0]),
-                         cudaMemcpyHostToDevice),
-              "cudaMemcpy(DGraphSeeds)");
-
-    CheckCuda(cudaMemset(DEdgeU, 0, TotalEdges * sizeof(StorageT)), "cudaMemset(DEdgeU)");
-    CheckCuda(cudaMemset(DEdgeV, 0, TotalEdges * sizeof(StorageT)), "cudaMemset(DEdgeV)");
-    CheckCuda(cudaMemset(DDegree, 0, TotalVertices * sizeof(uint32_t)), "cudaMemset(DDegree)");
-    CheckCuda(cudaMemset(DXorEdge, 0, TotalVertices * sizeof(uint32_t)), "cudaMemset(DXorEdge)");
-    CheckCuda(cudaMemset(DInvalidGraphs, 0, Batch * sizeof(uint32_t)), "cudaMemset(DInvalidGraphs)");
-    CheckCuda(cudaMemset(DEdgePeeled, 0, TotalEdges * sizeof(uint32_t)), "cudaMemset(DEdgePeeled)");
-    CheckCuda(cudaMemset(DOwnerVertex, 0xff, TotalEdges * sizeof(StorageT)), "cudaMemset(DOwnerVertex)");
-    CheckCuda(cudaMemset(DPeelOrder, 0xff, TotalEdges * sizeof(StorageT)), "cudaMemset(DPeelOrder)");
-    CheckCuda(cudaMemset(DPeeledCount, 0, Batch * sizeof(uint32_t)), "cudaMemset(DPeeledCount)");
-    CheckCuda(cudaMemset(DAssigned, 0, TotalVertices * sizeof(StorageT)), "cudaMemset(DAssigned)");
-    CheckCuda(cudaMemset(DVerifyFailures, 0, Batch * sizeof(uint32_t)), "cudaMemset(DVerifyFailures)");
-    CheckCuda(cudaMemset(DGraphRounds, 0, Batch * sizeof(uint32_t)), "cudaMemset(DGraphRounds)");
-
-    if (NeedsFrontier) {
-        CheckCuda(cudaMemset(DFrontierCount, 0, Batch * sizeof(uint32_t)), "cudaMemset(DFrontierCount)");
-    }
-
-    auto GpuStart = std::chrono::steady_clock::now();
-
-    if (Opts.Allocation == AllocationMode::ManagedPrefetchGpu) {
-        int Device = 0;
-        CheckCuda(cudaGetDevice(&Device), "cudaGetDevice");
-
-        PrefetchGpuMemory(DKeys, Keys.size(), Device, "cudaMemPrefetchAsync(DKeys)");
-        PrefetchGpuMemory(DGraphSeeds, GraphSeedsVector.size(), Device, "cudaMemPrefetchAsync(DGraphSeeds)");
-        PrefetchGpuMemory(DEdgeU, TotalEdges, Device, "cudaMemPrefetchAsync(DEdgeU)");
-        PrefetchGpuMemory(DEdgeV, TotalEdges, Device, "cudaMemPrefetchAsync(DEdgeV)");
-        PrefetchGpuMemory(DDegree, TotalVertices, Device, "cudaMemPrefetchAsync(DDegree)");
-        PrefetchGpuMemory(DXorEdge, TotalVertices, Device, "cudaMemPrefetchAsync(DXorEdge)");
-        PrefetchGpuMemory(DInvalidGraphs, Batch, Device, "cudaMemPrefetchAsync(DInvalidGraphs)");
-        PrefetchGpuMemory(DEdgePeeled, TotalEdges, Device, "cudaMemPrefetchAsync(DEdgePeeled)");
-        PrefetchGpuMemory(DOwnerVertex, TotalEdges, Device, "cudaMemPrefetchAsync(DOwnerVertex)");
-        PrefetchGpuMemory(DPeelOrder, TotalEdges, Device, "cudaMemPrefetchAsync(DPeelOrder)");
-        PrefetchGpuMemory(DPeeledCount, Batch, Device, "cudaMemPrefetchAsync(DPeeledCount)");
-        PrefetchGpuMemory(DAssigned, TotalVertices, Device, "cudaMemPrefetchAsync(DAssigned)");
-        PrefetchGpuMemory(DVerifyFailures, Batch, Device, "cudaMemPrefetchAsync(DVerifyFailures)");
-        PrefetchGpuMemory(DGraphRounds, Batch, Device, "cudaMemPrefetchAsync(DGraphRounds)");
-        if (NeedsFrontier) {
-            PrefetchGpuMemory(DFrontier, FrontierCapacity, Device, "cudaMemPrefetchAsync(DFrontier)");
-            PrefetchGpuMemory(DFrontierCount, Batch, Device, "cudaMemPrefetchAsync(DFrontierCount)");
-        }
-        CheckCuda(cudaDeviceSynchronize(), "cudaDeviceSynchronize(prefetch)");
-    }
-
-    cudaEvent_t StageStart = nullptr;
-    cudaEvent_t StageStop = nullptr;
-    CheckCuda(cudaEventCreate(&StageStart), "cudaEventCreate(StageStart)");
-    CheckCuda(cudaEventCreate(&StageStop), "cudaEventCreate(StageStop)");
-
-    const uint32_t BuildBlocks = static_cast<uint32_t>((TotalEdges + Opts.Threads - 1) / Opts.Threads);
-    const uint32_t VertexBlocks = static_cast<uint32_t>((TotalVertices + Opts.Threads - 1) / Opts.Threads);
-
-    auto MeasureStage = [&](auto &&Launch) -> double {
-        float StageMilliseconds = 0.0f;
-        CheckCuda(cudaEventRecord(StageStart), "cudaEventRecord(StageStart)");
-        Launch();
-        CheckCuda(cudaEventRecord(StageStop), "cudaEventRecord(StageStop)");
-        CheckCuda(cudaEventSynchronize(StageStop), "cudaEventSynchronize(StageStop)");
-        CheckCuda(cudaEventElapsedTime(&StageMilliseconds, StageStart, StageStop), "cudaEventElapsedTime");
-        return static_cast<double>(StageMilliseconds);
-    };
-
-    Result.AddBuildMilliseconds = MeasureStage([&]() {
-        BuildGraphsKernel<Kind, StorageT><<<BuildBlocks, Opts.Threads>>>(KeyCount,
-                                                                         Vertices,
-                                                                         Batch,
-                                                                         DKeys,
-                                                                         DGraphSeeds,
-                                                                         DEdgeU,
-                                                                         DEdgeV,
-                                                                         DDegree,
-                                                                         DXorEdge,
-                                                                         DInvalidGraphs);
-        CheckCuda(cudaGetLastError(), "BuildGraphsKernel launch");
-    });
-
-    if (Opts.Solve == SolveMode::HostRoundTrip) {
-        uint32_t FrontierCount = 0;
-
-        for (;;) {
-            CheckCuda(cudaMemset(DFrontierCount, 0, Batch * sizeof(uint32_t)), "cudaMemset(DFrontierCount)");
-
-            Result.PeelMilliseconds += MeasureStage([&]() {
-                CollectFrontierKernel<StorageT><<<VertexBlocks, Opts.Threads>>>(Vertices,
-                                                                                Batch,
-                                                                                DDegree,
-                                                                                DXorEdge,
-                                                                                DInvalidGraphs,
-                                                                                DFrontier,
-                                                                                DFrontierCount);
-                CheckCuda(cudaGetLastError(), "CollectFrontierKernel launch");
-            });
-
-            CheckCuda(cudaMemcpy(&FrontierCount, DFrontierCount, sizeof(uint32_t), cudaMemcpyDeviceToHost),
-                      "cudaMemcpy(FrontierCount)");
-
-            if (FrontierCount == 0) {
-                break;
-            }
-
-            ++Result.Rounds;
-
-            const uint32_t PeelBlocks = static_cast<uint32_t>((FrontierCount + Opts.Threads - 1) / Opts.Threads);
-            Result.PeelMilliseconds += MeasureStage([&]() {
-                PeelFrontierKernel<StorageT><<<PeelBlocks, Opts.Threads>>>(KeyCount,
-                                                                           Vertices,
-                                                                           FrontierCount,
-                                                                           DFrontier,
-                                                                           DEdgeU,
-                                                                           DEdgeV,
-                                                                           DDegree,
-                                                                           DXorEdge,
-                                                                           DEdgePeeled,
-                                                                           DOwnerVertex,
-                                                                           DPeelOrder,
-                                                                           DPeeledCount);
-                CheckCuda(cudaGetLastError(), "PeelFrontierKernel launch");
-            });
-        }
-
-        Result.AssignMilliseconds = MeasureStage([&]() {
-            AssignGraphsKernel<StorageT><<<Batch, 1>>>(KeyCount,
-                                                       Vertices,
-                                                       EdgeMask,
-                                                       DInvalidGraphs,
-                                                       DEdgeU,
-                                                       DEdgeV,
-                                                       DOwnerVertex,
-                                                       DPeelOrder,
-                                                       DPeeledCount,
-                                                       DAssigned);
-            CheckCuda(cudaGetLastError(), "AssignGraphsKernel launch");
-        });
-
-        const uint32_t VerifyBlocks = static_cast<uint32_t>((TotalEdges + Opts.Threads - 1) / Opts.Threads);
-        Result.VerifyMilliseconds = MeasureStage([&]() {
-            VerifyGraphsKernel<StorageT><<<VerifyBlocks, Opts.Threads>>>(KeyCount,
-                                                                         Vertices,
-                                                                         Batch,
-                                                                         EdgeMask,
-                                                                         DInvalidGraphs,
-                                                                         DEdgeU,
-                                                                         DEdgeV,
-                                                                         DAssigned,
-                                                                         DPeeledCount,
-                                                                         DVerifyFailures);
-            CheckCuda(cudaGetLastError(), "VerifyGraphsKernel launch");
-        });
-    } else {
-        if (Opts.DeviceSerialPeelGeometry == GraphGeometry::Thread) {
-            Result.PeelMilliseconds = MeasureStage([&]() {
-                PeelGraphsDeviceSerialThreadKernel<StorageT><<<Batch, 1>>>(KeyCount,
-                                                                           Vertices,
-                                                                           Batch,
-                                                                           DInvalidGraphs,
-                                                                           DEdgeU,
-                                                                           DEdgeV,
-                                                                           DDegree,
-                                                                           DXorEdge,
-                                                                           DEdgePeeled,
-                                                                           DOwnerVertex,
-                                                                           DPeelOrder,
-                                                                           DPeeledCount,
-                                                                           DVerifyFailures,
-                                                                           DGraphRounds);
-                CheckCuda(cudaGetLastError(), "PeelGraphsDeviceSerialThreadKernel launch");
-            });
-        } else if (Opts.DeviceSerialPeelGeometry == GraphGeometry::Warp) {
-            const uint32_t WarpsPerBlock = Opts.Threads / 32u;
-            const uint32_t PeelBlocks = static_cast<uint32_t>((Batch + WarpsPerBlock - 1u) / WarpsPerBlock);
-            Result.PeelMilliseconds = MeasureStage([&]() {
-                PeelGraphsDeviceSerialWarpKernel<StorageT><<<PeelBlocks, Opts.Threads>>>(KeyCount,
-                                                                                        Vertices,
-                                                                                        Batch,
-                                                                                        DInvalidGraphs,
-                                                                                        DEdgeU,
-                                                                                        DEdgeV,
-                                                                                        DDegree,
-                                                                                        DXorEdge,
-                                                                                        DEdgePeeled,
-                                                                                        DOwnerVertex,
-                                                                                        DPeelOrder,
-                                                                                        DPeeledCount,
-                                                                                        DFrontier,
-                                                                                        DFrontierCount,
-                                                                                        DVerifyFailures,
-                                                                                        DGraphRounds);
-                CheckCuda(cudaGetLastError(), "PeelGraphsDeviceSerialWarpKernel launch");
-            });
-        } else {
-            Result.PeelMilliseconds = MeasureStage([&]() {
-                PeelGraphsDeviceSerialBlockKernel<StorageT><<<Batch, Opts.Threads>>>(KeyCount,
-                                                                                    Vertices,
-                                                                                    Batch,
-                                                                                    DInvalidGraphs,
-                                                                                    DEdgeU,
-                                                                                    DEdgeV,
-                                                                                    DDegree,
-                                                                                    DXorEdge,
-                                                                                    DEdgePeeled,
-                                                                                    DOwnerVertex,
-                                                                                    DPeelOrder,
-                                                                                    DPeeledCount,
-                                                                                    DFrontier,
-                                                                                    DFrontierCount,
-                                                                                    DVerifyFailures,
-                                                                                    DGraphRounds);
-                CheckCuda(cudaGetLastError(), "PeelGraphsDeviceSerialBlockKernel launch");
-            });
-        }
-
-        Result.AssignMilliseconds = MeasureStage([&]() {
-            AssignGraphsKernel<StorageT><<<Batch, 1>>>(KeyCount,
-                                                       Vertices,
-                                                       EdgeMask,
-                                                       DInvalidGraphs,
-                                                       DEdgeU,
-                                                       DEdgeV,
-                                                       DOwnerVertex,
-                                                       DPeelOrder,
-                                                       DPeeledCount,
-                                                       DAssigned);
-            CheckCuda(cudaGetLastError(), "AssignGraphsKernel launch");
-        });
-
-        const uint32_t VerifyBlocks = static_cast<uint32_t>((TotalEdges + Opts.Threads - 1) / Opts.Threads);
-        Result.VerifyMilliseconds = MeasureStage([&]() {
-            VerifyGraphsKernel<StorageT><<<VerifyBlocks, Opts.Threads>>>(KeyCount,
-                                                                         Vertices,
-                                                                         Batch,
-                                                                         EdgeMask,
-                                                                         DInvalidGraphs,
-                                                                         DEdgeU,
-                                                                         DEdgeV,
-                                                                         DAssigned,
-                                                                         DPeeledCount,
-                                                                         DVerifyFailures);
-            CheckCuda(cudaGetLastError(), "VerifyGraphsKernel launch");
-        });
-    }
-
-    std::vector<uint32_t> InvalidGraphs(Batch);
-    std::vector<uint32_t> PeeledCount(Batch);
-    std::vector<uint32_t> VerifyFailures(Batch);
-    std::vector<uint32_t> GraphRounds(Batch);
-
-    CheckCuda(cudaMemcpy(InvalidGraphs.data(), DInvalidGraphs, Batch * sizeof(uint32_t), cudaMemcpyDeviceToHost),
-              "cudaMemcpy(InvalidGraphs)");
-    CheckCuda(cudaMemcpy(PeeledCount.data(), DPeeledCount, Batch * sizeof(uint32_t), cudaMemcpyDeviceToHost),
-              "cudaMemcpy(PeeledCount)");
-    CheckCuda(cudaMemcpy(VerifyFailures.data(), DVerifyFailures, Batch * sizeof(uint32_t), cudaMemcpyDeviceToHost),
-              "cudaMemcpy(VerifyFailures)");
-    CheckCuda(cudaMemcpy(GraphRounds.data(), DGraphRounds, Batch * sizeof(uint32_t), cudaMemcpyDeviceToHost),
-              "cudaMemcpy(GraphRounds)");
-
-    if (Opts.Solve == SolveMode::DeviceSerial) {
-        uint32_t MaxRounds = 0;
-        for (uint32_t Round : GraphRounds) {
-            MaxRounds = std::max(MaxRounds, Round);
-        }
-        Result.Rounds = MaxRounds;
-    }
-
-    auto GpuStop = std::chrono::steady_clock::now();
-    Result.GpuMilliseconds =
-        std::chrono::duration<double, std::milli>(GpuStop - GpuStart).count();
-
-    auto CpuStart = std::chrono::steady_clock::now();
-    std::vector<CpuResult> CpuResults(Batch);
-    CpuStageTimings &CpuAllAttempts = Result.CpuStageTimingsMs.AllAttempts;
-    CpuStageTimings &CpuSolvedOnly = Result.CpuStageTimingsMs.SolvedOnly;
-
-    for (uint32_t Graph = 0; Graph < Batch; ++Graph) {
-        CpuResults[Graph] = RunCpuReference<Kind, StorageT>(Graph,
-                                                            KeyCount,
-                                                            Vertices,
-                                                            EdgeMask,
-                                                            Keys,
-                                                            GraphSeedsVector);
-        CpuAllAttempts.AddBuildMilliseconds += CpuResults[Graph].AddBuildMilliseconds;
-        CpuAllAttempts.PeelMilliseconds += CpuResults[Graph].PeelMilliseconds;
-        CpuAllAttempts.AssignMilliseconds += CpuResults[Graph].AssignMilliseconds;
-        CpuAllAttempts.VerifyMilliseconds += CpuResults[Graph].VerifyMilliseconds;
-    }
-
-    auto CpuStop = std::chrono::steady_clock::now();
-    Result.CpuMilliseconds =
-        std::chrono::duration<double, std::milli>(CpuStop - CpuStart).count();
-
     std::ofstream SolvedSeedsFile;
     if (!Opts.DumpSolvedSeedsFile.empty()) {
         SolvedSeedsFile.open(Opts.DumpSolvedSeedsFile, std::ios::trunc);
@@ -2305,57 +2043,419 @@ RunExperiment(const Options &Opts,
             << "GraphIndex,HashFunction,Seed1,Seed2,Seed3,Seed4,Seed5,Seed6,Seed7,Seed8\n";
     }
 
-    for (uint32_t Graph = 0; Graph < Batch; ++Graph) {
-        const bool ThisGpuSuccess = (
-            InvalidGraphs[Graph] == 0 &&
-            PeeledCount[Graph] == KeyCount &&
-            VerifyFailures[Graph] == 0
-        );
-        const bool ThisCpuSuccess = (CpuResults[Graph].Success && CpuResults[Graph].Verified);
+    cudaEvent_t StageStart = nullptr;
+    cudaEvent_t StageStop = nullptr;
+    CheckCuda(cudaEventCreate(&StageStart), "cudaEventCreate(StageStart)");
+    CheckCuda(cudaEventCreate(&StageStop), "cudaEventCreate(StageStop)");
 
-        if (ThisGpuSuccess) {
-            ++Result.GpuSuccess;
+    const uint32_t BuildBlocks = static_cast<uint32_t>((TotalEdges + Opts.Threads - 1) / Opts.Threads);
+    const uint32_t VertexBlocks = static_cast<uint32_t>((TotalVertices + Opts.Threads - 1) / Opts.Threads);
+    const uint32_t VerifyBlocks = static_cast<uint32_t>((TotalEdges + Opts.Threads - 1) / Opts.Threads);
+    const bool UseController = (Opts.FixedAttempts > 0);
+
+    auto MeasureStage = [&](auto &&Launch) -> double {
+        float StageMilliseconds = 0.0f;
+        CheckCuda(cudaEventRecord(StageStart), "cudaEventRecord(StageStart)");
+        Launch();
+        CheckCuda(cudaEventRecord(StageStop), "cudaEventRecord(StageStop)");
+        CheckCuda(cudaEventSynchronize(StageStop), "cudaEventSynchronize(StageStop)");
+        CheckCuda(cudaEventElapsedTime(&StageMilliseconds, StageStart, StageStop), "cudaEventElapsedTime");
+        return static_cast<double>(StageMilliseconds);
+    };
+
+    auto RunOneBatch = [&](const std::vector<GraphSeeds> &CurrentGraphSeedsVector,
+                           uint64_t AttemptBase) -> BatchOutcome {
+        BatchOutcome Outcome = {};
+
+        CheckCuda(cudaMemcpy(DGraphSeeds,
+                             CurrentGraphSeedsVector.data(),
+                             CurrentGraphSeedsVector.size() * sizeof(CurrentGraphSeedsVector[0]),
+                             cudaMemcpyHostToDevice),
+                  "cudaMemcpy(DGraphSeeds)");
+
+        CheckCuda(cudaMemset(DEdgeU, 0, TotalEdges * sizeof(StorageT)), "cudaMemset(DEdgeU)");
+        CheckCuda(cudaMemset(DEdgeV, 0, TotalEdges * sizeof(StorageT)), "cudaMemset(DEdgeV)");
+        CheckCuda(cudaMemset(DDegree, 0, TotalVertices * sizeof(uint32_t)), "cudaMemset(DDegree)");
+        CheckCuda(cudaMemset(DXorEdge, 0, TotalVertices * sizeof(uint32_t)), "cudaMemset(DXorEdge)");
+        CheckCuda(cudaMemset(DInvalidGraphs, 0, Batch * sizeof(uint32_t)), "cudaMemset(DInvalidGraphs)");
+        CheckCuda(cudaMemset(DEdgePeeled, 0, TotalEdges * sizeof(uint32_t)), "cudaMemset(DEdgePeeled)");
+        CheckCuda(cudaMemset(DOwnerVertex, 0xff, TotalEdges * sizeof(StorageT)), "cudaMemset(DOwnerVertex)");
+        CheckCuda(cudaMemset(DPeelOrder, 0xff, TotalEdges * sizeof(StorageT)), "cudaMemset(DPeelOrder)");
+        CheckCuda(cudaMemset(DPeeledCount, 0, Batch * sizeof(uint32_t)), "cudaMemset(DPeeledCount)");
+        CheckCuda(cudaMemset(DAssigned, 0, TotalVertices * sizeof(StorageT)), "cudaMemset(DAssigned)");
+        CheckCuda(cudaMemset(DVerifyFailures, 0, Batch * sizeof(uint32_t)), "cudaMemset(DVerifyFailures)");
+        CheckCuda(cudaMemset(DGraphRounds, 0, Batch * sizeof(uint32_t)), "cudaMemset(DGraphRounds)");
+
+        if (NeedsFrontier) {
+            CheckCuda(cudaMemset(DFrontierCount, 0, Batch * sizeof(uint32_t)), "cudaMemset(DFrontierCount)");
         }
-        if (ThisCpuSuccess) {
-            ++Result.CpuSuccess;
-            CpuSolvedOnly.AddBuildMilliseconds += CpuResults[Graph].AddBuildMilliseconds;
-            CpuSolvedOnly.PeelMilliseconds += CpuResults[Graph].PeelMilliseconds;
-            CpuSolvedOnly.AssignMilliseconds += CpuResults[Graph].AssignMilliseconds;
-            CpuSolvedOnly.VerifyMilliseconds += CpuResults[Graph].VerifyMilliseconds;
+
+        auto GpuStart = std::chrono::steady_clock::now();
+
+        if (Opts.Allocation == AllocationMode::ManagedPrefetchGpu) {
+            int Device = 0;
+            CheckCuda(cudaGetDevice(&Device), "cudaGetDevice");
+
+            PrefetchGpuMemory(DKeys, Keys.size(), Device, "cudaMemPrefetchAsync(DKeys)");
+            PrefetchGpuMemory(DGraphSeeds, CurrentGraphSeedsVector.size(), Device, "cudaMemPrefetchAsync(DGraphSeeds)");
+            PrefetchGpuMemory(DEdgeU, TotalEdges, Device, "cudaMemPrefetchAsync(DEdgeU)");
+            PrefetchGpuMemory(DEdgeV, TotalEdges, Device, "cudaMemPrefetchAsync(DEdgeV)");
+            PrefetchGpuMemory(DDegree, TotalVertices, Device, "cudaMemPrefetchAsync(DDegree)");
+            PrefetchGpuMemory(DXorEdge, TotalVertices, Device, "cudaMemPrefetchAsync(DXorEdge)");
+            PrefetchGpuMemory(DInvalidGraphs, Batch, Device, "cudaMemPrefetchAsync(DInvalidGraphs)");
+            PrefetchGpuMemory(DEdgePeeled, TotalEdges, Device, "cudaMemPrefetchAsync(DEdgePeeled)");
+            PrefetchGpuMemory(DOwnerVertex, TotalEdges, Device, "cudaMemPrefetchAsync(DOwnerVertex)");
+            PrefetchGpuMemory(DPeelOrder, TotalEdges, Device, "cudaMemPrefetchAsync(DPeelOrder)");
+            PrefetchGpuMemory(DPeeledCount, Batch, Device, "cudaMemPrefetchAsync(DPeeledCount)");
+            PrefetchGpuMemory(DAssigned, TotalVertices, Device, "cudaMemPrefetchAsync(DAssigned)");
+            PrefetchGpuMemory(DVerifyFailures, Batch, Device, "cudaMemPrefetchAsync(DVerifyFailures)");
+            PrefetchGpuMemory(DGraphRounds, Batch, Device, "cudaMemPrefetchAsync(DGraphRounds)");
+            if (NeedsFrontier) {
+                PrefetchGpuMemory(DFrontier, FrontierCapacity, Device, "cudaMemPrefetchAsync(DFrontier)");
+                PrefetchGpuMemory(DFrontierCount, Batch, Device, "cudaMemPrefetchAsync(DFrontierCount)");
+            }
+            CheckCuda(cudaDeviceSynchronize(), "cudaDeviceSynchronize(prefetch)");
         }
-        if (ThisGpuSuccess && SolvedSeedsFile.is_open()) {
-            const GraphSeeds &Seeds = GraphSeedsVector[Graph];
-            SolvedSeedsFile
-                << Graph
-                << "," << HashTraits<Kind>::Name
-                << "," << Seeds.Seeds[0]
-                << "," << Seeds.Seeds[1]
-                << "," << Seeds.Seeds[2]
-                << "," << Seeds.Seeds[3]
-                << "," << Seeds.Seeds[4]
-                << "," << Seeds.Seeds[5]
-                << "," << Seeds.Seeds[6]
-                << "," << Seeds.Seeds[7]
-                << "\n";
+
+        const uint32_t BatchSize = Batch;
+        std::vector<uint32_t> InvalidGraphs(BatchSize);
+        std::vector<uint32_t> PeeledCount(BatchSize);
+        std::vector<uint32_t> VerifyFailures(BatchSize);
+        std::vector<uint32_t> GraphRounds(BatchSize);
+        std::vector<CpuResult> CpuResults(BatchSize);
+
+        Outcome.AddBuildMilliseconds = MeasureStage([&]() {
+            BuildGraphsKernel<Kind, StorageT><<<BuildBlocks, Opts.Threads>>>(KeyCount,
+                                                                             Vertices,
+                                                                             BatchSize,
+                                                                             DKeys,
+                                                                             DGraphSeeds,
+                                                                             DEdgeU,
+                                                                             DEdgeV,
+                                                                             DDegree,
+                                                                             DXorEdge,
+                                                                             DInvalidGraphs);
+            CheckCuda(cudaGetLastError(), "BuildGraphsKernel launch");
+        });
+
+        if (Opts.Solve == SolveMode::HostRoundTrip) {
+            uint32_t FrontierCount = 0;
+
+            for (;;) {
+                CheckCuda(cudaMemset(DFrontierCount, 0, BatchSize * sizeof(uint32_t)), "cudaMemset(DFrontierCount)");
+
+                Outcome.PeelMilliseconds += MeasureStage([&]() {
+                    CollectFrontierKernel<StorageT><<<VertexBlocks, Opts.Threads>>>(Vertices,
+                                                                                    BatchSize,
+                                                                                    DDegree,
+                                                                                    DXorEdge,
+                                                                                    DInvalidGraphs,
+                                                                                    DFrontier,
+                                                                                    DFrontierCount);
+                    CheckCuda(cudaGetLastError(), "CollectFrontierKernel launch");
+                });
+
+                CheckCuda(cudaMemcpy(&FrontierCount, DFrontierCount, sizeof(uint32_t), cudaMemcpyDeviceToHost),
+                          "cudaMemcpy(FrontierCount)");
+
+                if (FrontierCount == 0) {
+                    break;
+                }
+
+                ++Outcome.Rounds;
+
+                const uint32_t PeelBlocks = static_cast<uint32_t>((FrontierCount + Opts.Threads - 1) / Opts.Threads);
+                Outcome.PeelMilliseconds += MeasureStage([&]() {
+                    PeelFrontierKernel<StorageT><<<PeelBlocks, Opts.Threads>>>(KeyCount,
+                                                                               Vertices,
+                                                                               FrontierCount,
+                                                                               DFrontier,
+                                                                               DEdgeU,
+                                                                               DEdgeV,
+                                                                               DDegree,
+                                                                               DXorEdge,
+                                                                               DEdgePeeled,
+                                                                               DOwnerVertex,
+                                                                               DPeelOrder,
+                                                                               DPeeledCount);
+                    CheckCuda(cudaGetLastError(), "PeelFrontierKernel launch");
+                });
+            }
+
+            Outcome.AssignMilliseconds = MeasureStage([&]() {
+                AssignGraphsKernel<StorageT><<<BatchSize, 1>>>(KeyCount,
+                                                               Vertices,
+                                                               EdgeMask,
+                                                               DInvalidGraphs,
+                                                               DEdgeU,
+                                                               DEdgeV,
+                                                               DOwnerVertex,
+                                                               DPeelOrder,
+                                                               DPeeledCount,
+                                                               DAssigned);
+                CheckCuda(cudaGetLastError(), "AssignGraphsKernel launch");
+            });
+
+            Outcome.VerifyMilliseconds = MeasureStage([&]() {
+                VerifyGraphsKernel<StorageT><<<VerifyBlocks, Opts.Threads>>>(KeyCount,
+                                                                             Vertices,
+                                                                             BatchSize,
+                                                                             EdgeMask,
+                                                                             DInvalidGraphs,
+                                                                             DEdgeU,
+                                                                             DEdgeV,
+                                                                             DAssigned,
+                                                                             DPeeledCount,
+                                                                             DVerifyFailures);
+                CheckCuda(cudaGetLastError(), "VerifyGraphsKernel launch");
+            });
+        } else {
+            if (Opts.DeviceSerialPeelGeometry == GraphGeometry::Thread) {
+                Outcome.PeelMilliseconds = MeasureStage([&]() {
+                    PeelGraphsDeviceSerialThreadKernel<StorageT><<<BatchSize, 1>>>(KeyCount,
+                                                                                   Vertices,
+                                                                                   BatchSize,
+                                                                                   DInvalidGraphs,
+                                                                                   DEdgeU,
+                                                                                   DEdgeV,
+                                                                                   DDegree,
+                                                                                   DXorEdge,
+                                                                                   DEdgePeeled,
+                                                                                   DOwnerVertex,
+                                                                                   DPeelOrder,
+                                                                                   DPeeledCount,
+                                                                                   DVerifyFailures,
+                                                                                   DGraphRounds);
+                    CheckCuda(cudaGetLastError(), "PeelGraphsDeviceSerialThreadKernel launch");
+                });
+            } else if (Opts.DeviceSerialPeelGeometry == GraphGeometry::Warp) {
+                const uint32_t WarpsPerBlock = Opts.Threads / 32u;
+                const uint32_t PeelBlocks = static_cast<uint32_t>((BatchSize + WarpsPerBlock - 1u) / WarpsPerBlock);
+                Outcome.PeelMilliseconds = MeasureStage([&]() {
+                    PeelGraphsDeviceSerialWarpKernel<StorageT><<<PeelBlocks, Opts.Threads>>>(KeyCount,
+                                                                                            Vertices,
+                                                                                            BatchSize,
+                                                                                            DInvalidGraphs,
+                                                                                            DEdgeU,
+                                                                                            DEdgeV,
+                                                                                            DDegree,
+                                                                                            DXorEdge,
+                                                                                            DEdgePeeled,
+                                                                                            DOwnerVertex,
+                                                                                            DPeelOrder,
+                                                                                            DPeeledCount,
+                                                                                            DFrontier,
+                                                                                            DFrontierCount,
+                                                                                            DVerifyFailures,
+                                                                                            DGraphRounds);
+                    CheckCuda(cudaGetLastError(), "PeelGraphsDeviceSerialWarpKernel launch");
+                });
+            } else {
+                Outcome.PeelMilliseconds = MeasureStage([&]() {
+                    PeelGraphsDeviceSerialBlockKernel<StorageT><<<BatchSize, Opts.Threads>>>(KeyCount,
+                                                                                             Vertices,
+                                                                                             BatchSize,
+                                                                                             DInvalidGraphs,
+                                                                                             DEdgeU,
+                                                                                             DEdgeV,
+                                                                                             DDegree,
+                                                                                             DXorEdge,
+                                                                                             DEdgePeeled,
+                                                                                             DOwnerVertex,
+                                                                                             DPeelOrder,
+                                                                                             DPeeledCount,
+                                                                                             DFrontier,
+                                                                                             DFrontierCount,
+                                                                                             DVerifyFailures,
+                                                                                             DGraphRounds);
+                    CheckCuda(cudaGetLastError(), "PeelGraphsDeviceSerialBlockKernel launch");
+                });
+            }
+
+            Outcome.AssignMilliseconds = MeasureStage([&]() {
+                AssignGraphsKernel<StorageT><<<BatchSize, 1>>>(KeyCount,
+                                                               Vertices,
+                                                               EdgeMask,
+                                                               DInvalidGraphs,
+                                                               DEdgeU,
+                                                               DEdgeV,
+                                                               DOwnerVertex,
+                                                               DPeelOrder,
+                                                               DPeeledCount,
+                                                               DAssigned);
+                CheckCuda(cudaGetLastError(), "AssignGraphsKernel launch");
+            });
+
+            Outcome.VerifyMilliseconds = MeasureStage([&]() {
+                VerifyGraphsKernel<StorageT><<<VerifyBlocks, Opts.Threads>>>(KeyCount,
+                                                                             Vertices,
+                                                                             BatchSize,
+                                                                             EdgeMask,
+                                                                             DInvalidGraphs,
+                                                                             DEdgeU,
+                                                                             DEdgeV,
+                                                                             DAssigned,
+                                                                             DPeeledCount,
+                                                                             DVerifyFailures);
+                CheckCuda(cudaGetLastError(), "VerifyGraphsKernel launch");
+            });
         }
-        if (ThisGpuSuccess != ThisCpuSuccess) {
-            ++Result.Mismatches;
-            if (Opts.Verbose) {
-                std::ostream &Details = (Opts.Output == OutputFormat::Json) ? std::cerr : std::cout;
-                Details << "Mismatch graph=" << Graph
-                        << " gpu_success=" << ThisGpuSuccess
-                        << " cpu_success=" << ThisCpuSuccess
-                        << " invalid=" << InvalidGraphs[Graph]
-                        << " peeled_gpu=" << PeeledCount[Graph]
-                        << " peeled_cpu=" << CpuResults[Graph].Peeled
-                        << " verify_failures=" << VerifyFailures[Graph]
-                        << "\n";
+
+        CheckCuda(cudaMemcpy(InvalidGraphs.data(), DInvalidGraphs, BatchSize * sizeof(uint32_t), cudaMemcpyDeviceToHost),
+                  "cudaMemcpy(InvalidGraphs)");
+        CheckCuda(cudaMemcpy(PeeledCount.data(), DPeeledCount, BatchSize * sizeof(uint32_t), cudaMemcpyDeviceToHost),
+                  "cudaMemcpy(PeeledCount)");
+        CheckCuda(cudaMemcpy(VerifyFailures.data(), DVerifyFailures, BatchSize * sizeof(uint32_t), cudaMemcpyDeviceToHost),
+                  "cudaMemcpy(VerifyFailures)");
+        CheckCuda(cudaMemcpy(GraphRounds.data(), DGraphRounds, BatchSize * sizeof(uint32_t), cudaMemcpyDeviceToHost),
+                  "cudaMemcpy(GraphRounds)");
+
+        if (Opts.Solve == SolveMode::DeviceSerial) {
+            uint32_t MaxRounds = 0;
+            for (uint32_t Round : GraphRounds) {
+                MaxRounds = std::max(MaxRounds, Round);
+            }
+            Outcome.Rounds = MaxRounds;
+        }
+
+        auto GpuStop = std::chrono::steady_clock::now();
+        Outcome.GpuMilliseconds =
+            std::chrono::duration<double, std::milli>(GpuStop - GpuStart).count();
+
+        auto CpuStart = std::chrono::steady_clock::now();
+        CpuStageTimings CpuAllAttempts = {};
+        CpuStageTimings CpuSolvedOnly = {};
+
+        for (uint32_t Graph = 0; Graph < BatchSize; ++Graph) {
+            CpuResults[Graph] = RunCpuReference<Kind, StorageT>(Graph,
+                                                                KeyCount,
+                                                                Vertices,
+                                                                EdgeMask,
+                                                                Keys,
+                                                                CurrentGraphSeedsVector);
+            CpuAllAttempts.AddBuildMilliseconds += CpuResults[Graph].AddBuildMilliseconds;
+            CpuAllAttempts.PeelMilliseconds += CpuResults[Graph].PeelMilliseconds;
+            CpuAllAttempts.AssignMilliseconds += CpuResults[Graph].AssignMilliseconds;
+            CpuAllAttempts.VerifyMilliseconds += CpuResults[Graph].VerifyMilliseconds;
+        }
+
+        auto CpuStop = std::chrono::steady_clock::now();
+        Outcome.CpuMilliseconds =
+            std::chrono::duration<double, std::milli>(CpuStop - CpuStart).count();
+
+        for (uint32_t Graph = 0; Graph < BatchSize; ++Graph) {
+            const bool ThisGpuSuccess = (
+                InvalidGraphs[Graph] == 0 &&
+                PeeledCount[Graph] == KeyCount &&
+                VerifyFailures[Graph] == 0
+            );
+            const bool ThisCpuSuccess = (CpuResults[Graph].Success && CpuResults[Graph].Verified);
+
+            if (ThisGpuSuccess) {
+                ++Outcome.GpuSuccess;
+                Outcome.GpuHadSuccess = true;
+                if (Result.FirstSolvedAttempt < 0) {
+                    Result.FirstSolvedAttempt = static_cast<int64_t>(AttemptBase + Graph);
+                }
+            }
+            if (ThisCpuSuccess) {
+                ++Outcome.CpuSuccess;
+                CpuSolvedOnly.AddBuildMilliseconds += CpuResults[Graph].AddBuildMilliseconds;
+                CpuSolvedOnly.PeelMilliseconds += CpuResults[Graph].PeelMilliseconds;
+                CpuSolvedOnly.AssignMilliseconds += CpuResults[Graph].AssignMilliseconds;
+                CpuSolvedOnly.VerifyMilliseconds += CpuResults[Graph].VerifyMilliseconds;
+            }
+            if (ThisGpuSuccess && SolvedSeedsFile.is_open()) {
+                const GraphSeeds &Seeds = CurrentGraphSeedsVector[Graph];
+                SolvedSeedsFile
+                    << (AttemptBase + Graph)
+                    << "," << HashTraits<Kind>::Name
+                    << "," << Seeds.Seeds[0]
+                    << "," << Seeds.Seeds[1]
+                    << "," << Seeds.Seeds[2]
+                    << "," << Seeds.Seeds[3]
+                    << "," << Seeds.Seeds[4]
+                    << "," << Seeds.Seeds[5]
+                    << "," << Seeds.Seeds[6]
+                    << "," << Seeds.Seeds[7]
+                    << "\n";
+            }
+            if (ThisGpuSuccess != ThisCpuSuccess) {
+                ++Outcome.Mismatches;
+                if (Opts.Verbose) {
+                    std::ostream &Details = (Opts.Output == OutputFormat::Json) ? std::cerr : std::cout;
+                    Details << "Mismatch graph=" << (AttemptBase + Graph)
+                            << " gpu_success=" << ThisGpuSuccess
+                            << " cpu_success=" << ThisCpuSuccess
+                            << " invalid=" << InvalidGraphs[Graph]
+                            << " peeled_gpu=" << PeeledCount[Graph]
+                            << " peeled_cpu=" << CpuResults[Graph].Peeled
+                            << " verify_failures=" << VerifyFailures[Graph]
+                            << "\n";
+                }
+            }
+            if (CpuResults[Graph].Success && !CpuResults[Graph].Verified) {
+                ++Outcome.CpuVerifyIssues;
             }
         }
-        if (CpuResults[Graph].Success && !CpuResults[Graph].Verified) {
-            ++Result.CpuVerifyIssues;
+
+        Outcome.CpuAllAttempts = CpuAllAttempts;
+        Outcome.CpuSolvedOnly = CpuSolvedOnly;
+        return Outcome;
+    };
+
+    const uint64_t BatchAttempts = static_cast<uint64_t>(Batch);
+    uint64_t AttemptBase = 0;
+
+    for (;;) {
+        std::vector<GraphSeeds> CurrentGraphSeedsVector = MakeGraphSeedsVector<Kind>(Batch,
+                                                                                     Opts.GraphSeed,
+                                                                                     Opts.RngSubsequence,
+                                                                                     Opts.RngOffset,
+                                                                                     Vertices,
+                                                                                     Opts.SeedsFile,
+                                                                                     AttemptBase);
+        BatchOutcome Outcome = RunOneBatch(CurrentGraphSeedsVector, AttemptBase);
+
+        Result.GpuSuccess += Outcome.GpuSuccess;
+        Result.CpuSuccess += Outcome.CpuSuccess;
+        Result.Mismatches += Outcome.Mismatches;
+        Result.CpuVerifyIssues += Outcome.CpuVerifyIssues;
+        Result.Rounds += Outcome.Rounds;
+        Result.GpuMilliseconds += Outcome.GpuMilliseconds;
+        Result.CpuMilliseconds += Outcome.CpuMilliseconds;
+        Result.CpuStageTimingsMs.AllAttempts.AddBuildMilliseconds += Outcome.CpuAllAttempts.AddBuildMilliseconds;
+        Result.CpuStageTimingsMs.AllAttempts.PeelMilliseconds += Outcome.CpuAllAttempts.PeelMilliseconds;
+        Result.CpuStageTimingsMs.AllAttempts.AssignMilliseconds += Outcome.CpuAllAttempts.AssignMilliseconds;
+        Result.CpuStageTimingsMs.AllAttempts.VerifyMilliseconds += Outcome.CpuAllAttempts.VerifyMilliseconds;
+        Result.CpuStageTimingsMs.SolvedOnly.AddBuildMilliseconds += Outcome.CpuSolvedOnly.AddBuildMilliseconds;
+        Result.CpuStageTimingsMs.SolvedOnly.PeelMilliseconds += Outcome.CpuSolvedOnly.PeelMilliseconds;
+        Result.CpuStageTimingsMs.SolvedOnly.AssignMilliseconds += Outcome.CpuSolvedOnly.AssignMilliseconds;
+        Result.CpuStageTimingsMs.SolvedOnly.VerifyMilliseconds += Outcome.CpuSolvedOnly.VerifyMilliseconds;
+        Result.AddBuildMilliseconds += Outcome.AddBuildMilliseconds;
+        Result.PeelMilliseconds += Outcome.PeelMilliseconds;
+        Result.AssignMilliseconds += Outcome.AssignMilliseconds;
+        Result.VerifyMilliseconds += Outcome.VerifyMilliseconds;
+        Result.ActualAttemptsTried += BatchAttempts;
+        ++Result.BatchesRun;
+
+        if (!UseController) {
+            break;
         }
+
+        if (Opts.FirstSolutionWins && Outcome.GpuHadSuccess) {
+            break;
+        }
+
+        if (Result.ActualAttemptsTried >= Opts.FixedAttempts) {
+            break;
+        }
+
+        AttemptBase += BatchAttempts;
     }
+
+    auto ControllerStop = std::chrono::steady_clock::now();
+    (void)ControllerStop;
 
     if (Opts.Output == OutputFormat::Json) {
         std::ostringstream Json;
@@ -2363,6 +2463,11 @@ RunExperiment(const Options &Opts,
         Json << "{"
              << "\"dataset\":\"" << JsonEscape(Result.DatasetName) << "\","
              << "\"batch\":" << Result.Batch << ","
+             << "\"requested_fixed_attempts\":" << Result.RequestedFixedAttempts << ","
+             << "\"actual_attempts_tried\":" << Result.ActualAttemptsTried << ","
+             << "\"batches_run\":" << Result.BatchesRun << ","
+             << "\"first_solution_wins\":" << (Result.FirstSolutionWins ? "true" : "false") << ","
+             << "\"first_solved_attempt\":" << Result.FirstSolvedAttempt << ","
              << "\"solve_mode\":\"" << JsonEscape(Result.SolveModeName) << "\","
              << "\"threads\":" << Opts.Threads << ","
              << "\"assign_geometry\":\"" << JsonEscape(GraphGeometryToString(Opts.AssignGeometry)) << "\","
@@ -2413,6 +2518,13 @@ RunExperiment(const Options &Opts,
             << "  Edge capacity:     " << EdgeCapacity << "\n"
             << "  Vertices:          " << Vertices << "\n"
             << "  Batch size:        " << Batch << "\n"
+            << "  Requested fixed attempts: " << Result.RequestedFixedAttempts << "\n"
+            << "  Actual attempts tried:    " << Result.ActualAttemptsTried << "\n"
+            << "  Batches run:              " << Result.BatchesRun << "\n"
+            << "  First solution wins:      " << (Result.FirstSolutionWins ? "Y" : "N") << "\n"
+            << "  First solved attempt:     "
+            << (Result.FirstSolvedAttempt >= 0 ? std::to_string(Result.FirstSolvedAttempt) : std::string("<none>"))
+            << "\n"
             << "  Hash function:     " << Result.HashFunctionName << "\n"
             << "  Solve mode:        " << Result.SolveModeName << "\n"
             << "  Allocation mode:   " << Result.AllocationModeName << "\n"
@@ -2422,8 +2534,8 @@ RunExperiment(const Options &Opts,
             << "  Storage bits:      " << Result.StorageBits << "\n"
             << "  Storage mode:      " << StorageModeToString(Result.SelectedStorage) << "\n"
             << "  Peel rounds:       " << Result.Rounds << "\n"
-            << "  GPU success:       " << Result.GpuSuccess << "/" << Batch << "\n"
-            << "  CPU success:       " << Result.CpuSuccess << "/" << Batch << "\n"
+            << "  GPU success:       " << Result.GpuSuccess << "/" << Result.ActualAttemptsTried << "\n"
+            << "  CPU success:       " << Result.CpuSuccess << "/" << Result.ActualAttemptsTried << "\n"
             << "  Success mismatches: " << Result.Mismatches << "\n"
             << "  CPU verify issues: " << Result.CpuVerifyIssues << "\n"
             << std::fixed << std::setprecision(3)
@@ -2538,7 +2650,8 @@ RunWithSelectedStorage(const Options &Opts,
                                                        NextPowerOfTwo(NextPowerOfTwo(
                                                            static_cast<uint32_t>(Keys.size())
                                                        ) + 1),
-                                                       Opts.SeedsFile);
+                                                       Opts.SeedsFile,
+                                                       0);
 
     if (SelectedStorage == StorageMode::Bits16) {
         return RunExperiment<Kind, uint16_t>(Opts,
