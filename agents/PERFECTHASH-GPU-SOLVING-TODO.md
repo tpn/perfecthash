@@ -72,6 +72,11 @@
 - Compare `Mulshrolate4RX` against `Mulshrolate3RX` on the new fixed-attempt/hybrid path for:
   - `HologramWorld-31016.keys`
   - `Hydrogen-40147.keys`
+- Optimize `PeelGraphsDeviceSerialBlockKernel` based on the new profiling data:
+  - shared-memory frontier staging
+  - fewer global atomics / frontier writes
+  - CUB/CCCL block primitives where useful
+- Preserve `batch=128` as the current default profiling target for generated `8193` unless a later optimization changes the batch-size curve.
 - Add best-coverage / predicate mode on top of the fixed-attempt controller:
   - track best solved candidate
   - report best attempt id and metric

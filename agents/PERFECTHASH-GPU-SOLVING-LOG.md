@@ -595,3 +595,34 @@
 - These real-key results materially strengthened the hybrid conclusion:
   - current scalar GPU assignment is a major bottleneck
   - block peel + CPU assignment/verify is the best current direction on GB10
+- 2026-03-28 00:xx PDT: Confirmed profiler environment is already available:
+  - `nsys` and `ncu` present under `/usr/local/cuda-13.1/bin`
+  - `ncu` required root because `/proc/driver/nvidia/params` reported `RmProfilingAdminOnly: 1`
+  - passwordless `sudo` was available, so `ncu` profiling was possible without changing machine config
+- 2026-03-28 00:xx PDT: `nsys` on generated `8193`, `fixed_attempts=20000`, `block` peel, `assignment_backend=cpu`:
+  - `PeelGraphsDeviceSerialBlockKernel`: `79.6%`
+  - `BuildGraphsKernel`: `20.4%`
+- 2026-03-28 00:xx PDT: `nsys` on the same case with `assignment_backend=gpu`:
+  - `AssignGraphsKernel`: `50.2%`
+  - `PeelGraphsDeviceSerialBlockKernel`: `34.8%`
+  - `BuildGraphsKernel`: `8.9%`
+  - `VerifyGraphsKernel`: `6.1%`
+- 2026-03-28 00:xx PDT: `ncu` on `PeelGraphsDeviceSerialBlockKernel`:
+  - memory throughput `7.30%`
+  - compute throughput `1.40%`
+  - achieved occupancy `14.41%`
+  - waves per SM `0.22`
+- 2026-03-28 00:xx PDT: `ncu` on `AssignGraphsKernel`:
+  - block size `1`
+  - achieved occupancy `3.11%`
+  - waves per SM `0.11`
+- 2026-03-28 00:xx PDT: batch sweep on generated `8193`, hybrid CPU backend, `fixed_attempts=20000`, `block` peel:
+  - `batch=128`: GPU `516.610 ms`
+  - `batch=256`: GPU `599.459 ms`
+  - `batch=512`: GPU `605.346 ms`
+- Profiling-informed next step:
+  - do not just increase batch size
+  - keep hybrid CPU assignment
+  - optimize `PeelGraphsDeviceSerialBlockKernel` internals next
+- Wrote profiling notes to:
+  - `docs/superpowers/reports/2026-03-28-gpu-poc-nsight-profile-notes.md`

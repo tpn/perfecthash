@@ -864,3 +864,40 @@
     - CPU assign `4.356 ms`
     - CPU verify `0.935 ms`
 - On Hydrogen in particular, the hybrid path is no longer just “promising”; it is clearly superior to the current scalar GPU assignment path.
+
+## Nsight Profiling
+- `nsys` and `ncu` are already present on the box:
+  - `/usr/local/cuda-13.1/bin/nsys`
+  - `/usr/local/cuda-13.1/bin/ncu`
+- `ncu` required root due `RmProfilingAdminOnly: 1`; passwordless `sudo` was available.
+- `nsys` on generated `8193`, `fixed_attempts=20000`, `block` peel, `assignment_backend=cpu`:
+  - peel kernel accounts for about `79.6%` of GPU kernel time
+  - build kernel accounts for about `20.4%`
+- `nsys` on the same case with `assignment_backend=gpu`:
+  - `AssignGraphsKernel` accounts for about `50.2%`
+  - `PeelGraphsDeviceSerialBlockKernel` about `34.8%`
+  - `BuildGraphsKernel` about `8.9%`
+  - `VerifyGraphsKernel` about `6.1%`
+- `ncu` on `PeelGraphsDeviceSerialBlockKernel`:
+  - memory throughput `7.30%`
+  - compute throughput `1.40%`
+  - achieved occupancy `14.41%`
+  - waves per SM `0.22`
+  - interpretation:
+    - underfilled / coordination-heavy
+    - not compute-bound
+    - not near bandwidth saturation either
+- `ncu` on `AssignGraphsKernel`:
+  - block size `1`
+  - achieved occupancy `3.11%`
+  - waves per SM `0.11`
+  - launch warning confirms the obvious warp waste, but does not invalidate the decision to keep assignment on CPU until layer metadata exists
+- A batch-size sweep on the hybrid path showed:
+  - `batch=128` beat `256` and `512`
+  - so the next win is not simply “increase batch size”
+- Profiling-informed recommendation:
+  - keep hybrid CPU assignment
+  - optimize the internals of `PeelGraphsDeviceSerialBlockKernel` next:
+    - shared-memory frontier staging
+    - fewer global atomics / writes
+    - CUB/CCCL block primitives
