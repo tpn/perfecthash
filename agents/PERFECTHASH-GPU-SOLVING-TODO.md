@@ -110,6 +110,13 @@
   - reduce the remaining overhead versus plain `block` on lighter/synthetic runs
   - consider CUB/CCCL block compaction in place of hand-rolled shared counting
 - Measure real-key throughput and solve rate on Hydrogen/HologramWorld across batch sizes.
+- Keep `block-shared` as the primary experimental real-key block peel path for now.
+- Keep `block-staged` as the correctness/reference oracle.
+- Keep plain `block` around for comparison on synthetic/lighter runs.
+- Optimize the `block-shared` peel kernel based on the new profiling data:
+  - preserve its real-key correctness
+  - reduce the remaining overhead versus plain `block` on lighter/synthetic runs
+  - consider CUB/CCCL block compaction in place of hand-rolled shared counting
 - Compare `host-roundtrip` vs `device-serial` on hard cases with clean serial measurements.
 - Measure solve throughput as a function of:
   - edges
