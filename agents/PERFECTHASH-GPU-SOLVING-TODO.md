@@ -78,6 +78,7 @@
     - shared-memory frontier staging
     - fewer global atomics / frontier writes
     - CUB/CCCL block primitives where useful
+- Use the new `block-staged` kernel as the correctness oracle while debugging the faster `block` kernel.
 - Preserve `batch=128` as the current default profiling target for generated `8193` unless a later optimization changes the batch-size curve.
 - Add best-coverage / predicate mode on top of the fixed-attempt controller:
   - track best solved candidate

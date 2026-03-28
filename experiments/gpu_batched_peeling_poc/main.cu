@@ -35,6 +35,7 @@ enum class GraphGeometry {
     Thread,
     Warp,
     Block,
+    BlockStaged,
 };
 
 enum class AllocationMode {
@@ -433,6 +434,8 @@ GraphGeometryToString(GraphGeometry Geometry)
             return "warp";
         case GraphGeometry::Block:
             return "block";
+        case GraphGeometry::BlockStaged:
+            return "block-staged";
         default:
             return "unknown";
     }
@@ -562,6 +565,8 @@ ParseGraphGeometry(const std::string &Value, const char *FlagName)
         return GraphGeometry::Warp;
     } else if (Lower == "block") {
         return GraphGeometry::Block;
+    } else if (Lower == "block-staged") {
+        return GraphGeometry::BlockStaged;
     }
 
     std::cerr << "Invalid " << FlagName << " value: " << Value << "\n";
@@ -744,7 +749,7 @@ ParseOptions(int argc, char **argv)
                 << "  --threads <n>         Threads per block for build/collect/peel kernels\n"
                 << "  --assign-geometry <x> stage-1 config/reporting only; assignment stays thread mode\n"
                 << "  --device-serial-peel-geometry <x>\n"
-                << "                        device-serial peel geometry: thread, warp, or block\n"
+                << "                        device-serial peel geometry: thread, warp, block, or block-staged\n"
                 << "  --storage-bits <x>    auto, 16, or 32\n"
                 << "  --solve-mode <x>      host-roundtrip or device-serial\n"
                 << "  --memory-headroom-pct <x>\n"
@@ -789,8 +794,12 @@ ParseOptions(int argc, char **argv)
             std::exit(EXIT_FAILURE);
         }
 
-        if (Opts.DeviceSerialPeelGeometry == GraphGeometry::Block && Opts.Threads < 32u) {
-            std::cerr << "--device-serial-peel-geometry block requires --threads to be at least 32.\n";
+        if ((Opts.DeviceSerialPeelGeometry == GraphGeometry::Block ||
+             Opts.DeviceSerialPeelGeometry == GraphGeometry::BlockStaged) &&
+            Opts.Threads < 32u) {
+            std::cerr << "--device-serial-peel-geometry "
+                      << GraphGeometryToString(Opts.DeviceSerialPeelGeometry)
+                      << " requires --threads to be at least 32.\n";
             std::exit(EXIT_FAILURE);
         }
     } else if (Opts.DeviceSerialPeelGeometry != GraphGeometry::Thread) {
@@ -1849,6 +1858,177 @@ PeelGraphsDeviceSerialBlockKernel(uint32_t Edges,
     }
 }
 
+template<typename StorageT>
+size_t
+BlockStagedSharedBytes(uint32_t Threads)
+{
+    return (sizeof(uint32_t) * Threads * 2) +
+           (sizeof(StorageT) * Threads * 2);
+}
+
+template<typename StorageT>
+__global__ void
+PeelGraphsDeviceSerialBlockStagedKernel(uint32_t Edges,
+                                        uint32_t Vertices,
+                                        uint32_t Batch,
+                                        const uint32_t *InvalidGraphs,
+                                        const StorageT *EdgeU,
+                                        const StorageT *EdgeV,
+                                        uint32_t *Degree,
+                                        uint32_t *XorEdge,
+                                        uint32_t *EdgePeeled,
+                                        StorageT *OwnerVertex,
+                                        StorageT *PeelOrder,
+                                        uint32_t *PeeledCount,
+                                        FrontierItemT<StorageT> *Frontier,
+                                        uint32_t *FrontierCount,
+                                        uint32_t *VerifyFailures,
+                                        uint32_t *GraphRounds)
+{
+    extern __shared__ unsigned char SharedRaw[];
+
+    const uint32_t Graph = blockIdx.x;
+    if (Graph >= Batch) {
+        return;
+    }
+
+    const uint32_t Thread = threadIdx.x;
+    const uint32_t VertexBase = Graph * Vertices;
+    const uint32_t EdgeBase = Graph * Edges;
+    FrontierItemT<StorageT> *GraphFrontier = Frontier + static_cast<size_t>(Graph) * Vertices;
+
+    auto *CandidateFlags = reinterpret_cast<uint32_t *>(SharedRaw);
+    auto *CandidateOffsets = CandidateFlags + blockDim.x;
+    auto *CandidateVertices = reinterpret_cast<StorageT *>(CandidateOffsets + blockDim.x);
+    auto *CandidateEdges = CandidateVertices + blockDim.x;
+
+    __shared__ uint32_t SharedFrontierCount;
+    __shared__ uint32_t SharedRoundOrderBase;
+    uint32_t Rounds = 0;
+
+    if (InvalidGraphs[Graph] != 0) {
+        if (Thread == 0) {
+            VerifyFailures[Graph] = 1;
+            GraphRounds[Graph] = 0;
+        }
+        return;
+    }
+
+    for (;;) {
+        if (Thread == 0) {
+            FrontierCount[Graph] = 0;
+        }
+        __syncthreads();
+
+        // Phase 1: collect the current round frontier without mutating graph state.
+        for (uint32_t VertexBaseIndex = 0; VertexBaseIndex < Vertices; VertexBaseIndex += blockDim.x) {
+            const uint32_t Vertex = VertexBaseIndex + Thread;
+            uint32_t Flag = 0;
+            StorageT ChosenVertex = 0;
+            StorageT ChosenEdge = 0;
+
+            if (Vertex < Vertices && Degree[VertexBase + Vertex] == 1) {
+                const uint32_t Edge = XorEdge[VertexBase + Vertex];
+                const uint32_t EdgeIndex = EdgeBase + Edge;
+                const uint32_t U = static_cast<uint32_t>(EdgeU[EdgeIndex]);
+                const uint32_t V = static_cast<uint32_t>(EdgeV[EdgeIndex]);
+                const uint32_t Other = (U == Vertex ? V : U);
+
+                // Deterministically choose one owner when both endpoints are degree-1.
+                if (Degree[VertexBase + Other] == 1 && Other < Vertex) {
+                    Flag = 0;
+                } else {
+                    Flag = 1;
+                    ChosenVertex = static_cast<StorageT>(Vertex);
+                    ChosenEdge = static_cast<StorageT>(Edge);
+                }
+            }
+
+            CandidateFlags[Thread] = Flag;
+            CandidateVertices[Thread] = ChosenVertex;
+            CandidateEdges[Thread] = ChosenEdge;
+            __syncthreads();
+
+            if (Thread == 0) {
+                uint32_t Running = 0;
+                for (uint32_t Index = 0; Index < blockDim.x; ++Index) {
+                    CandidateOffsets[Index] = Running;
+                    Running += CandidateFlags[Index];
+                }
+            }
+            __syncthreads();
+
+            if (Flag != 0) {
+                const uint32_t Slot = atomicAdd(&FrontierCount[Graph], 1u);
+                if (Slot < Vertices) {
+                    GraphFrontier[Slot].Graph = Graph;
+                    GraphFrontier[Slot].Vertex = CandidateVertices[Thread];
+                    GraphFrontier[Slot].Edge = CandidateEdges[Thread];
+                } else {
+                    atomicExch(&VerifyFailures[Graph], 1u);
+                }
+            }
+            __syncthreads();
+        }
+
+        if (Thread == 0) {
+            SharedFrontierCount = FrontierCount[Graph];
+        }
+        __syncthreads();
+
+        if (SharedFrontierCount == 0) {
+            break;
+        }
+
+        if (Thread == 0) {
+            SharedRoundOrderBase = PeeledCount[Graph];
+            PeeledCount[Graph] += SharedFrontierCount;
+        }
+        __syncthreads();
+
+        // Phase 2: process the collected frontier as a round.
+        for (uint32_t Index = Thread; Index < SharedFrontierCount; Index += blockDim.x) {
+            const FrontierItemT<StorageT> Item = GraphFrontier[Index];
+            const uint32_t Vertex = static_cast<uint32_t>(Item.Vertex);
+            const uint32_t Edge = static_cast<uint32_t>(Item.Edge);
+            const uint32_t EdgeIndex = EdgeBase + Edge;
+            const uint32_t U = static_cast<uint32_t>(EdgeU[EdgeIndex]);
+            const uint32_t V = static_cast<uint32_t>(EdgeV[EdgeIndex]);
+
+            if (Degree[VertexBase + Vertex] != 1) {
+                atomicExch(&VerifyFailures[Graph], 1u);
+                continue;
+            }
+
+            if (atomicCAS(&EdgePeeled[EdgeIndex], 0u, 1u) != 0u) {
+                atomicExch(&VerifyFailures[Graph], 1u);
+                continue;
+            }
+
+            OwnerVertex[EdgeIndex] = static_cast<StorageT>(Vertex);
+            PeelOrder[EdgeBase + SharedRoundOrderBase + Index] = static_cast<StorageT>(Edge);
+
+            atomicSub(&Degree[VertexBase + U], 1u);
+            atomicXor(&XorEdge[VertexBase + U], Edge);
+            atomicSub(&Degree[VertexBase + V], 1u);
+            atomicXor(&XorEdge[VertexBase + V], Edge);
+        }
+
+        __syncthreads();
+        if (Thread == 0) {
+            ++Rounds;
+        }
+        __syncthreads();
+    }
+
+    if (Thread == 0) {
+        GraphRounds[Graph] = Rounds;
+        if (PeeledCount[Graph] != Edges) {
+            VerifyFailures[Graph] = 1;
+        }
+    }
+}
+
 template<HashFunctionKind Kind, typename StorageT>
 CpuResult
 RunCpuAssignmentAndVerify(uint32_t GraphBase,
@@ -2334,23 +2514,46 @@ RunExperiment(const Options &Opts,
                 });
             } else {
                 Outcome.PeelMilliseconds = MeasureStage([&]() {
-                    PeelGraphsDeviceSerialBlockKernel<StorageT><<<BatchSize, Opts.Threads>>>(KeyCount,
-                                                                                             Vertices,
-                                                                                             BatchSize,
-                                                                                             DInvalidGraphs,
-                                                                                             DEdgeU,
-                                                                                             DEdgeV,
-                                                                                             DDegree,
-                                                                                             DXorEdge,
-                                                                                             DEdgePeeled,
-                                                                                             DOwnerVertex,
-                                                                                             DPeelOrder,
-                                                                                             DPeeledCount,
-                                                                                             DFrontier,
-                                                                                             DFrontierCount,
-                                                                                             DVerifyFailures,
-                                                                                             DGraphRounds);
-                    CheckCuda(cudaGetLastError(), "PeelGraphsDeviceSerialBlockKernel launch");
+                    if (Opts.DeviceSerialPeelGeometry == GraphGeometry::BlockStaged) {
+                        const uint32_t SharedBytes = static_cast<uint32_t>(
+                            BlockStagedSharedBytes<StorageT>(Opts.Threads)
+                        );
+                        PeelGraphsDeviceSerialBlockStagedKernel<StorageT><<<BatchSize, Opts.Threads, SharedBytes>>>(KeyCount,
+                                                                                                                      Vertices,
+                                                                                                                      BatchSize,
+                                                                                                                      DInvalidGraphs,
+                                                                                                                      DEdgeU,
+                                                                                                                      DEdgeV,
+                                                                                                                      DDegree,
+                                                                                                                      DXorEdge,
+                                                                                                                      DEdgePeeled,
+                                                                                                                      DOwnerVertex,
+                                                                                                                      DPeelOrder,
+                                                                                                                      DPeeledCount,
+                                                                                                                      DFrontier,
+                                                                                                                      DFrontierCount,
+                                                                                                                      DVerifyFailures,
+                                                                                                                      DGraphRounds);
+                        CheckCuda(cudaGetLastError(), "PeelGraphsDeviceSerialBlockStagedKernel launch");
+                    } else {
+                        PeelGraphsDeviceSerialBlockKernel<StorageT><<<BatchSize, Opts.Threads>>>(KeyCount,
+                                                                                                 Vertices,
+                                                                                                 BatchSize,
+                                                                                                 DInvalidGraphs,
+                                                                                                 DEdgeU,
+                                                                                                 DEdgeV,
+                                                                                                 DDegree,
+                                                                                                 DXorEdge,
+                                                                                                 DEdgePeeled,
+                                                                                                 DOwnerVertex,
+                                                                                                 DPeelOrder,
+                                                                                                 DPeeledCount,
+                                                                                                 DFrontier,
+                                                                                                 DFrontierCount,
+                                                                                                 DVerifyFailures,
+                                                                                                 DGraphRounds);
+                        CheckCuda(cudaGetLastError(), "PeelGraphsDeviceSerialBlockKernel launch");
+                    }
                 });
             }
 

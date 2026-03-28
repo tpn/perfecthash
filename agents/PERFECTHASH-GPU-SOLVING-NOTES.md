@@ -915,3 +915,12 @@
       - CPU success `193`
       - mismatches `65`
 - So the next block-peel iteration needs a correctness fix first, then more performance work.
+- Added a new experimental `block-staged` peel geometry that keeps the old
+  `block` kernel untouched.
+- `block-staged` result:
+  - correct on the same `Mulshrolate4RX` real-key cases where current `block`
+    fails
+  - far slower than both `warp` and current `block`
+- Current role of `block-staged`:
+  - correctness oracle / reference path
+  - not a performance candidate yet

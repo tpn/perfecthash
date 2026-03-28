@@ -237,6 +237,30 @@ Interpretation:
 - so the next block-peel optimization pass should start with a correctness fix,
   not just further performance work
 
+## Experimental Staged Block Peel
+
+A new `block-staged` peel geometry was then added as an experiment that keeps
+the existing `block` kernel untouched and uses a stricter staged round
+collection/processing model.
+
+Results:
+
+- generated `8193`, `fixed_attempts=20000`, `assignment_backend=cpu`
+  - `block-staged`: GPU `3811.779 ms`
+  - current `block`: GPU `516.610 ms`
+- `HologramWorld-31016.keys`, `Mulshrolate4RX`, `fixed_attempts=2048`
+  - `block-staged`: solved `36`, CPU success `36`, mismatches `0`
+- `Hydrogen-40147.keys`, `Mulshrolate4RX`, `fixed_attempts=2048`
+  - `block-staged`: solved `258`, CPU success `258`, mismatches `0`
+
+Interpretation:
+
+- `block-staged` fixes the correctness failures seen in the current `block`
+  path
+- but it is far too slow to be the final performance kernel
+- this makes it useful as a correctness oracle / reference path while we debug
+  the faster `block` kernel
+
 ## Current Recommendation
 
 The next best GPU algorithm work is:
@@ -248,9 +272,11 @@ The next best GPU algorithm work is:
    - reducing global atomics and global frontier writes
    - using CUB/CCCL block primitives where they simplify local compaction or
      prefix work
-4. First, fix the current `block` peel correctness issue exposed by
+4. Use `block-staged` as a correctness oracle while debugging the faster
+   `block` kernel.
+5. First, fix the current `block` peel correctness issue exposed by
    `Mulshrolate4RX` real-key runs.
-5. Do **not** spend time trying to widen the current ordered GPU assignment
+6. Do **not** spend time trying to widen the current ordered GPU assignment
    kernel without adding peel-layer metadata first.
 
 ## Relevant Files

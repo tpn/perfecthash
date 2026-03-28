@@ -643,3 +643,19 @@
   - the current `block` peel path has a real correctness issue on higher-yield real-key runs
   - `warp` peel remains the safe parallel peel baseline
   - next block-peel work should start with correctness debugging, not further speed tuning
+- 2026-03-28 02:xx PDT: Added a new experimental `block-staged` peel geometry while preserving the existing `block` kernel.
+- `block-staged` results:
+  - generated `8193`, `fixed_attempts=20000`, hybrid CPU backend:
+    - GPU `3811.779 ms`
+  - `HologramWorld-31016.keys`, `Mulshrolate4RX`, `fixed_attempts=2048`:
+    - solved `36`
+    - CPU success `36`
+    - mismatches `0`
+  - `Hydrogen-40147.keys`, `Mulshrolate4RX`, `fixed_attempts=2048`:
+    - solved `258`
+    - CPU success `258`
+    - mismatches `0`
+- Interpretation:
+  - `block-staged` fixes the correctness issue
+  - it is much too slow to replace the existing `block` path
+  - it is useful as a correctness oracle while debugging the faster `block` kernel
