@@ -901,20 +901,14 @@
     - shared-memory frontier staging
     - fewer global atomics / writes
     - CUB/CCCL block primitives
-- Follow-on real-key control runs exposed a correctness caveat:
-  - `Mulshrolate4RX` with `thread` and `warp` peel remains aligned on:
+- Follow-on real-key control runs on the current binary showed `Mulshrolate4RX`
+  remains correctness-aligned for:
+  - `thread`
+  - `warp`
+  - plain `block`
+  on:
     - `HologramWorld-31016.keys`
     - `Hydrogen-40147.keys`
-  - the current `block` peel path does not:
-    - Hologram:
-      - solved `36`
-      - CPU success `16`
-      - mismatches `20`
-    - Hydrogen:
-      - solved `258`
-      - CPU success `193`
-      - mismatches `65`
-- So the next block-peel iteration needs a correctness fix first, then more performance work.
 - Added a new experimental `block-staged` peel geometry that keeps the old
   `block` kernel untouched.
 - `block-staged` result:
@@ -924,3 +918,25 @@
 - Current role of `block-staged`:
   - correctness oracle / reference path
   - not a performance candidate yet
+- Added a second experimental `block-shared` peel geometry:
+  - shared-memory frontier counting during collection
+  - one round-wide `PeeledCount` reservation
+- `block-shared` results:
+  - `Mulshrolate4RX`, `HologramWorld-31016.keys`:
+    - `block`: GPU `306.200 ms`
+    - `block-shared`: GPU `301.214 ms`
+  - `Mulshrolate4RX`, `Hydrogen-40147.keys`:
+    - `block`: GPU `1035.545 ms`
+    - `block-shared`: GPU `562.849 ms`
+  - `Mulshrolate3RX`, `HologramWorld-31016.keys`:
+    - `block`: GPU `305.070 ms`
+    - `block-shared`: GPU `396.659 ms`
+  - `Mulshrolate3RX`, `Hydrogen-40147.keys`:
+    - `block`: GPU `694.154 ms`
+    - `block-shared`: GPU `563.361 ms`
+  - generated `8193`, `fixed_attempts=20000`:
+    - `block`: GPU `516.610 ms`
+    - `block-shared`: GPU `720.727 ms`
+- Current practical conclusion:
+  - `block-shared` is the strongest real-key block peel candidate
+  - plain `block` still wins on some synthetic / lighter runs

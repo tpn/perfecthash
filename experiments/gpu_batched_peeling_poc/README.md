@@ -94,8 +94,9 @@ cmake --build build/gpu-batched-peeling-poc -j
   - allowed values: `thread`, `warp`, `block`
 - `--device-serial-peel-geometry` selects the real `device-serial` peel execution geometry:
   - default: `thread`
-  - allowed values: `thread`, `warp`, `block`, `block-staged`
+  - allowed values: `thread`, `warp`, `block`, `block-staged`, `block-shared`
   - `block-staged` is an experimental staged/correctness-oriented block path that preserves the old `block` kernel for comparison
+  - `block-shared` is an experimental block path that keeps the fast kernel shape but replaces some global coordination with block-local shared-memory coordination
 - `--output-format json` emits a single machine-readable JSON object and suppresses the human summary on stdout.
   The JSON includes at least:
   - `dataset`

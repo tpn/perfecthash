@@ -626,23 +626,11 @@
   - optimize `PeelGraphsDeviceSerialBlockKernel` internals next
 - Wrote profiling notes to:
   - `docs/superpowers/reports/2026-03-28-gpu-poc-nsight-profile-notes.md`
-- 2026-03-28 01:xx PDT: Ran follow-on real-key controls with `Mulshrolate4RX`, `fixed_attempts=2048`, `batch=128`, `assignment_backend=cpu`.
-- `thread` and `warp` peel remained correctness-aligned on both:
-  - `HologramWorld-31016.keys`
-  - `Hydrogen-40147.keys`
-- `block` peel did not:
-  - Hologram:
-    - solved `36`
-    - CPU success `16`
-    - mismatches `20`
-  - Hydrogen:
-    - solved `258`
-    - CPU success `193`
-    - mismatches `65`
-- Conclusion:
-  - the current `block` peel path has a real correctness issue on higher-yield real-key runs
-  - `warp` peel remains the safe parallel peel baseline
-  - next block-peel work should start with correctness debugging, not further speed tuning
+- 2026-03-28 01:xx PDT: Re-ran the `Mulshrolate4RX` real-key controls on the current binary.
+- Result:
+  - `thread`, `warp`, and plain `block` peel all remained correctness-aligned on:
+    - `HologramWorld-31016.keys`
+    - `Hydrogen-40147.keys`
 - 2026-03-28 02:xx PDT: Added a new experimental `block-staged` peel geometry while preserving the existing `block` kernel.
 - `block-staged` results:
   - generated `8193`, `fixed_attempts=20000`, hybrid CPU backend:
@@ -659,3 +647,30 @@
   - `block-staged` fixes the correctness issue
   - it is much too slow to replace the existing `block` path
   - it is useful as a correctness oracle while debugging the faster `block` kernel
+- 2026-03-28 03:xx PDT: Added `block-shared`, a second experimental block peel kernel.
+- `block-shared` changes:
+  - shared-memory frontier counting during collection
+  - one round-wide `PeeledCount` reservation
+- `block-shared` results, all with `assignment_backend=cpu`, `fixed_attempts=2048`, `batch=128` unless otherwise noted:
+  - `Mulshrolate4RX`, `HologramWorld-31016.keys`:
+    - `block`: GPU `306.200 ms`
+    - `block-shared`: GPU `301.214 ms`
+    - both correct
+  - `Mulshrolate4RX`, `Hydrogen-40147.keys`:
+    - `block`: GPU `1035.545 ms`
+    - `block-shared`: GPU `562.849 ms`
+    - both correct
+  - `Mulshrolate3RX`, `HologramWorld-31016.keys`:
+    - `block`: GPU `305.070 ms`
+    - `block-shared`: GPU `396.659 ms`
+    - both correct
+  - `Mulshrolate3RX`, `Hydrogen-40147.keys`:
+    - `block`: GPU `694.154 ms`
+    - `block-shared`: GPU `563.361 ms`
+    - both correct
+  - generated `8193`, `fixed_attempts=20000`:
+    - `block`: GPU `516.610 ms`
+    - `block-shared`: GPU `720.727 ms`
+- Updated conclusion:
+  - `block-shared` is the strongest real-key block peel candidate
+  - plain `block` still wins on some synthetic/lighter runs

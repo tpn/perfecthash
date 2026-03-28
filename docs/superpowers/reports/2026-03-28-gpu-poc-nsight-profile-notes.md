@@ -231,11 +231,9 @@ parallel peel paths stay correct on higher-yield real-key cases.
 
 Interpretation:
 
-- the current `block` peel path has a real correctness problem on these
-  real-key / higher-yield runs
-- `warp` peel remains correctness-aligned on the same cases
-- so the next block-peel optimization pass should start with a correctness fix,
-  not just further performance work
+- on the current binary, the plain `block` peel path is correctness-aligned on
+  these real-key controls
+- `warp` remains the simpler correctness reference
 
 ## Experimental Staged Block Peel
 
@@ -261,21 +259,66 @@ Interpretation:
 - this makes it useful as a correctness oracle / reference path while we debug
   the faster `block` kernel
 
+## Experimental Block-Shared Peel
+
+A second experimental block kernel, `block-shared`, was added after
+`block-staged`. It keeps the fast block shape and preserves the current
+whole-vertex round scan, but moves two coordination points into block-local
+shared state:
+
+- frontier counting during collection
+- one round-wide `PeeledCount` reservation instead of one atomic increment per
+  peeled edge
+
+Results:
+
+`Mulshrolate4RX`, `fixed_attempts=2048`, `batch=128`, `assignment_backend=cpu`:
+
+- `HologramWorld-31016.keys`
+  - `block`: GPU `306.200 ms`
+  - `block-shared`: GPU `301.214 ms`
+  - both correct
+- `Hydrogen-40147.keys`
+  - `block`: GPU `1035.545 ms`
+  - `block-shared`: GPU `562.849 ms`
+  - both correct
+
+`Mulshrolate3RX`, `fixed_attempts=2048`, `batch=128`, `assignment_backend=cpu`:
+
+- `HologramWorld-31016.keys`
+  - `block`: GPU `305.070 ms`
+  - `block-shared`: GPU `396.659 ms`
+  - both correct
+- `Hydrogen-40147.keys`
+  - `block`: GPU `694.154 ms`
+  - `block-shared`: GPU `563.361 ms`
+  - both correct
+
+generated `8193`, `fixed_attempts=20000`, `assignment_backend=cpu`:
+
+- `block`: GPU `516.610 ms`
+- `block-shared`: GPU `720.727 ms`
+
+Interpretation:
+
+- `block-shared` is now the strongest real-key block peel candidate
+- it materially improves the Hydrogen cases
+- it is not universally better, because it loses on generated `8193` and on
+  Hologram `Mulshrolate3RX`
+
 ## Current Recommendation
 
 The next best GPU algorithm work is:
 
 1. Keep hybrid CPU assignment as the default experimental path.
-2. Focus on the internals of `PeelGraphsDeviceSerialBlockKernel`.
+2. Focus on the internals of the block-family peel kernels.
 3. Specifically target:
-   - block-local frontier staging in shared memory
-   - reducing global atomics and global frontier writes
+   - `block-shared` as the primary real-key block path
+   - continued block-local/shared-memory coordination
    - using CUB/CCCL block primitives where they simplify local compaction or
      prefix work
-4. Use `block-staged` as a correctness oracle while debugging the faster
-   `block` kernel.
-5. First, fix the current `block` peel correctness issue exposed by
-   `Mulshrolate4RX` real-key runs.
+4. Keep `block-staged` as a correctness oracle / reference path.
+5. Keep plain `block` around for comparison on synthetic and lighter runs.
 6. Do **not** spend time trying to widen the current ordered GPU assignment
    kernel without adding peel-layer metadata first.
 
