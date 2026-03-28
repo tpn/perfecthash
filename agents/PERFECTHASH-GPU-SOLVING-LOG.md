@@ -674,3 +674,21 @@
 - Updated conclusion:
   - `block-shared` is the strongest real-key block peel candidate
   - plain `block` still wins on some synthetic/lighter runs
+- 2026-03-28 14:xx PDT: Tried a CUB `BlockScan` compaction variant inside `block-shared`.
+- Result:
+  - kernel stayed correct
+  - but performance regressed and the change was reverted
+- Example regressions:
+  - generated `8193`, `fixed_attempts=20000`, hybrid CPU backend:
+    - pre-CUB `block-shared`: GPU about `720.727 ms`
+    - CUB attempt: GPU about `1185.729 ms`
+  - `Hydrogen-40147.keys`, `Mulshrolate4RX`, `fixed_attempts=2048`:
+    - pre-CUB `block-shared`: GPU about `562.849 ms`
+    - CUB attempt: GPU about `722.509 ms`
+- `ncu` directionally showed:
+  - slightly higher compute throughput
+  - lower memory throughput
+  - similar low occupancy
+- Conclusion:
+  - the first full-block `BlockScan` placement was not a keeper
+  - branch was reverted back to the last good `block-shared` state

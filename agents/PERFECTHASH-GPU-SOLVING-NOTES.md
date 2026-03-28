@@ -940,3 +940,13 @@
 - Current practical conclusion:
   - `block-shared` is the strongest real-key block peel candidate
   - plain `block` still wins on some synthetic / lighter runs
+- I also tried a CUB `BlockScan` compaction variant inside `block-shared`.
+- Result:
+  - correct, but slower
+  - generated `8193`: regressed from about `720.727 ms` to about `1185.729 ms`
+  - `Hydrogen-40147.keys`, `Mulshrolate4RX`: regressed from about `562.849 ms` to about `722.509 ms`
+- `ncu` showed slightly higher SM throughput but worse overall runtime, so the
+  added scan/compaction overhead outweighed the savings.
+- Conclusion:
+  - CUB is still worth pursuing
+  - but the first full-block `BlockScan` placement was not the right one

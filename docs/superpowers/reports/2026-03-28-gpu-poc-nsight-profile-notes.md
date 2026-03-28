@@ -306,6 +306,46 @@ Interpretation:
 - it is not universally better, because it loses on generated `8193` and on
   Hologram `Mulshrolate3RX`
 
+## Failed CUB BlockScan Attempt
+
+I also tried replacing the per-candidate shared frontier-count atomics in
+`block-shared` with a CUB `BlockScan` compaction path for supported block sizes.
+
+Outcome:
+
+- the optimized variant built and stayed correct
+- but it regressed performance and was reverted
+
+Observed non-profiled regression examples:
+
+- generated `8193`, `fixed_attempts=20000`, `assignment_backend=cpu`
+  - pre-CUB `block-shared`: GPU about `720.727 ms`
+  - CUB attempt: GPU about `1185.729 ms`
+- `Hydrogen-40147.keys`, `Mulshrolate4RX`, `fixed_attempts=2048`
+  - pre-CUB `block-shared`: GPU about `562.849 ms`
+  - CUB attempt: GPU about `722.509 ms`
+
+`ncu` directionally showed:
+
+- old `block-shared`
+  - memory throughput about `7.77%`
+  - compute throughput about `1.50%`
+  - achieved occupancy about `13.63%`
+- CUB attempt
+  - memory throughput about `4.12%`
+  - compute throughput about `2.31%`
+  - achieved occupancy about `13.01%`
+
+Interpretation:
+
+- the CUB path did more compute work per cycle
+- but total kernel time got worse, which suggests the added scan/compaction
+  machinery cost more than it saved in this placement
+- so the first CUB `BlockScan` attempt was not a keeper
+
+This does **not** mean CUB is the wrong direction overall. It means the current
+full-block compaction placement is not the right use of it.
+
 ## Current Recommendation
 
 The next best GPU algorithm work is:
@@ -315,8 +355,8 @@ The next best GPU algorithm work is:
 3. Specifically target:
    - `block-shared` as the primary real-key block path
    - continued block-local/shared-memory coordination
-   - using CUB/CCCL block primitives where they simplify local compaction or
-     prefix work
+   - using CUB/CCCL block primitives more selectively than the reverted
+     full-block `BlockScan` attempt
 4. Keep `block-staged` as a correctness oracle / reference path.
 5. Keep plain `block` around for comparison on synthetic and lighter runs.
 6. Do **not** spend time trying to widen the current ordered GPU assignment
