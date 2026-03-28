@@ -2262,33 +2262,35 @@ RunExperiment(const Options &Opts,
                 });
             }
 
-            Outcome.AssignMilliseconds = MeasureStage([&]() {
-                AssignGraphsKernel<StorageT><<<BatchSize, 1>>>(KeyCount,
-                                                               Vertices,
-                                                               EdgeMask,
-                                                               DInvalidGraphs,
-                                                               DEdgeU,
-                                                               DEdgeV,
-                                                               DOwnerVertex,
-                                                               DPeelOrder,
-                                                               DPeeledCount,
-                                                               DAssigned);
-                CheckCuda(cudaGetLastError(), "AssignGraphsKernel launch");
-            });
+            if (!UseCpuAssignmentBackend) {
+                Outcome.AssignMilliseconds = MeasureStage([&]() {
+                    AssignGraphsKernel<StorageT><<<BatchSize, 1>>>(KeyCount,
+                                                                   Vertices,
+                                                                   EdgeMask,
+                                                                   DInvalidGraphs,
+                                                                   DEdgeU,
+                                                                   DEdgeV,
+                                                                   DOwnerVertex,
+                                                                   DPeelOrder,
+                                                                   DPeeledCount,
+                                                                   DAssigned);
+                    CheckCuda(cudaGetLastError(), "AssignGraphsKernel launch");
+                });
 
-            Outcome.VerifyMilliseconds = MeasureStage([&]() {
-                VerifyGraphsKernel<StorageT><<<VerifyBlocks, Opts.Threads>>>(KeyCount,
-                                                                             Vertices,
-                                                                             BatchSize,
-                                                                             EdgeMask,
-                                                                             DInvalidGraphs,
-                                                                             DEdgeU,
-                                                                             DEdgeV,
-                                                                             DAssigned,
-                                                                             DPeeledCount,
-                                                                             DVerifyFailures);
-                CheckCuda(cudaGetLastError(), "VerifyGraphsKernel launch");
-            });
+                Outcome.VerifyMilliseconds = MeasureStage([&]() {
+                    VerifyGraphsKernel<StorageT><<<VerifyBlocks, Opts.Threads>>>(KeyCount,
+                                                                                 Vertices,
+                                                                                 BatchSize,
+                                                                                 EdgeMask,
+                                                                                 DInvalidGraphs,
+                                                                                 DEdgeU,
+                                                                                 DEdgeV,
+                                                                                 DAssigned,
+                                                                                 DPeeledCount,
+                                                                                 DVerifyFailures);
+                    CheckCuda(cudaGetLastError(), "VerifyGraphsKernel launch");
+                });
+            }
         } else {
             if (Opts.DeviceSerialPeelGeometry == GraphGeometry::Thread) {
                 Outcome.PeelMilliseconds = MeasureStage([&]() {
@@ -2352,33 +2354,35 @@ RunExperiment(const Options &Opts,
                 });
             }
 
-            Outcome.AssignMilliseconds = MeasureStage([&]() {
-                AssignGraphsKernel<StorageT><<<BatchSize, 1>>>(KeyCount,
-                                                               Vertices,
-                                                               EdgeMask,
-                                                               DInvalidGraphs,
-                                                               DEdgeU,
-                                                               DEdgeV,
-                                                               DOwnerVertex,
-                                                               DPeelOrder,
-                                                               DPeeledCount,
-                                                               DAssigned);
-                CheckCuda(cudaGetLastError(), "AssignGraphsKernel launch");
-            });
+            if (!UseCpuAssignmentBackend) {
+                Outcome.AssignMilliseconds = MeasureStage([&]() {
+                    AssignGraphsKernel<StorageT><<<BatchSize, 1>>>(KeyCount,
+                                                                   Vertices,
+                                                                   EdgeMask,
+                                                                   DInvalidGraphs,
+                                                                   DEdgeU,
+                                                                   DEdgeV,
+                                                                   DOwnerVertex,
+                                                                   DPeelOrder,
+                                                                   DPeeledCount,
+                                                                   DAssigned);
+                    CheckCuda(cudaGetLastError(), "AssignGraphsKernel launch");
+                });
 
-            Outcome.VerifyMilliseconds = MeasureStage([&]() {
-                VerifyGraphsKernel<StorageT><<<VerifyBlocks, Opts.Threads>>>(KeyCount,
-                                                                             Vertices,
-                                                                             BatchSize,
-                                                                             EdgeMask,
-                                                                             DInvalidGraphs,
-                                                                             DEdgeU,
-                                                                             DEdgeV,
-                                                                             DAssigned,
-                                                                             DPeeledCount,
-                                                                             DVerifyFailures);
-                CheckCuda(cudaGetLastError(), "VerifyGraphsKernel launch");
-            });
+                Outcome.VerifyMilliseconds = MeasureStage([&]() {
+                    VerifyGraphsKernel<StorageT><<<VerifyBlocks, Opts.Threads>>>(KeyCount,
+                                                                                 Vertices,
+                                                                                 BatchSize,
+                                                                                 EdgeMask,
+                                                                                 DInvalidGraphs,
+                                                                                 DEdgeU,
+                                                                                 DEdgeV,
+                                                                                 DAssigned,
+                                                                                 DPeeledCount,
+                                                                                 DVerifyFailures);
+                    CheckCuda(cudaGetLastError(), "VerifyGraphsKernel launch");
+                });
+            }
         }
 
         CheckCuda(cudaMemcpy(InvalidGraphs.data(), DInvalidGraphs, BatchSize * sizeof(uint32_t), cudaMemcpyDeviceToHost),
