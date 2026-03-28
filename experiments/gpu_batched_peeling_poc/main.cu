@@ -1,5 +1,4 @@
 #include <cuda_runtime.h>
-#include <cub/cub.cuh>
 
 #include <algorithm>
 #include <chrono>
@@ -248,25 +247,6 @@ FormatBytes(size_t Value)
     char Buffer[64];
     std::snprintf(Buffer, sizeof(Buffer), "%.2f %s", Amount, Suffixes[Index]);
     return Buffer;
-}
-
-inline double
-MillisecondsToNanoseconds(double Milliseconds)
-{
-    return Milliseconds * 1000000.0;
-}
-
-inline double
-NanosecondsPerAttempt(double Milliseconds, uint64_t Attempts)
-{
-    return Attempts == 0 ? 0.0 : (MillisecondsToNanoseconds(Milliseconds) / static_cast<double>(Attempts));
-}
-
-inline double
-NanosecondsPerAttemptedKey(double Milliseconds, uint64_t Attempts, uint32_t KeyCount)
-{
-    const uint64_t AttemptedKeys = Attempts * static_cast<uint64_t>(KeyCount);
-    return AttemptedKeys == 0 ? 0.0 : (MillisecondsToNanoseconds(Milliseconds) / static_cast<double>(AttemptedKeys));
 }
 
 DeviceMemoryInfo
@@ -2163,223 +2143,6 @@ PeelGraphsDeviceSerialBlockSharedKernel(uint32_t Edges,
     }
 }
 
-template<uint32_t BlockThreads, typename StorageT>
-__global__ void
-PeelGraphsDeviceSerialBlockSharedCubKernel(uint32_t Edges,
-                                           uint32_t Vertices,
-                                           uint32_t Batch,
-                                           const uint32_t *InvalidGraphs,
-                                           const StorageT *EdgeU,
-                                           const StorageT *EdgeV,
-                                           uint32_t *Degree,
-                                           uint32_t *XorEdge,
-                                           uint32_t *EdgePeeled,
-                                           StorageT *OwnerVertex,
-                                           StorageT *PeelOrder,
-                                           uint32_t *PeeledCount,
-                                           FrontierItemT<StorageT> *Frontier,
-                                           uint32_t *VerifyFailures,
-                                           uint32_t *GraphRounds)
-{
-    using BlockScan = cub::BlockScan<uint32_t, BlockThreads>;
-
-    const uint32_t Graph = blockIdx.x;
-
-    if (Graph >= Batch) {
-        return;
-    }
-
-    const uint32_t Thread = threadIdx.x;
-    const uint32_t VertexBase = Graph * Vertices;
-    const uint32_t EdgeBase = Graph * Edges;
-    FrontierItemT<StorageT> *GraphFrontier = Frontier + static_cast<size_t>(Graph) * Vertices;
-    __shared__ typename BlockScan::TempStorage BlockScanStorage;
-    __shared__ uint32_t SharedFrontierCount;
-    __shared__ uint32_t SharedRoundOrderBase;
-    __shared__ uint32_t SharedTileBase;
-    uint32_t Rounds = 0;
-
-    if (InvalidGraphs[Graph] != 0) {
-        if (Thread == 0) {
-            VerifyFailures[Graph] = 1;
-            GraphRounds[Graph] = 0;
-        }
-        return;
-    }
-
-    for (;;) {
-        if (Thread == 0) {
-            SharedFrontierCount = 0;
-        }
-        __syncthreads();
-
-        for (uint32_t VertexBaseIndex = 0; VertexBaseIndex < Vertices; VertexBaseIndex += BlockThreads) {
-            const uint32_t Vertex = VertexBaseIndex + Thread;
-            uint32_t Flag = 0;
-            StorageT ChosenVertex = 0;
-            StorageT ChosenEdge = 0;
-
-            if (Vertex < Vertices && Degree[VertexBase + Vertex] == 1) {
-                const uint32_t Edge = XorEdge[VertexBase + Vertex];
-                const uint32_t EdgeIndex = EdgeBase + Edge;
-
-                if (atomicCAS(&EdgePeeled[EdgeIndex], 0u, 1u) == 0u) {
-                    Flag = 1;
-                    ChosenVertex = static_cast<StorageT>(Vertex);
-                    ChosenEdge = static_cast<StorageT>(Edge);
-                }
-            }
-
-            uint32_t Offset = 0;
-            uint32_t BlockCount = 0;
-            BlockScan(BlockScanStorage).ExclusiveSum(Flag, Offset, BlockCount);
-
-            if (Thread == 0) {
-                SharedTileBase = (BlockCount != 0) ? atomicAdd(&SharedFrontierCount, BlockCount) : 0u;
-            }
-            __syncthreads();
-
-            if (Flag != 0) {
-                const uint32_t Slot = SharedTileBase + Offset;
-                GraphFrontier[Slot].Graph = Graph;
-                GraphFrontier[Slot].Vertex = ChosenVertex;
-                GraphFrontier[Slot].Edge = ChosenEdge;
-            }
-            __syncthreads();
-        }
-
-        if (SharedFrontierCount == 0) {
-            break;
-        }
-
-        if (Thread == 0) {
-            SharedRoundOrderBase = PeeledCount[Graph];
-            PeeledCount[Graph] += SharedFrontierCount;
-        }
-        __syncthreads();
-
-        for (uint32_t Index = Thread; Index < SharedFrontierCount; Index += BlockThreads) {
-            const FrontierItemT<StorageT> Item = GraphFrontier[Index];
-            const uint32_t Edge = static_cast<uint32_t>(Item.Edge);
-            const uint32_t EdgeIndex = EdgeBase + Edge;
-            const uint32_t U = static_cast<uint32_t>(EdgeU[EdgeIndex]);
-            const uint32_t V = static_cast<uint32_t>(EdgeV[EdgeIndex]);
-
-            OwnerVertex[EdgeIndex] = Item.Vertex;
-            PeelOrder[EdgeBase + SharedRoundOrderBase + Index] = static_cast<StorageT>(Edge);
-
-            atomicSub(&Degree[VertexBase + U], 1u);
-            atomicXor(&XorEdge[VertexBase + U], Edge);
-            atomicSub(&Degree[VertexBase + V], 1u);
-            atomicXor(&XorEdge[VertexBase + V], Edge);
-        }
-
-        __syncthreads();
-        if (Thread == 0) {
-            ++Rounds;
-        }
-        __syncthreads();
-    }
-
-    if (Thread == 0) {
-        GraphRounds[Graph] = Rounds;
-        if (PeeledCount[Graph] != Edges) {
-            VerifyFailures[Graph] = 1;
-        }
-    }
-}
-
-template<typename StorageT>
-void
-LaunchDeviceSerialBlockSharedKernel(uint32_t Edges,
-                                    uint32_t Vertices,
-                                    uint32_t Batch,
-                                    const uint32_t *InvalidGraphs,
-                                    const StorageT *EdgeU,
-                                    const StorageT *EdgeV,
-                                    uint32_t *Degree,
-                                    uint32_t *XorEdge,
-                                    uint32_t *EdgePeeled,
-                                    StorageT *OwnerVertex,
-                                    StorageT *PeelOrder,
-                                    uint32_t *PeeledCount,
-                                    FrontierItemT<StorageT> *Frontier,
-                                    uint32_t Threads,
-                                    uint32_t *VerifyFailures,
-                                    uint32_t *GraphRounds)
-{
-    switch (Threads) {
-    case 64:
-        PeelGraphsDeviceSerialBlockSharedCubKernel<64, StorageT><<<Batch, 64>>>(Edges,
-                                                                                Vertices,
-                                                                                Batch,
-                                                                                InvalidGraphs,
-                                                                                EdgeU,
-                                                                                EdgeV,
-                                                                                Degree,
-                                                                                XorEdge,
-                                                                                EdgePeeled,
-                                                                                OwnerVertex,
-                                                                                PeelOrder,
-                                                                                PeeledCount,
-                                                                                Frontier,
-                                                                                VerifyFailures,
-                                                                                GraphRounds);
-        break;
-    case 128:
-        PeelGraphsDeviceSerialBlockSharedCubKernel<128, StorageT><<<Batch, 128>>>(Edges,
-                                                                                  Vertices,
-                                                                                  Batch,
-                                                                                  InvalidGraphs,
-                                                                                  EdgeU,
-                                                                                  EdgeV,
-                                                                                  Degree,
-                                                                                  XorEdge,
-                                                                                  EdgePeeled,
-                                                                                  OwnerVertex,
-                                                                                  PeelOrder,
-                                                                                  PeeledCount,
-                                                                                  Frontier,
-                                                                                  VerifyFailures,
-                                                                                  GraphRounds);
-        break;
-    case 256:
-        PeelGraphsDeviceSerialBlockSharedCubKernel<256, StorageT><<<Batch, 256>>>(Edges,
-                                                                                  Vertices,
-                                                                                  Batch,
-                                                                                  InvalidGraphs,
-                                                                                  EdgeU,
-                                                                                  EdgeV,
-                                                                                  Degree,
-                                                                                  XorEdge,
-                                                                                  EdgePeeled,
-                                                                                  OwnerVertex,
-                                                                                  PeelOrder,
-                                                                                  PeeledCount,
-                                                                                  Frontier,
-                                                                                  VerifyFailures,
-                                                                                  GraphRounds);
-        break;
-    default:
-        PeelGraphsDeviceSerialBlockSharedKernel<StorageT><<<Batch, Threads>>>(Edges,
-                                                                               Vertices,
-                                                                               Batch,
-                                                                               InvalidGraphs,
-                                                                               EdgeU,
-                                                                               EdgeV,
-                                                                               Degree,
-                                                                               XorEdge,
-                                                                               EdgePeeled,
-                                                                               OwnerVertex,
-                                                                               PeelOrder,
-                                                                               PeeledCount,
-                                                                               Frontier,
-                                                                               VerifyFailures,
-                                                                               GraphRounds);
-        break;
-    }
-}
-
 template<HashFunctionKind Kind, typename StorageT>
 CpuResult
 RunCpuAssignmentAndVerify(uint32_t GraphBase,
@@ -2887,22 +2650,21 @@ RunExperiment(const Options &Opts,
                                                                                                                       DGraphRounds);
                         CheckCuda(cudaGetLastError(), "PeelGraphsDeviceSerialBlockStagedKernel launch");
                     } else if (Opts.DeviceSerialPeelGeometry == GraphGeometry::BlockShared) {
-                        LaunchDeviceSerialBlockSharedKernel<StorageT>(KeyCount,
-                                                                       Vertices,
-                                                                       BatchSize,
-                                                                       DInvalidGraphs,
-                                                                       DEdgeU,
-                                                                       DEdgeV,
-                                                                       DDegree,
-                                                                       DXorEdge,
-                                                                       DEdgePeeled,
-                                                                       DOwnerVertex,
-                                                                       DPeelOrder,
-                                                                       DPeeledCount,
-                                                                       DFrontier,
-                                                                       Opts.Threads,
-                                                                       DVerifyFailures,
-                                                                       DGraphRounds);
+                        PeelGraphsDeviceSerialBlockSharedKernel<StorageT><<<BatchSize, Opts.Threads>>>(KeyCount,
+                                                                                                        Vertices,
+                                                                                                        BatchSize,
+                                                                                                        DInvalidGraphs,
+                                                                                                        DEdgeU,
+                                                                                                        DEdgeV,
+                                                                                                        DDegree,
+                                                                                                        DXorEdge,
+                                                                                                        DEdgePeeled,
+                                                                                                        DOwnerVertex,
+                                                                                                        DPeelOrder,
+                                                                                                        DPeeledCount,
+                                                                                                        DFrontier,
+                                                                                                        DVerifyFailures,
+                                                                                                        DGraphRounds);
                         CheckCuda(cudaGetLastError(), "PeelGraphsDeviceSerialBlockSharedKernel launch");
                     } else {
                         PeelGraphsDeviceSerialBlockKernel<StorageT><<<BatchSize, Opts.Threads>>>(KeyCount,
@@ -3227,15 +2989,6 @@ RunExperiment(const Options &Opts,
     (void)ControllerStop;
 
     if (Opts.Output == OutputFormat::Json) {
-        const double GpuNsPerAttempt = NanosecondsPerAttempt(Result.GpuMilliseconds, Result.ActualAttemptsTried);
-        const double GpuNsPerAttemptedKey = NanosecondsPerAttemptedKey(Result.GpuMilliseconds,
-                                                                       Result.ActualAttemptsTried,
-                                                                       Result.KeyCount);
-        const double CpuNsPerAttempt = NanosecondsPerAttempt(Result.CpuMilliseconds, Result.ActualAttemptsTried);
-        const double CpuNsPerAttemptedKey = NanosecondsPerAttemptedKey(Result.CpuMilliseconds,
-                                                                       Result.ActualAttemptsTried,
-                                                                       Result.KeyCount);
-
         std::ostringstream Json;
         Json << std::fixed << std::setprecision(3);
         Json << "{"
@@ -3261,10 +3014,6 @@ RunExperiment(const Options &Opts,
              << "\"vertices\":" << Result.Vertices << ","
              << "\"gpu_ms\":" << Result.GpuMilliseconds << ","
              << "\"cpu_ms\":" << Result.CpuMilliseconds << ","
-             << "\"gpu_ns_per_attempt\":" << GpuNsPerAttempt << ","
-             << "\"gpu_ns_per_attempted_key\":" << GpuNsPerAttemptedKey << ","
-             << "\"cpu_ns_per_attempt\":" << CpuNsPerAttempt << ","
-             << "\"cpu_ns_per_attempted_key\":" << CpuNsPerAttemptedKey << ","
              << "\"cpu_stage_timings_ms_all_attempts\":{"
              << "\"add_build\":" << Result.CpuStageTimingsMs.AllAttempts.AddBuildMilliseconds << ","
              << "\"peel\":" << Result.CpuStageTimingsMs.AllAttempts.PeelMilliseconds << ","
@@ -3291,15 +3040,6 @@ RunExperiment(const Options &Opts,
              << "}";
         std::cout << Json.str() << "\n";
     } else {
-        const double GpuNsPerAttempt = NanosecondsPerAttempt(Result.GpuMilliseconds, Result.ActualAttemptsTried);
-        const double GpuNsPerAttemptedKey = NanosecondsPerAttemptedKey(Result.GpuMilliseconds,
-                                                                       Result.ActualAttemptsTried,
-                                                                       Result.KeyCount);
-        const double CpuNsPerAttempt = NanosecondsPerAttempt(Result.CpuMilliseconds, Result.ActualAttemptsTried);
-        const double CpuNsPerAttemptedKey = NanosecondsPerAttemptedKey(Result.CpuMilliseconds,
-                                                                       Result.ActualAttemptsTried,
-                                                                       Result.KeyCount);
-
         std::cout
             << "GPU Batched Peeling POC\n"
             << "  Dataset:           " << Result.DatasetName << "\n"
@@ -3333,11 +3073,7 @@ RunExperiment(const Options &Opts,
             << "  CPU verify issues: " << Result.CpuVerifyIssues << "\n"
             << std::fixed << std::setprecision(3)
             << "  GPU time (ms):     " << Result.GpuMilliseconds << "\n"
-            << "  GPU ns/attempt:    " << GpuNsPerAttempt << "\n"
-            << "  GPU ns/attempted key: " << GpuNsPerAttemptedKey << "\n"
             << "  CPU time (ms):     " << Result.CpuMilliseconds << "\n"
-            << "  CPU ns/attempt:    " << CpuNsPerAttempt << "\n"
-            << "  CPU ns/attempted key: " << CpuNsPerAttemptedKey << "\n"
             << "  CPU stage timings (all attempts):\n"
             << "    Add/build (ms):  " << Result.CpuStageTimingsMs.AllAttempts.AddBuildMilliseconds << "\n"
             << "    Peel (ms):       " << Result.CpuStageTimingsMs.AllAttempts.PeelMilliseconds << "\n"
