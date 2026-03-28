@@ -30,6 +30,10 @@ isolation.
   - sequential queue-based peel
   - reverse-order assignment
   - used to cross-check GPU success/failure behavior
+- `--assignment-backend` selects where assignment/verify runs after GPU peel:
+  - default: `gpu`
+  - `gpu`: current scalar GPU assignment/verify path
+  - `cpu`: GPU build/peel, then CPU assignment/verify only for graphs that solved on the GPU peel path
 
 ## Build
 
@@ -77,6 +81,10 @@ cmake --build build/gpu-batched-peeling-poc -j
   - `explicit-device`: current CUDA device allocations with explicit host/device copies
   - `managed-default`: managed memory with default migration behavior
   - `managed-prefetch-gpu`: managed memory plus a prefetch pass for the hot graph-state buffers before solve
+- `--assignment-backend` selects where assignment/verify runs after GPU peel:
+  - `gpu`: current scalar GPU assignment/verify path
+  - `cpu`: GPU peel plus CPU assignment/verify for solved survivors only
+  - output records `assignment_backend`
 - `--fixed-attempts` and `--first-solution-wins` add a batch controller around the existing solve path:
   - `--fixed-attempts <n>` reruns full batches until at least `n` attempts have been tried
   - `--first-solution-wins` stops at the next batch boundary after any batch with one or more solved attempts
@@ -98,6 +106,7 @@ cmake --build build/gpu-batched-peeling-poc -j
   - `storage_bits`
   - `hash_function`
   - `allocation_mode`
+  - `assignment_backend`
   - `requested_fixed_attempts`
   - `actual_attempts_tried`
   - `batches_run`
@@ -120,6 +129,7 @@ cmake --build build/gpu-batched-peeling-poc -j
   - `stage_timings_ms.assign`
   - `stage_timings_ms.verify`
 - `cpu_ms` is the end-to-end wall time for the CPU reference batch.
+- For `--assignment-backend cpu`, the CPU timing fields cover only the survivor-only assignment/verify work on graphs that solved on the GPU peel path.
 - `cpu_stage_timings_ms_all_attempts` accumulates the CPU add/build, peel, assign, and verify stage timings across every graph attempt.
 - `cpu_stage_timings_ms_solved_only` accumulates the same CPU stage timings, but only for graphs where the CPU reference both solved and verified the graph.
 - `gpu_ms` is intended to be an end-to-end solve wall time for the GPU portion of the run.

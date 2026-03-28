@@ -43,6 +43,11 @@ enum class AllocationMode {
     ManagedPrefetchGpu,
 };
 
+enum class AssignmentBackend {
+    Gpu,
+    Cpu,
+};
+
 enum class OutputFormat {
     Human,
     Json,
@@ -76,6 +81,7 @@ struct Options {
     GraphGeometry DeviceSerialPeelGeometry = GraphGeometry::Thread;
     HashFunctionKind HashFunction = HashFunctionKind::MultiplyShiftR;
     AllocationMode Allocation = AllocationMode::ExplicitDevice;
+    AssignmentBackend AssignmentBackendMode = AssignmentBackend::Gpu;
     OutputFormat Output = OutputFormat::Human;
     double MemoryHeadroomPct = 10.0;
     bool AutoScaleBatchToFit = true;
@@ -176,6 +182,7 @@ struct ExperimentResult {
     const char *HashFunctionName = nullptr;
     StorageMode SelectedStorage = StorageMode::Auto;
     const char *SolveModeName = nullptr;
+    const char *AssignmentBackendName = nullptr;
     const char *AllocationModeName = nullptr;
     size_t EstimatedDeviceBytes = 0;
     size_t DeviceFreeBytes = 0;
@@ -447,6 +454,19 @@ AllocationModeToString(AllocationMode Mode)
 }
 
 const char *
+AssignmentBackendToString(AssignmentBackend Mode)
+{
+    switch (Mode) {
+        case AssignmentBackend::Gpu:
+            return "gpu";
+        case AssignmentBackend::Cpu:
+            return "cpu";
+        default:
+            return "unknown";
+    }
+}
+
+const char *
 OutputFormatToString(OutputFormat Mode)
 {
     switch (Mode) {
@@ -498,6 +518,21 @@ ParseAllocationMode(const std::string &Value)
     }
 
     std::cerr << "Invalid --allocation-mode value: " << Value << "\n";
+    std::exit(EXIT_FAILURE);
+}
+
+AssignmentBackend
+ParseAssignmentBackend(const std::string &Value)
+{
+    const std::string Lower = ToLower(Value);
+
+    if (Lower == "gpu") {
+        return AssignmentBackend::Gpu;
+    } else if (Lower == "cpu") {
+        return AssignmentBackend::Cpu;
+    }
+
+    std::cerr << "Invalid --assignment-backend value: " << Value << "\n";
     std::exit(EXIT_FAILURE);
 }
 
@@ -689,6 +724,8 @@ ParseOptions(int argc, char **argv)
             Opts.HashFunction = ParseHashFunctionKind(RequireValue("--hash-function"));
         } else if (Arg == "--allocation-mode") {
             Opts.Allocation = ParseAllocationMode(RequireValue("--allocation-mode"));
+        } else if (Arg == "--assignment-backend") {
+            Opts.AssignmentBackendMode = ParseAssignmentBackend(RequireValue("--assignment-backend"));
         } else if (Arg == "--output-format") {
             Opts.Output = ParseOutputFormat(RequireValue("--output-format"));
         } else if (Arg == "--first-solution-wins") {
@@ -719,6 +756,8 @@ ParseOptions(int argc, char **argv)
                 << "                        or Mulshrolate4RX\n"
                 << "  --allocation-mode <x> explicit-device, managed-default, or\n"
                 << "                        managed-prefetch-gpu\n"
+                << "  --assignment-backend <x>\n"
+                << "                        gpu or cpu\n"
                 << "  --output-format <x>   human or json\n"
                 << "  --key-seed <x>        Base seed for generated keys\n"
                 << "  --graph-seed <x>      Philox seed for per-graph hash seeds\n"
@@ -1812,6 +1851,61 @@ PeelGraphsDeviceSerialBlockKernel(uint32_t Edges,
 
 template<HashFunctionKind Kind, typename StorageT>
 CpuResult
+RunCpuAssignmentAndVerify(uint32_t GraphBase,
+                          uint32_t Edges,
+                          uint32_t Vertices,
+                          uint32_t EdgeMask,
+                          const std::vector<StorageT> &EdgeU,
+                          const std::vector<StorageT> &EdgeV,
+                          const std::vector<StorageT> &Owner,
+                          const std::vector<StorageT> &Order)
+{
+    CpuResult Result;
+    std::vector<StorageT> Assigned(Vertices, 0);
+    const uint32_t EdgeBase = GraphBase * Edges;
+
+    auto MeasureStage = [&](auto &&Stage) -> double {
+        const auto Start = std::chrono::steady_clock::now();
+        Stage();
+        const auto Stop = std::chrono::steady_clock::now();
+        return std::chrono::duration<double, std::milli>(Stop - Start).count();
+    };
+
+    Result.Success = true;
+
+    Result.AssignMilliseconds = MeasureStage([&]() {
+        for (int64_t Index = static_cast<int64_t>(Edges) - 1; Index >= 0; --Index) {
+            uint32_t Edge = static_cast<uint32_t>(Order[EdgeBase + static_cast<uint32_t>(Index)]);
+            uint32_t OwnerVertex = static_cast<uint32_t>(Owner[EdgeBase + Edge]);
+            uint32_t U = static_cast<uint32_t>(EdgeU[EdgeBase + Edge]);
+            uint32_t V = static_cast<uint32_t>(EdgeV[EdgeBase + Edge]);
+            uint32_t Other = (OwnerVertex == U) ? V : U;
+            uint32_t Value = (Edge - static_cast<uint32_t>(Assigned[Other])) & EdgeMask;
+
+            Assigned[OwnerVertex] = static_cast<StorageT>(Value);
+        }
+    });
+
+    Result.Verified = true;
+
+    Result.VerifyMilliseconds = MeasureStage([&]() {
+        for (uint32_t Edge = 0; Edge < Edges; ++Edge) {
+            uint32_t Index = (
+                static_cast<uint32_t>(Assigned[static_cast<uint32_t>(EdgeU[EdgeBase + Edge])]) +
+                static_cast<uint32_t>(Assigned[static_cast<uint32_t>(EdgeV[EdgeBase + Edge])])
+            ) & EdgeMask;
+            if (Index != Edge) {
+                Result.Verified = false;
+                break;
+            }
+        }
+    });
+
+    return Result;
+}
+
+template<HashFunctionKind Kind, typename StorageT>
+CpuResult
 RunCpuReference(uint32_t Graph,
                 uint32_t Edges,
                 uint32_t Vertices,
@@ -1916,33 +2010,17 @@ RunCpuReference(uint32_t Graph,
         return Result;
     }
 
-    Result.AssignMilliseconds = MeasureStage([&]() {
-        for (int64_t Index = static_cast<int64_t>(Order.size()) - 1; Index >= 0; --Index) {
-            uint32_t Edge = static_cast<uint32_t>(Order[static_cast<size_t>(Index)]);
-            uint32_t OwnerVertex = static_cast<uint32_t>(Owner[Edge]);
-            uint32_t U = static_cast<uint32_t>(EdgeU[Edge]);
-            uint32_t V = static_cast<uint32_t>(EdgeV[Edge]);
-            uint32_t Other = (OwnerVertex == U) ? V : U;
-            uint32_t Value = (Edge - static_cast<uint32_t>(Assigned[Other])) & EdgeMask;
-
-            Assigned[OwnerVertex] = static_cast<StorageT>(Value);
-        }
-    });
-
-    Result.Verified = true;
-
-    Result.VerifyMilliseconds = MeasureStage([&]() {
-        for (uint32_t Edge = 0; Edge < Edges; ++Edge) {
-            uint32_t Index = (
-                static_cast<uint32_t>(Assigned[static_cast<uint32_t>(EdgeU[Edge])]) +
-                static_cast<uint32_t>(Assigned[static_cast<uint32_t>(EdgeV[Edge])])
-            ) & EdgeMask;
-            if (Index != Edge) {
-                Result.Verified = false;
-                break;
-            }
-        }
-    });
+    CpuResult AssignmentResult = RunCpuAssignmentAndVerify<Kind, StorageT>(0,
+                                                                            Edges,
+                                                                            Vertices,
+                                                                            EdgeMask,
+                                                                            EdgeU,
+                                                                            EdgeV,
+                                                                            Owner,
+                                                                            Order);
+    Result.AssignMilliseconds = AssignmentResult.AssignMilliseconds;
+    Result.VerifyMilliseconds = AssignmentResult.VerifyMilliseconds;
+    Result.Verified = AssignmentResult.Verified;
 
     return Result;
 }
@@ -1975,6 +2053,7 @@ RunExperiment(const Options &Opts,
     Result.HashFunctionName = HashTraits<Kind>::Name;
     Result.SelectedStorage = SelectedStorage;
     Result.SolveModeName = SolveModeToString(Opts.Solve);
+    Result.AssignmentBackendName = AssignmentBackendToString(Opts.AssignmentBackendMode);
     Result.AllocationModeName = AllocationModeToString(Opts.Allocation);
     Result.RequestedFixedAttempts = Opts.FixedAttempts;
     Result.FirstSolutionWins = Opts.FirstSolutionWins;
@@ -2052,6 +2131,7 @@ RunExperiment(const Options &Opts,
     const uint32_t VertexBlocks = static_cast<uint32_t>((TotalVertices + Opts.Threads - 1) / Opts.Threads);
     const uint32_t VerifyBlocks = static_cast<uint32_t>((TotalEdges + Opts.Threads - 1) / Opts.Threads);
     const bool UseController = (Opts.FixedAttempts > 0);
+    const bool UseCpuAssignmentBackend = (Opts.AssignmentBackendMode == AssignmentBackend::Cpu);
 
     auto MeasureStage = [&](auto &&Launch) -> double {
         float StageMilliseconds = 0.0f;
@@ -2322,82 +2402,195 @@ RunExperiment(const Options &Opts,
         Outcome.GpuMilliseconds =
             std::chrono::duration<double, std::milli>(GpuStop - GpuStart).count();
 
+        std::vector<StorageT> HostEdgeU;
+        std::vector<StorageT> HostEdgeV;
+        std::vector<StorageT> HostOwnerVertex;
+        std::vector<StorageT> HostPeelOrder;
+
+        if (UseCpuAssignmentBackend) {
+            HostEdgeU.resize(TotalEdges);
+            HostEdgeV.resize(TotalEdges);
+            HostOwnerVertex.resize(TotalEdges);
+            HostPeelOrder.resize(TotalEdges);
+
+            CheckCuda(cudaMemcpy(HostEdgeU.data(),
+                                 DEdgeU,
+                                 TotalEdges * sizeof(StorageT),
+                                 cudaMemcpyDeviceToHost),
+                      "cudaMemcpy(HostEdgeU)");
+            CheckCuda(cudaMemcpy(HostEdgeV.data(),
+                                 DEdgeV,
+                                 TotalEdges * sizeof(StorageT),
+                                 cudaMemcpyDeviceToHost),
+                      "cudaMemcpy(HostEdgeV)");
+            CheckCuda(cudaMemcpy(HostOwnerVertex.data(),
+                                 DOwnerVertex,
+                                 TotalEdges * sizeof(StorageT),
+                                 cudaMemcpyDeviceToHost),
+                      "cudaMemcpy(HostOwnerVertex)");
+            CheckCuda(cudaMemcpy(HostPeelOrder.data(),
+                                 DPeelOrder,
+                                 TotalEdges * sizeof(StorageT),
+                                 cudaMemcpyDeviceToHost),
+                      "cudaMemcpy(HostPeelOrder)");
+        }
+
         auto CpuStart = std::chrono::steady_clock::now();
         CpuStageTimings CpuAllAttempts = {};
         CpuStageTimings CpuSolvedOnly = {};
 
-        for (uint32_t Graph = 0; Graph < BatchSize; ++Graph) {
-            CpuResults[Graph] = RunCpuReference<Kind, StorageT>(Graph,
-                                                                KeyCount,
-                                                                Vertices,
-                                                                EdgeMask,
-                                                                Keys,
-                                                                CurrentGraphSeedsVector);
-            CpuAllAttempts.AddBuildMilliseconds += CpuResults[Graph].AddBuildMilliseconds;
-            CpuAllAttempts.PeelMilliseconds += CpuResults[Graph].PeelMilliseconds;
-            CpuAllAttempts.AssignMilliseconds += CpuResults[Graph].AssignMilliseconds;
-            CpuAllAttempts.VerifyMilliseconds += CpuResults[Graph].VerifyMilliseconds;
+        if (UseCpuAssignmentBackend) {
+            for (uint32_t Graph = 0; Graph < BatchSize; ++Graph) {
+                const bool ThisGpuSuccess = (
+                    InvalidGraphs[Graph] == 0 &&
+                    PeeledCount[Graph] == KeyCount &&
+                    VerifyFailures[Graph] == 0
+                );
+
+                CpuResult CpuAssignmentResult = {};
+                if (ThisGpuSuccess) {
+                    CpuAssignmentResult = RunCpuAssignmentAndVerify<Kind, StorageT>(Graph,
+                                                                                     KeyCount,
+                                                                                     Vertices,
+                                                                                     EdgeMask,
+                                                                                     HostEdgeU,
+                                                                                     HostEdgeV,
+                                                                                     HostOwnerVertex,
+                                                                                     HostPeelOrder);
+                    CpuAllAttempts.AssignMilliseconds += CpuAssignmentResult.AssignMilliseconds;
+                    CpuAllAttempts.VerifyMilliseconds += CpuAssignmentResult.VerifyMilliseconds;
+                    if (CpuAssignmentResult.Success && CpuAssignmentResult.Verified) {
+                        CpuSolvedOnly.AssignMilliseconds += CpuAssignmentResult.AssignMilliseconds;
+                        CpuSolvedOnly.VerifyMilliseconds += CpuAssignmentResult.VerifyMilliseconds;
+                    }
+                }
+
+                const bool ThisCpuSuccess = (ThisGpuSuccess &&
+                                             CpuAssignmentResult.Success &&
+                                             CpuAssignmentResult.Verified);
+
+                if (ThisGpuSuccess) {
+                    ++Outcome.GpuSuccess;
+                    Outcome.GpuHadSuccess = true;
+                    if (Result.FirstSolvedAttempt < 0) {
+                        Result.FirstSolvedAttempt = static_cast<int64_t>(AttemptBase + Graph);
+                    }
+                    if (SolvedSeedsFile.is_open()) {
+                        const GraphSeeds &Seeds = CurrentGraphSeedsVector[Graph];
+                        SolvedSeedsFile
+                            << (AttemptBase + Graph)
+                            << "," << HashTraits<Kind>::Name
+                            << "," << Seeds.Seeds[0]
+                            << "," << Seeds.Seeds[1]
+                            << "," << Seeds.Seeds[2]
+                            << "," << Seeds.Seeds[3]
+                            << "," << Seeds.Seeds[4]
+                            << "," << Seeds.Seeds[5]
+                            << "," << Seeds.Seeds[6]
+                            << "," << Seeds.Seeds[7]
+                            << "\n";
+                    }
+                }
+
+                if (ThisCpuSuccess) {
+                    ++Outcome.CpuSuccess;
+                }
+
+                if (ThisGpuSuccess != ThisCpuSuccess) {
+                    ++Outcome.Mismatches;
+                    if (Opts.Verbose) {
+                        std::ostream &Details = (Opts.Output == OutputFormat::Json) ? std::cerr : std::cout;
+                        Details << "Mismatch graph=" << (AttemptBase + Graph)
+                                << " gpu_success=" << ThisGpuSuccess
+                                << " cpu_success=" << ThisCpuSuccess
+                                << " invalid=" << InvalidGraphs[Graph]
+                                << " peeled_gpu=" << PeeledCount[Graph]
+                                << " peeled_cpu=" << KeyCount
+                                << " verify_failures=" << VerifyFailures[Graph]
+                                << "\n";
+                    }
+                }
+
+                if (ThisGpuSuccess && !CpuAssignmentResult.Verified) {
+                    ++Outcome.CpuVerifyIssues;
+                }
+            }
+        } else {
+            std::vector<CpuResult> CpuResults(BatchSize);
+
+            for (uint32_t Graph = 0; Graph < BatchSize; ++Graph) {
+                CpuResults[Graph] = RunCpuReference<Kind, StorageT>(Graph,
+                                                                    KeyCount,
+                                                                    Vertices,
+                                                                    EdgeMask,
+                                                                    Keys,
+                                                                    CurrentGraphSeedsVector);
+                CpuAllAttempts.AddBuildMilliseconds += CpuResults[Graph].AddBuildMilliseconds;
+                CpuAllAttempts.PeelMilliseconds += CpuResults[Graph].PeelMilliseconds;
+                CpuAllAttempts.AssignMilliseconds += CpuResults[Graph].AssignMilliseconds;
+                CpuAllAttempts.VerifyMilliseconds += CpuResults[Graph].VerifyMilliseconds;
+            }
+
+            for (uint32_t Graph = 0; Graph < BatchSize; ++Graph) {
+                const bool ThisGpuSuccess = (
+                    InvalidGraphs[Graph] == 0 &&
+                    PeeledCount[Graph] == KeyCount &&
+                    VerifyFailures[Graph] == 0
+                );
+                const bool ThisCpuSuccess = (CpuResults[Graph].Success && CpuResults[Graph].Verified);
+
+                if (ThisGpuSuccess) {
+                    ++Outcome.GpuSuccess;
+                    Outcome.GpuHadSuccess = true;
+                    if (Result.FirstSolvedAttempt < 0) {
+                        Result.FirstSolvedAttempt = static_cast<int64_t>(AttemptBase + Graph);
+                    }
+                }
+                if (ThisCpuSuccess) {
+                    ++Outcome.CpuSuccess;
+                    CpuSolvedOnly.AddBuildMilliseconds += CpuResults[Graph].AddBuildMilliseconds;
+                    CpuSolvedOnly.PeelMilliseconds += CpuResults[Graph].PeelMilliseconds;
+                    CpuSolvedOnly.AssignMilliseconds += CpuResults[Graph].AssignMilliseconds;
+                    CpuSolvedOnly.VerifyMilliseconds += CpuResults[Graph].VerifyMilliseconds;
+                }
+                if (ThisGpuSuccess && SolvedSeedsFile.is_open()) {
+                    const GraphSeeds &Seeds = CurrentGraphSeedsVector[Graph];
+                    SolvedSeedsFile
+                        << (AttemptBase + Graph)
+                        << "," << HashTraits<Kind>::Name
+                        << "," << Seeds.Seeds[0]
+                        << "," << Seeds.Seeds[1]
+                        << "," << Seeds.Seeds[2]
+                        << "," << Seeds.Seeds[3]
+                        << "," << Seeds.Seeds[4]
+                        << "," << Seeds.Seeds[5]
+                        << "," << Seeds.Seeds[6]
+                        << "," << Seeds.Seeds[7]
+                        << "\n";
+                }
+                if (ThisGpuSuccess != ThisCpuSuccess) {
+                    ++Outcome.Mismatches;
+                    if (Opts.Verbose) {
+                        std::ostream &Details = (Opts.Output == OutputFormat::Json) ? std::cerr : std::cout;
+                        Details << "Mismatch graph=" << (AttemptBase + Graph)
+                                << " gpu_success=" << ThisGpuSuccess
+                                << " cpu_success=" << ThisCpuSuccess
+                                << " invalid=" << InvalidGraphs[Graph]
+                                << " peeled_gpu=" << PeeledCount[Graph]
+                                << " peeled_cpu=" << CpuResults[Graph].Peeled
+                                << " verify_failures=" << VerifyFailures[Graph]
+                                << "\n";
+                    }
+                }
+                if (CpuResults[Graph].Success && !CpuResults[Graph].Verified) {
+                    ++Outcome.CpuVerifyIssues;
+                }
+            }
         }
 
         auto CpuStop = std::chrono::steady_clock::now();
         Outcome.CpuMilliseconds =
             std::chrono::duration<double, std::milli>(CpuStop - CpuStart).count();
-
-        for (uint32_t Graph = 0; Graph < BatchSize; ++Graph) {
-            const bool ThisGpuSuccess = (
-                InvalidGraphs[Graph] == 0 &&
-                PeeledCount[Graph] == KeyCount &&
-                VerifyFailures[Graph] == 0
-            );
-            const bool ThisCpuSuccess = (CpuResults[Graph].Success && CpuResults[Graph].Verified);
-
-            if (ThisGpuSuccess) {
-                ++Outcome.GpuSuccess;
-                Outcome.GpuHadSuccess = true;
-                if (Result.FirstSolvedAttempt < 0) {
-                    Result.FirstSolvedAttempt = static_cast<int64_t>(AttemptBase + Graph);
-                }
-            }
-            if (ThisCpuSuccess) {
-                ++Outcome.CpuSuccess;
-                CpuSolvedOnly.AddBuildMilliseconds += CpuResults[Graph].AddBuildMilliseconds;
-                CpuSolvedOnly.PeelMilliseconds += CpuResults[Graph].PeelMilliseconds;
-                CpuSolvedOnly.AssignMilliseconds += CpuResults[Graph].AssignMilliseconds;
-                CpuSolvedOnly.VerifyMilliseconds += CpuResults[Graph].VerifyMilliseconds;
-            }
-            if (ThisGpuSuccess && SolvedSeedsFile.is_open()) {
-                const GraphSeeds &Seeds = CurrentGraphSeedsVector[Graph];
-                SolvedSeedsFile
-                    << (AttemptBase + Graph)
-                    << "," << HashTraits<Kind>::Name
-                    << "," << Seeds.Seeds[0]
-                    << "," << Seeds.Seeds[1]
-                    << "," << Seeds.Seeds[2]
-                    << "," << Seeds.Seeds[3]
-                    << "," << Seeds.Seeds[4]
-                    << "," << Seeds.Seeds[5]
-                    << "," << Seeds.Seeds[6]
-                    << "," << Seeds.Seeds[7]
-                    << "\n";
-            }
-            if (ThisGpuSuccess != ThisCpuSuccess) {
-                ++Outcome.Mismatches;
-                if (Opts.Verbose) {
-                    std::ostream &Details = (Opts.Output == OutputFormat::Json) ? std::cerr : std::cout;
-                    Details << "Mismatch graph=" << (AttemptBase + Graph)
-                            << " gpu_success=" << ThisGpuSuccess
-                            << " cpu_success=" << ThisCpuSuccess
-                            << " invalid=" << InvalidGraphs[Graph]
-                            << " peeled_gpu=" << PeeledCount[Graph]
-                            << " peeled_cpu=" << CpuResults[Graph].Peeled
-                            << " verify_failures=" << VerifyFailures[Graph]
-                            << "\n";
-                }
-            }
-            if (CpuResults[Graph].Success && !CpuResults[Graph].Verified) {
-                ++Outcome.CpuVerifyIssues;
-            }
-        }
 
         Outcome.CpuAllAttempts = CpuAllAttempts;
         Outcome.CpuSolvedOnly = CpuSolvedOnly;
@@ -2476,6 +2669,7 @@ RunExperiment(const Options &Opts,
              << "\"storage_bits\":" << Result.StorageBits << ","
              << "\"storage_mode\":\"" << JsonEscape(StorageModeToString(Result.SelectedStorage)) << "\","
              << "\"hash_function\":\"" << JsonEscape(Result.HashFunctionName) << "\","
+             << "\"assignment_backend\":\"" << JsonEscape(Result.AssignmentBackendName) << "\","
              << "\"allocation_mode\":\"" << JsonEscape(Result.AllocationModeName) << "\","
              << "\"output_format\":\"" << JsonEscape(OutputFormatToString(Opts.Output)) << "\","
              << "\"edge_capacity\":" << Result.EdgeCapacity << ","
@@ -2527,6 +2721,7 @@ RunExperiment(const Options &Opts,
             << "\n"
             << "  Hash function:     " << Result.HashFunctionName << "\n"
             << "  Solve mode:        " << Result.SolveModeName << "\n"
+            << "  Assignment backend: " << Result.AssignmentBackendName << "\n"
             << "  Allocation mode:   " << Result.AllocationModeName << "\n"
             << "  Assign geometry:   " << GraphGeometryToString(Opts.AssignGeometry) << "\n"
             << "  Device-serial peel geometry: "
