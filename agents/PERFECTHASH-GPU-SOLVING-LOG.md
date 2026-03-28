@@ -692,3 +692,17 @@
 - Conclusion:
   - the first full-block `BlockScan` placement was not a keeper
   - branch was reverted back to the last good `block-shared` state
+- 2026-03-28 15:xx PDT: Tried a second, lighter CUB placement using warp-local
+  `cub::WarpScan` inside `block-shared`.
+- Result:
+  - correctness remained intact on the checked real-key case
+  - but generated `8193`, `fixed_attempts=20000`, hybrid CPU backend regressed:
+    - good `block-shared`: GPU about `498.187 ms`
+    - warp-local CUB attempt: GPU about `1156.116 ms`
+- `ncu` also regressed directionally:
+  - memory throughput about `2.97%`
+  - compute throughput about `2.30%`
+  - achieved occupancy about `11.80%`
+- Conclusion:
+  - the second, lighter CUB compaction placement was also not a keeper
+  - branch was restored to the last good `block-shared` state

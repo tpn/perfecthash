@@ -108,10 +108,10 @@
 - Optimize the `block-shared` peel kernel based on the new profiling data:
   - preserve its real-key correctness
   - reduce the remaining overhead versus plain `block` on lighter/synthetic runs
-  - retry CUB/CCCL more selectively than the reverted full-block `BlockScan` attempt
+  - retry CUB/CCCL more selectively than the reverted full-block and warp-local compaction attempts
   - likely candidates:
-    - warp-local scan/compaction first, then block aggregation
     - CUB only for the densest frontier phases, not every tile scan
+    - CUB/CCCL in the processing/update phase instead of frontier collection
 - Measure real-key throughput and solve rate on Hydrogen/HologramWorld across batch sizes.
 - Keep `block-shared` as the primary experimental real-key block peel path for now.
 - Keep `block-staged` as the correctness/reference oracle.

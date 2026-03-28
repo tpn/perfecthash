@@ -950,3 +950,15 @@
 - Conclusion:
   - CUB is still worth pursuing
   - but the first full-block `BlockScan` placement was not the right one
+- I also tried a lighter warp-local `cub::WarpScan` placement inside
+  `block-shared`.
+- Result:
+  - still correct on the checked real-key case
+  - but generated `8193` regressed from about `498.187 ms` to about `1156.116 ms`
+  - `ncu` also looked worse:
+    - memory throughput dropped to about `2.97%`
+    - achieved occupancy dropped to about `11.80%`
+- So both tried CUB compaction placements have regressed so far.
+- Current interpretation:
+  - CUB/CCCL is still likely useful
+  - but not yet in the collection/compaction shape I tried

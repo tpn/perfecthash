@@ -346,6 +346,45 @@ Interpretation:
 This does **not** mean CUB is the wrong direction overall. It means the current
 full-block compaction placement is not the right use of it.
 
+## Failed Warp-Local CUB Attempt
+
+I then tried a lighter CUB placement:
+
+- keep `block-shared` as the base kernel
+- replace the frontier collection path with warp-local `cub::WarpScan`
+  compaction plus a small block-level aggregation step
+
+Outcome:
+
+- correctness remained intact on the checked real-key case
+- but performance regressed again
+
+Observed regressions:
+
+- generated `8193`, `fixed_attempts=20000`, `assignment_backend=cpu`
+  - good `block-shared`: GPU about `498.187 ms`
+  - warp-local CUB attempt: GPU about `1156.116 ms`
+
+`ncu` on the warp-local CUB attempt showed:
+
+- memory throughput about `2.97%`
+- compute throughput about `2.30%`
+- achieved occupancy about `11.80%`
+
+Compared to the good `block-shared` kernel:
+
+- memory throughput dropped substantially
+- achieved occupancy dropped slightly
+- total kernel time still got worse
+
+Interpretation:
+
+- this second, lighter CUB placement also was not a keeper
+- both tried CUB compaction placements have increased coordination cost more
+  than they reduced frontier-compaction overhead
+- the next CUB attempt should be even more selective, or delayed until another
+  hotspot is isolated
+
 ## Current Recommendation
 
 The next best GPU algorithm work is:
