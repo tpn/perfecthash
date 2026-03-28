@@ -85,6 +85,8 @@ cmake --build build/gpu-batched-peeling-poc -j
   - `gpu`: current scalar GPU assignment/verify path
   - `cpu`: GPU peel plus CPU assignment/verify for solved survivors only
   - output records `assignment_backend`
+- `--skip-cpu-reference` disables the extra CPU reference comparison pass.
+  This is useful for GPU-only scaling runs where you do not want concurrent CPU work.
 - `--fixed-attempts` and `--first-solution-wins` add a batch controller around the existing solve path:
   - `--fixed-attempts <n>` reruns full batches until at least `n` attempts have been tried
   - `--first-solution-wins` stops at the next batch boundary after any batch with one or more solved attempts

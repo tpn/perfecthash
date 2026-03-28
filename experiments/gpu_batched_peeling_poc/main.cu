@@ -88,6 +88,7 @@ struct Options {
     double MemoryHeadroomPct = 10.0;
     bool AutoScaleBatchToFit = true;
     bool FirstSolutionWins = false;
+    bool SkipCpuReference = false;
     bool Verbose = false;
 };
 
@@ -740,6 +741,8 @@ ParseOptions(int argc, char **argv)
             Opts.Output = ParseOutputFormat(RequireValue("--output-format"));
         } else if (Arg == "--first-solution-wins") {
             Opts.FirstSolutionWins = true;
+        } else if (Arg == "--skip-cpu-reference") {
+            Opts.SkipCpuReference = true;
         } else if (Arg == "--verbose") {
             Opts.Verbose = true;
         } else if (Arg == "--help" || Arg == "-h") {
@@ -769,6 +772,7 @@ ParseOptions(int argc, char **argv)
                 << "  --assignment-backend <x>\n"
                 << "                        gpu or cpu\n"
                 << "  --output-format <x>   human or json\n"
+                << "  --skip-cpu-reference  disable the extra CPU reference comparison pass\n"
                 << "  --key-seed <x>        Base seed for generated keys\n"
                 << "  --graph-seed <x>      Philox seed for per-graph hash seeds\n"
                 << "  --rng-subsequence <x> Philox subsequence base for graph seeds\n"
@@ -790,6 +794,11 @@ ParseOptions(int argc, char **argv)
 
     if (Opts.MemoryHeadroomPct < 0.0 || Opts.MemoryHeadroomPct >= 100.0) {
         std::cerr << "--memory-headroom-pct must be in the range [0, 100).\n";
+        std::exit(EXIT_FAILURE);
+    }
+
+    if (Opts.SkipCpuReference && Opts.AssignmentBackendMode == AssignmentBackend::Cpu) {
+        std::cerr << "--skip-cpu-reference cannot be used with --assignment-backend cpu.\n";
         std::exit(EXIT_FAILURE);
     }
 
@@ -2773,10 +2782,11 @@ RunExperiment(const Options &Opts,
                       "cudaMemcpy(HostPeelOrder)");
         }
 
-        auto CpuStart = std::chrono::steady_clock::now();
         CpuStageTimings CpuAllAttempts = {};
         CpuStageTimings CpuSolvedOnly = {};
+        const bool ShouldRunCpuReference = !Opts.SkipCpuReference;
 
+        auto CpuStart = std::chrono::steady_clock::now();
         if (UseCpuAssignmentBackend) {
             for (uint32_t Graph = 0; Graph < BatchSize; ++Graph) {
                 const bool ThisGpuSuccess = (
@@ -2853,7 +2863,7 @@ RunExperiment(const Options &Opts,
                     ++Outcome.CpuVerifyIssues;
                 }
             }
-        } else {
+        } else if (ShouldRunCpuReference) {
             std::vector<CpuResult> CpuResults(BatchSize);
 
             for (uint32_t Graph = 0; Graph < BatchSize; ++Graph) {
@@ -2925,10 +2935,12 @@ RunExperiment(const Options &Opts,
                 }
             }
         }
-
         auto CpuStop = std::chrono::steady_clock::now();
         Outcome.CpuMilliseconds =
             std::chrono::duration<double, std::milli>(CpuStop - CpuStart).count();
+        if (!UseCpuAssignmentBackend && !ShouldRunCpuReference) {
+            Outcome.CpuMilliseconds = 0.0;
+        }
 
         Outcome.CpuAllAttempts = CpuAllAttempts;
         Outcome.CpuSolvedOnly = CpuSolvedOnly;
