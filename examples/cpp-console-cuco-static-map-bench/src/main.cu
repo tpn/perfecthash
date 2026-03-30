@@ -443,8 +443,10 @@ int main(int argc, char** argv)
     result.lookup_max_ms = *max_it;
     result.lookup_ns_per_key = ns_per_key(lookup_avg_ms, probe_key_count);
     result.verify_ms = verify_ms;
-    result.vram_buffers_bytes = free_before_buffers - free_after_buffers;
-    result.vram_total_bytes = free_before_buffers - free_after_map;
+    result.vram_buffers_bytes =
+      (free_before_buffers >= free_after_buffers) ? (free_before_buffers - free_after_buffers) : 0;
+    result.vram_total_bytes =
+      (free_before_buffers >= free_after_map) ? (free_before_buffers - free_after_map) : 0;
     result.device_ordinal = opts.device_ordinal;
 
     cleanup();

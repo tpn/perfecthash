@@ -188,9 +188,11 @@ if(DEFINED PH_ONLINE_CUDA_NVRTC_FULL_LIBRARY AND
     get_filename_component(_ph_full_lib_dir "${PH_ONLINE_CUDA_NVRTC_FULL_LIBRARY}" DIRECTORY)
     list(APPEND _ph_runtime_dirs "${_ph_full_lib_dir}")
 endif()
-if(CUDAToolkit_LIBRARY_ROOT)
-    list(APPEND _ph_runtime_dirs "${CUDAToolkit_LIBRARY_ROOT}")
-endif()
+list(APPEND _ph_runtime_dirs
+    "$<TARGET_FILE_DIR:CUDA::cudart>"
+    "$<TARGET_FILE_DIR:CUDA::nvrtc>"
+    "$<TARGET_FILE_DIR:CUDA::nvJitLink>"
+)
 list(REMOVE_DUPLICATES _ph_runtime_dirs)
 
 if(_ph_runtime_dirs AND (APPLE OR UNIX))

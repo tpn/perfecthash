@@ -89,13 +89,18 @@ def summarize_probe_freq(con, sql: str) -> dict:
     from ranked
     """
     total_rows, distinct_keys, max_cnt, top1_rows, top10_rows = con.execute(summary_sql).fetchone()
+    total_rows = int(total_rows or 0)
+    distinct_keys = int(distinct_keys or 0)
+    max_cnt = int(max_cnt or 0)
+    top1_rows = int(top1_rows or 0)
+    top10_rows = int(top10_rows or 0)
     return {
-        "probe_rows": int(total_rows),
-        "probe_distinct_keys": int(distinct_keys),
-        "max_frequency": int(max_cnt),
-        "avg_multiplicity": float(total_rows) / float(distinct_keys),
-        "top1_mass": float(top1_rows) / float(total_rows),
-        "top10_mass": float(top10_rows) / float(total_rows),
+        "probe_rows": total_rows,
+        "probe_distinct_keys": distinct_keys,
+        "max_frequency": max_cnt,
+        "avg_multiplicity": (float(total_rows) / float(distinct_keys)) if distinct_keys else 0.0,
+        "top1_mass": (float(top1_rows) / float(total_rows)) if total_rows else 0.0,
+        "top10_mass": (float(top10_rows) / float(total_rows)) if total_rows else 0.0,
     }
 
 
