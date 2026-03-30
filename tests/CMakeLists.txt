@@ -265,6 +265,40 @@ if(TARGET PerfectHashCreateExe AND TARGET PerfectHashBulkCreateExe)
         PROPERTIES
             LABELS fast
     )
+
+    if(PERFECTHASH_HAS_CUDA)
+        add_test(
+            NAME perfecthash.cuda.chm02.hologram.nofileio
+            COMMAND ${CMAKE_COMMAND}
+                -DTEST_EXE=$<TARGET_FILE:PerfectHashCreateExe>
+                -DTEST_KEYS=${TEST_KEYS_FILE}
+                -DTEST_OUTPUT=${TEST_OUTPUT_DIR}/cuda-chm02-hologram-nofileio
+                "-DTEST_FLAGS=--NoFileIo;--DisableCsvOutputFile"
+                -DREQUIRE_GPU_ASSIGN=1
+                -DREQUIRE_GPU_ORDER_VALID=1
+                -DREQUIRE_GPU_VERIFY=1
+                -P ${CMAKE_CURRENT_SOURCE_DIR}/run_cli_chm02_cuda_known_seed_test.cmake
+        )
+
+        add_test(
+            NAME perfecthash.cuda.chm02.hologram.fileio
+            COMMAND ${CMAKE_COMMAND}
+                -DTEST_EXE=$<TARGET_FILE:PerfectHashCreateExe>
+                -DTEST_KEYS=${TEST_KEYS_FILE}
+                -DTEST_OUTPUT=${TEST_OUTPUT_DIR}/cuda-chm02-hologram-fileio
+                -DREQUIRE_GPU_ASSIGN=1
+                -DREQUIRE_GPU_ORDER_VALID=1
+                -DREQUIRE_GPU_VERIFY=1
+                -P ${CMAKE_CURRENT_SOURCE_DIR}/run_cli_chm02_cuda_known_seed_test.cmake
+        )
+
+        set_tests_properties(
+            perfecthash.cuda.chm02.hologram.nofileio
+            perfecthash.cuda.chm02.hologram.fileio
+            PROPERTIES
+                LABELS "cuda"
+        )
+    endif()
 else()
     message(STATUS "Skipping PerfectHash CLI tests for profile '${PERFECTHASH_BUILD_PROFILE_NORMALIZED}' (CLI executable targets are not available).")
 endif()
