@@ -437,7 +437,7 @@ double ns_per_key(double milliseconds, std::size_t key_count)
 
 std::size_t current_rss_bytes()
 {
-#if !defined(_WIN32)
+#if defined(__linux__)
   long page_size = sysconf(_SC_PAGESIZE);
   std::ifstream input("/proc/self/statm");
   std::size_t total_pages = 0;
@@ -535,7 +535,7 @@ host_slot_pair slot_pair_from_key_host(std::uint64_t key,
                                        PH_ONLINE_JIT_HASH_FUNCTION hash_function,
                                        PH_ONLINE_JIT_TABLE_INFO const& info)
 {
-  auto const downsized = static_cast<std::uint64_t>(downsize_key64(key, info));
+  auto const downsized = downsize_key64(key, info);
   auto const seed1 = static_cast<std::uint64_t>(info.Seed1);
   auto const seed2 = static_cast<std::uint64_t>(info.Seed2);
   auto const seed4 = static_cast<std::uint64_t>(info.Seed4);
@@ -544,40 +544,114 @@ host_slot_pair slot_pair_from_key_host(std::uint64_t key,
   auto const seed3_byte2 = ((info.Seed3 >> 8u) & 0xffu);
   auto const seed3_byte3 = ((info.Seed3 >> 16u) & 0xffu);
   auto const seed3_byte4 = ((info.Seed3 >> 24u) & 0xffu);
+  auto const use_32bit_math = (info.KeySizeInBytes <= sizeof(std::uint32_t));
+
+  if (use_32bit_math) {
+    auto const downsized32 = static_cast<std::uint32_t>(downsized);
+    auto const seed1_32 = static_cast<std::uint32_t>(seed1);
+    auto const seed2_32 = static_cast<std::uint32_t>(seed2);
+    auto const seed4_32 = static_cast<std::uint32_t>(seed4);
+    auto const seed5_32 = static_cast<std::uint32_t>(seed5);
+
+    switch (hash_function) {
+      case PhOnlineJitHashMultiplyShiftR: {
+        auto const vertex1 = (downsized32 * seed1_32) >> seed3_byte1;
+        auto const vertex2 = (downsized32 * seed2_32) >> seed3_byte2;
+        return {static_cast<std::uint32_t>(vertex1 & info.HashMask),
+                static_cast<std::uint32_t>(vertex2 & info.HashMask)};
+      }
+      case PhOnlineJitHashMultiplyShiftLR: {
+        auto const vertex1 = (downsized32 * seed1_32) << seed3_byte1;
+        auto const vertex2 = (downsized32 * seed2_32) >> seed3_byte2;
+        return {static_cast<std::uint32_t>(vertex1 & info.HashMask),
+                static_cast<std::uint32_t>(vertex2 & info.HashMask)};
+      }
+      case PhOnlineJitHashMultiplyShiftRMultiply: {
+        auto const vertex1 = ((downsized32 * seed1_32) >> seed3_byte1) * seed2_32;
+        auto const vertex2 = ((downsized32 * seed4_32) >> seed3_byte2) * seed5_32;
+        return {static_cast<std::uint32_t>(vertex1 & info.HashMask),
+                static_cast<std::uint32_t>(vertex2 & info.HashMask)};
+      }
+      case PhOnlineJitHashMultiplyShiftR2: {
+        auto const vertex1 = (((downsized32 * seed1_32) >> seed3_byte1) * seed2_32) >> seed3_byte2;
+        auto const vertex2 = (((downsized32 * seed4_32) >> seed3_byte3) * seed5_32) >> seed3_byte4;
+        return {static_cast<std::uint32_t>(vertex1 & info.HashMask),
+                static_cast<std::uint32_t>(vertex2 & info.HashMask)};
+      }
+      case PhOnlineJitHashMultiplyShiftRX: {
+        auto const vertex1 = (downsized32 * seed1_32) >> seed3_byte1;
+        auto const vertex2 = (downsized32 * seed2_32) >> seed3_byte1;
+        return {vertex1, vertex2};
+      }
+      case PhOnlineJitHashMulshrolate1RX: {
+        auto vertex1 = rotr32_host(downsized32 * seed1_32, seed3_byte2);
+        vertex1 >>= seed3_byte1;
+        auto vertex2 = downsized32 * seed2_32;
+        vertex2 >>= seed3_byte1;
+        return {vertex1, vertex2};
+      }
+      case PhOnlineJitHashMulshrolate2RX: {
+        auto vertex1 = rotr32_host(downsized32 * seed1_32, seed3_byte2);
+        vertex1 >>= seed3_byte1;
+        auto vertex2 = rotr32_host(downsized32 * seed2_32, seed3_byte3);
+        vertex2 >>= seed3_byte1;
+        return {vertex1, vertex2};
+      }
+      case PhOnlineJitHashMulshrolate3RX: {
+        auto vertex1 = rotr32_host(downsized32 * seed1_32, seed3_byte2);
+        vertex1 = vertex1 * seed4_32;
+        vertex1 >>= seed3_byte1;
+        auto vertex2 = rotr32_host(downsized32 * seed2_32, seed3_byte3);
+        vertex2 >>= seed3_byte1;
+        return {vertex1, vertex2};
+      }
+      case PhOnlineJitHashMulshrolate4RX: {
+        auto vertex1 = rotr32_host(downsized32 * seed1_32, seed3_byte2);
+        vertex1 = vertex1 * seed4_32;
+        vertex1 >>= seed3_byte1;
+        auto vertex2 = rotr32_host(downsized32 * seed2_32, seed3_byte3);
+        vertex2 = vertex2 * seed5_32;
+        vertex2 >>= seed3_byte1;
+        return {vertex1, vertex2};
+      }
+    }
+  }
+
+  auto const downsized64 = static_cast<std::uint64_t>(downsized);
 
   switch (hash_function) {
     case PhOnlineJitHashMultiplyShiftR: {
-      auto vertex1 = (downsized * seed1) >> seed3_byte1;
-      auto vertex2 = (downsized * seed2) >> seed3_byte2;
+      auto vertex1 = (downsized64 * seed1) >> seed3_byte1;
+      auto vertex2 = (downsized64 * seed2) >> seed3_byte2;
       return {static_cast<std::uint32_t>(vertex1 & info.HashMask),
               static_cast<std::uint32_t>(vertex2 & info.HashMask)};
     }
     case PhOnlineJitHashMultiplyShiftLR: {
-      auto vertex1 = (downsized * seed1) << seed3_byte1;
-      auto vertex2 = (downsized * seed2) >> seed3_byte2;
+      auto vertex1 = (downsized64 * seed1) << seed3_byte1;
+      auto vertex2 = (downsized64 * seed2) >> seed3_byte2;
       return {static_cast<std::uint32_t>(vertex1 & info.HashMask),
               static_cast<std::uint32_t>(vertex2 & info.HashMask)};
     }
     case PhOnlineJitHashMultiplyShiftRMultiply: {
-      auto vertex1 = ((downsized * seed1) >> seed3_byte1) * seed2;
-      auto vertex2 = ((downsized * seed4) >> seed3_byte2) * seed5;
+      auto vertex1 = ((downsized64 * seed1) >> seed3_byte1) * seed2;
+      auto vertex2 = ((downsized64 * seed4) >> seed3_byte2) * seed5;
       return {static_cast<std::uint32_t>(vertex1 & info.HashMask),
               static_cast<std::uint32_t>(vertex2 & info.HashMask)};
     }
     case PhOnlineJitHashMultiplyShiftR2: {
-      auto vertex1 = (((downsized * seed1) >> seed3_byte1) * seed2) >> seed3_byte2;
-      auto vertex2 = (((downsized * seed4) >> seed3_byte3) * seed5) >> seed3_byte4;
+      auto vertex1 = (((downsized64 * seed1) >> seed3_byte1) * seed2) >> seed3_byte2;
+      auto vertex2 = (((downsized64 * seed4) >> seed3_byte3) * seed5) >> seed3_byte4;
       return {static_cast<std::uint32_t>(vertex1 & info.HashMask),
               static_cast<std::uint32_t>(vertex2 & info.HashMask)};
     }
     case PhOnlineJitHashMultiplyShiftRX: {
-      auto vertex1 = (downsized * seed1) >> seed3_byte1;
-      auto vertex2 = (downsized * seed2) >> seed3_byte1;
+      auto vertex1 = (downsized64 * seed1) >> seed3_byte1;
+      auto vertex2 = (downsized64 * seed2) >> seed3_byte1;
       return {static_cast<std::uint32_t>(vertex1),
               static_cast<std::uint32_t>(vertex2)};
     }
     case PhOnlineJitHashMulshrolate1RX: {
-      auto downsized32 = static_cast<std::uint32_t>(downsized);
+      auto downsized32 = static_cast<std::uint32_t>(downsized64);
       auto vertex1 = rotr32_host(downsized32 * static_cast<std::uint32_t>(seed1), seed3_byte2);
       vertex1 >>= seed3_byte1;
       auto vertex2 = downsized32 * static_cast<std::uint32_t>(seed2);
