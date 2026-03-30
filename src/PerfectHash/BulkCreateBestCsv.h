@@ -280,16 +280,12 @@ Abstract:
           Context->GpuAddKeysSuccessButCpuAddKeysFailures,                                   \
           OUTPUT_INT)                                                                        \
                                                                                              \
-    ENTRY(GpuIsAcyclicButCpuIsCyclicFailures,                                                \
-          Context->GpuIsAcyclicButCpuIsCyclicFailures,                                       \
-          OUTPUT_INT)                                                                        \
-                                                                                             \
     ENTRY(GpuAndCpuAddKeysSuccess,                                                           \
           Context->GpuAndCpuAddKeysSuccess,                                                  \
           OUTPUT_INT)                                                                        \
                                                                                              \
     ENTRY(GpuAndCpuIsAcyclicSuccess,                                                         \
-          Context->GpuAndCpuAddKeysSuccess,                                                  \
+          Context->GpuAndCpuIsAcyclicSuccess,                                                \
           OUTPUT_INT)                                                                        \
                                                                                              \
     ENTRY(BestCoverageAttempts,                                                              \

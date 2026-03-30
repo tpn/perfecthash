@@ -907,10 +907,17 @@ typedef union _GRAPH_FLAGS {
         ULONG HasUserSeeds:1;
 
         //
+        // When set, enables PH_DEBUG_CUDA_CHM02 bring-up logging for this
+        // graph without re-reading the environment variable in hot paths.
+        //
+
+        ULONG DebugCudaChm02:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:10;
+        ULONG Unused:9;
     };
     LONG AsLong;
     ULONG AsULong;
@@ -935,6 +942,7 @@ C_ASSERT(sizeof(GRAPH_FLAGS) == sizeof(ULONG));
     ((Graph)->Flags.WantsCuRandomHostSeeds != FALSE)
 #define IsGraphParanoid(Graph) ((Graph)->Flags.Paranoid != FALSE)
 #define IsUsingAssigned16(Graph) ((Graph)->Flags.UsingAssigned16 != FALSE)
+#define IsCudaDebugGraph(Graph) ((Graph)->Flags.DebugCudaChm02 != FALSE)
 
 #define SetSpareGraph(Graph) (Graph->Flags.IsSpareGraph = TRUE)
 #define SetSpareCuGraph(Graph) (Graph->Flags.IsSpareCuGraph = TRUE)

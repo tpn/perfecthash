@@ -555,13 +555,7 @@ Return Value:
     Table = Context->Table;
     NumberOfKeys = Table->Keys->NumberOfKeys.LowPart;
     Edges = Keys = (PKEY)Table->Keys->KeyArrayBaseAddress;
-    DebugCudaSolve = FALSE;
-
-#ifdef PH_WINDOWS
-    DebugCudaSolve = (GetEnvironmentVariableA("PH_DEBUG_CUDA_CHM02", NULL, 0) > 0);
-#else
-    DebugCudaSolve = (getenv("PH_DEBUG_CUDA_CHM02") != NULL);
-#endif
+    DebugCudaSolve = (IsCuGraph(Graph) ? IsCudaDebugGraph(Graph) : FALSE);
 
     //
     // Attempt to add all the keys to the graph.
@@ -4017,12 +4011,8 @@ Return Value:
         return E_POINTER;
     }
 
-    DebugCudaSolve = FALSE;
-#ifdef PH_WINDOWS
-    DebugCudaSolve = (GetEnvironmentVariableA("PH_DEBUG_CUDA_CHM02", NULL, 0) > 0);
-#else
-    DebugCudaSolve = (getenv("PH_DEBUG_CUDA_CHM02") != NULL);
-#endif
+    DebugCudaSolve = (IsCuGraph(Graph) ? IsPerfectHashCudaDebugEnabled() : FALSE);
+    Graph->Flags.DebugCudaChm02 = DebugCudaSolve;
 
     //
     // Acquire the exclusive graph lock for the duration of the routine.  The
@@ -6975,13 +6965,7 @@ Return Value:
     CoverageType = Context->BestCoverageType;
     Attempt = Coverage->Attempt;
     ElapsedMilliseconds = GetTickCount64() - Context->StartMilliseconds;
-    DebugCudaSolve = FALSE;
-
-#ifdef PH_WINDOWS
-    DebugCudaSolve = (GetEnvironmentVariableA("PH_DEBUG_CUDA_CHM02", NULL, 0) > 0);
-#else
-    DebugCudaSolve = (getenv("PH_DEBUG_CUDA_CHM02") != NULL);
-#endif
+    DebugCudaSolve = (IsCuGraph(Graph) ? IsCudaDebugGraph(Graph) : FALSE);
 
     if (DebugCudaSolve && IsCuGraph(Graph)) {
         fprintf(stderr,

@@ -17,19 +17,6 @@ Abstract:
 #include "Chm01.h"
 #include "Chm02Private.h"
 
-FORCEINLINE
-BOOLEAN
-IsChm02CudaDebugEnabled(
-    VOID
-    )
-{
-#ifdef PH_WINDOWS
-    return (GetEnvironmentVariableA("PH_DEBUG_CUDA_CHM02", NULL, 0) > 0);
-#else
-    return (getenv("PH_DEBUG_CUDA_CHM02") != NULL);
-#endif
-}
-
 //
 // Main table creation implementation routine for Chm02.
 //
@@ -196,7 +183,7 @@ Return Value:
 
     TableCreateFlags.AsULongLong = Table->TableCreateFlags.AsULongLong;
     Silent = (TableCreateFlags.Silent != FALSE);
-    DebugCuda = IsChm02CudaDebugEnabled();
+    DebugCuda = IsPerfectHashCudaDebugEnabled();
 
     //
     // Initialize variables used if we jump to Error early-on.

@@ -1322,19 +1322,6 @@ End:
 }
 
 FORCEINLINE
-BOOLEAN
-IsCudaDebugEnabled(
-    VOID
-    )
-{
-#ifdef PH_WINDOWS
-    return (GetEnvironmentVariableA("PH_DEBUG_CUDA_CHM02", NULL, 0) > 0);
-#else
-    return (getenv("PH_DEBUG_CUDA_CHM02") != NULL);
-#endif
-}
-
-FORCEINLINE
 VOID
 CaptureCuElapsedMicroseconds(
     _In_ PGRAPH Graph,
@@ -1577,7 +1564,7 @@ GraphCuAddKeys(
                                  End,
                                  &Graph->CuAddKeysElapsedMicroseconds);
 
-    if (IsCudaDebugEnabled()) {
+    if (IsCudaDebugGraph(Graph)) {
         fprintf(stderr,
                 "[GraphCuAddKeys] Result=0x%08x HashKeysResult=0x%08x "
                 "VertexFailures=%u WarpFailures=%u\n",
@@ -1624,7 +1611,7 @@ GraphCuIsAcyclic(
                            Graph->CuThreadsPerBlock,
                            Graph->CuSharedMemory);
 
-    if (IsCudaDebugEnabled()) {
+    if (IsCudaDebugGraph(Graph)) {
         fprintf(stderr,
                 "[GraphCuIsAcyclic] GpuResult=0x%08x Attempts=%u "
                 "DeletedEdges=%u OrderIndex=%ld\n",
@@ -1711,7 +1698,7 @@ GraphCuIsAcyclic(
         InterlockedIncrement64(&Context->GpuAndCpuAddKeysSuccess);
     }
 
-    if (IsCudaDebugEnabled()) {
+        if (IsCudaDebugGraph(Graph)) {
         HRESULT CpuAcyclicResult;
         HRESULT GpuOrderValidationResult;
         LONG InvalidEdge;
@@ -1863,7 +1850,7 @@ GraphCuAssign(
     PCU Cu;
     HRESULT Result;
 
-    if (IsCudaDebugEnabled()) {
+    if (IsCudaDebugGraph(Graph)) {
         fprintf(stderr,
                 "[GraphCuAssign] Enter IsAcyclic=%u OrderIndex=%ld CpuOrderIndex=%ld\n",
                 (unsigned)Graph->Flags.IsAcyclic,
@@ -1880,7 +1867,7 @@ GraphCuAssign(
                         Graph->CuThreadsPerBlock,
                         Graph->CuSharedMemory);
 
-    if (IsCudaDebugEnabled()) {
+    if (IsCudaDebugGraph(Graph)) {
         fprintf(stderr, "[GraphCuAssign] GpuAssignResult=0x%08x\n", (unsigned)Result);
     }
     if (FAILED(Result)) {
@@ -1910,7 +1897,7 @@ GraphCuVerify(
     PCU Cu;
     HRESULT Result;
 
-    if (IsCudaDebugEnabled()) {
+    if (IsCudaDebugGraph(Graph)) {
         fprintf(stderr, "[GraphCuVerify] Enter\n");
     }
 
@@ -1929,7 +1916,7 @@ GraphCuVerify(
                                  End,
                                  &Graph->CuVerifyElapsedMicroseconds);
 
-    if (IsCudaDebugEnabled()) {
+    if (IsCudaDebugGraph(Graph)) {
         fprintf(stderr, "[GraphCuVerify] GpuVerifyResult=0x%08x\n", (unsigned)Result);
     }
 
