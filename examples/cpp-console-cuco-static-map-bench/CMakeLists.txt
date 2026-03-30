@@ -11,7 +11,7 @@ set(CMAKE_CUDA_EXTENSIONS OFF)
 
 set(
     CUCO_ROOT
-    "/home/trentn/src/cucollections"
+    ""
     CACHE PATH
     "Path to a local cuCollections checkout."
 )

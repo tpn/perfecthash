@@ -133,9 +133,15 @@ def write_top_distinct_subset(con, output_path: Path, sql: str, fraction: float)
 
 
 def register_views(con, dataset_root: Path, tables):
+    def quote_sql_path(path: Path) -> str:
+        return str(path).replace("'", "''")
+
     for table in tables:
         path = dataset_root / table / "*.parquet"
-        con.execute(f"create or replace view {table} as select * from parquet_scan('{path}')")
+        con.execute(
+            f"create or replace view {table} as "
+            f"select * from parquet_scan('{quote_sql_path(path)}')"
+        )
 
 
 def extract_q8(con, output_root: Path):

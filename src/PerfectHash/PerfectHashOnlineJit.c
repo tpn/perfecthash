@@ -317,8 +317,7 @@ PhEmitOnlineCudaSource(
     _In_ PPERFECT_HASH_TABLE Table,
     _In_ PCSTRING Name,
     _In_ ULONG Flags,
-    _Out_writes_bytes_(BufferSizeInBytes) PCHAR Base,
-    _In_ ULONGLONG BufferSizeInBytes,
+    _Out_ PCHAR Base,
     _Out_ PULONGLONG NumberOfBytesWrittenPointer
     )
 {
@@ -348,7 +347,6 @@ PhEmitOnlineCudaSource(
         !ARGUMENT_PRESENT(Name) ||
         !ARGUMENT_PRESENT(Name->Buffer) ||
         !ARGUMENT_PRESENT(Base) ||
-        BufferSizeInBytes == 0 ||
         !ARGUMENT_PRESENT(NumberOfBytesWrittenPointer)) {
         return E_POINTER;
     }
@@ -366,7 +364,6 @@ PhEmitOnlineCudaSource(
     Seed3Byte4 = ((Seed3 >> 24) & 0xff);
 
     Output = Base;
-    UNREFERENCED_PARAMETER(BufferSizeInBytes);
     DecimalString.Buffer = NULL;
     DecimalString.Length = 0;
     DecimalString.MaximumLength = sizeof(NumberOfKeysBuffer);
@@ -1168,7 +1165,6 @@ PhOnlineJitGetCudaSourceEx(
                                     &Name,
                                     Flags,
                                     Buffer,
-                                    AllocationSize,
                                     &NumberOfBytesWritten);
     if (FAILED(Result)) {
         free(Buffer);
