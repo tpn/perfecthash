@@ -3,3 +3,4 @@ EXPORTS
     GraphCuIsAcyclic
     GraphCuAddKeys
     GraphCuAssign
+    GraphCuVerify
