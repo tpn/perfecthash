@@ -127,6 +127,52 @@ PhMapOnlineJitHashFunction(
 
 static
 HRESULT
+PhMapPerfectHashHashFunctionToOnlineJit(
+    _In_ PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
+    _Out_ PH_ONLINE_JIT_HASH_FUNCTION *HashFunction
+    )
+{
+    if (!ARGUMENT_PRESENT(HashFunction)) {
+        return E_POINTER;
+    }
+
+    switch (HashFunctionId) {
+        case PerfectHashHashMultiplyShiftRFunctionId:
+            *HashFunction = PhOnlineJitHashMultiplyShiftR;
+            break;
+        case PerfectHashHashMultiplyShiftLRFunctionId:
+            *HashFunction = PhOnlineJitHashMultiplyShiftLR;
+            break;
+        case PerfectHashHashMultiplyShiftRMultiplyFunctionId:
+            *HashFunction = PhOnlineJitHashMultiplyShiftRMultiply;
+            break;
+        case PerfectHashHashMultiplyShiftR2FunctionId:
+            *HashFunction = PhOnlineJitHashMultiplyShiftR2;
+            break;
+        case PerfectHashHashMultiplyShiftRXFunctionId:
+            *HashFunction = PhOnlineJitHashMultiplyShiftRX;
+            break;
+        case PerfectHashHashMulshrolate1RXFunctionId:
+            *HashFunction = PhOnlineJitHashMulshrolate1RX;
+            break;
+        case PerfectHashHashMulshrolate2RXFunctionId:
+            *HashFunction = PhOnlineJitHashMulshrolate2RX;
+            break;
+        case PerfectHashHashMulshrolate3RXFunctionId:
+            *HashFunction = PhOnlineJitHashMulshrolate3RX;
+            break;
+        case PerfectHashHashMulshrolate4RXFunctionId:
+            *HashFunction = PhOnlineJitHashMulshrolate4RX;
+            break;
+        default:
+            return E_INVALIDARG;
+    }
+
+    return S_OK;
+}
+
+static
+HRESULT
 PhApplyOnlineJitVectorWidth(
     _In_ ULONG VectorWidth,
     _Inout_ PPERFECT_HASH_TABLE_COMPILE_FLAGS CompileFlags
@@ -1038,24 +1084,29 @@ PhOnlineJitCompileTableEx(
         return LastResult;
     }
 
-    Result = PhCompileOnlineJitBackend(Context,
-                                       Table,
-                                       PhOnlineJitBackendLlvmJit,
-                                       VectorWidth,
-                                       JitMaxIsa);
-    if (SUCCEEDED(Result)) {
-        if (ARGUMENT_PRESENT(EffectiveBackend)) {
-            *EffectiveBackend = PhOnlineJitBackendLlvmJit;
+    for (Index = 0; Index < CandidateCount; Index++) {
+        Result = PhCompileOnlineJitBackend(Context,
+                                           Table,
+                                           PhOnlineJitBackendLlvmJit,
+                                           CandidateWidths[Index],
+                                           JitMaxIsa);
+        if (SUCCEEDED(Result)) {
+            if (ARGUMENT_PRESENT(EffectiveBackend)) {
+                *EffectiveBackend = PhOnlineJitBackendLlvmJit;
+            }
+            if (ARGUMENT_PRESENT(EffectiveVectorWidth)) {
+                *EffectiveVectorWidth = CandidateWidths[Index];
+            }
+            return S_OK;
         }
-        if (ARGUMENT_PRESENT(EffectiveVectorWidth)) {
-            *EffectiveVectorWidth = VectorWidth;
-        }
-        return S_OK;
-    }
 
-    if (Result != PH_E_LLVM_BACKEND_NOT_FOUND &&
-        Result != PH_E_NOT_IMPLEMENTED) {
-        return Result;
+        if (Result != PH_E_LLVM_BACKEND_NOT_FOUND &&
+            Result != PH_E_NOT_IMPLEMENTED &&
+            Result != PH_E_INVARIANT_CHECK_FAILED) {
+            return Result;
+        }
+
+        LastResult = Result;
     }
 
     return LastResult;
@@ -1232,6 +1283,7 @@ PhOnlineJitGetTableInfo(
     PH_ONLINE_JIT_TABLE_INFO *TableInfo
     )
 {
+    HRESULT Result;
     PTABLE_INFO_ON_DISK Info;
 
     if (!ARGUMENT_PRESENT(Table) ||
@@ -1247,7 +1299,13 @@ PhOnlineJitGetTableInfo(
     TableInfo->KeySizeInBytes = Info->KeySizeInBytes;
     TableInfo->OriginalKeySizeInBytes = Info->OriginalKeySizeInBytes;
     TableInfo->AssignedElementSizeInBytes = Info->AssignedElementSizeInBytes;
-    TableInfo->HashFunctionId = Table->Table->HashFunctionId;
+    Result = PhMapPerfectHashHashFunctionToOnlineJit(
+        Table->Table->HashFunctionId,
+        (PH_ONLINE_JIT_HASH_FUNCTION *)&TableInfo->HashFunctionId
+    );
+    if (FAILED(Result)) {
+        return Result;
+    }
     TableInfo->MaskFunctionId = Table->Table->MaskFunctionId;
     TableInfo->HashMask = Info->HashMask;
     TableInfo->IndexMask = Info->IndexMask;

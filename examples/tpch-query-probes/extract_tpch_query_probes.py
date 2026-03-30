@@ -184,7 +184,9 @@ def extract_q8(con, output_root: Path):
     summary = summarize_probe_freq(con, probe_freq_sql)
     summary["candidate"] = name
     summary["build_rows"] = build_info["count"]
-    summary["probe_to_build_ratio"] = summary["probe_rows"] / build_info["count"]
+    summary["probe_to_build_ratio"] = (
+        summary["probe_rows"] / build_info["count"] if build_info["count"] else 0.0
+    )
     summary["build_keys"] = build_info
     summary["probe_stream"] = probe_info
     summary["top1pct_distinct_keys"] = write_top_distinct_subset(
@@ -273,7 +275,9 @@ def extract_q21(con, output_root: Path):
     summary = summarize_probe_freq(con, probe_freq_sql)
     summary["candidate"] = name
     summary["build_rows"] = build_info["count"]
-    summary["probe_to_build_ratio"] = summary["probe_rows"] / build_info["count"]
+    summary["probe_to_build_ratio"] = (
+        summary["probe_rows"] / build_info["count"] if build_info["count"] else 0.0
+    )
     summary["build_keys"] = build_info
     summary["probe_stream"] = probe_info
     summary["top1pct_distinct_keys"] = write_top_distinct_subset(
@@ -343,7 +347,9 @@ def extract_q5(con, output_root: Path):
     summary = summarize_probe_freq(con, probe_freq_sql)
     summary["candidate"] = name
     summary["build_rows"] = build_info["count"]
-    summary["probe_to_build_ratio"] = summary["probe_rows"] / build_info["count"]
+    summary["probe_to_build_ratio"] = (
+        summary["probe_rows"] / build_info["count"] if build_info["count"] else 0.0
+    )
     summary["build_keys"] = build_info
     summary["probe_stream"] = probe_info
     summary["top1pct_distinct_keys"] = write_top_distinct_subset(
