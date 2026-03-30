@@ -1460,9 +1460,15 @@ timing_stats benchmark_cpu_lookup(PH_ONLINE_JIT_TABLE* table,
   return summarize_timings(timings);
 }
 
-void verify_indexes(std::vector<std::uint32_t> const& indexes, benchmark_result* result)
+void verify_indexes(std::vector<std::uint32_t> const& indexes,
+                    std::vector<std::uint64_t> const& build_keys,
+                    std::vector<std::uint64_t> const& probe_keys,
+                    benchmark_result* result)
 {
   if (indexes.empty()) { return; }
+  if (build_keys.size() != probe_keys.size() || indexes.size() != probe_keys.size()) {
+    throw std::runtime_error("Verification inputs must have matching sizes");
+  }
 
   auto const [min_it, max_it] = std::minmax_element(indexes.begin(), indexes.end());
   result->index_min = *min_it;
@@ -1470,7 +1476,14 @@ void verify_indexes(std::vector<std::uint32_t> const& indexes, benchmark_result*
   result->index_span = static_cast<std::size_t>(result->index_max) + 1;
 
   std::vector<std::uint8_t> seen(result->index_span, 0);
-  for (auto index : indexes) {
+  for (std::size_t i = 0; i < indexes.size(); ++i) {
+    auto const index = indexes[i];
+    if (static_cast<std::size_t>(index) >= build_keys.size()) {
+      throw std::runtime_error("Out-of-range index detected at position " + std::to_string(i));
+    }
+    if (build_keys[static_cast<std::size_t>(index)] != probe_keys[i]) {
+      throw std::runtime_error("Key mismatch detected at position " + std::to_string(i));
+    }
     auto& slot = seen[static_cast<std::size_t>(index)];
     if (slot != 0) {
       throw std::runtime_error("Duplicate index detected: " + std::to_string(index));
@@ -1842,11 +1855,6 @@ benchmark_result run_benchmark(options const& opts)
       throw std::runtime_error(
         "blocksort lookup mode requires threads * items_per_thread * 2 to be a power of two");
     }
-    auto const shared_bytes = total_requests * sizeof(std::uint32_t) * 3u;
-    if (shared_bytes > (64u * 1024u)) {
-      throw std::runtime_error(
-        "blocksort lookup mode exceeds the current shared-memory budget");
-    }
   }
 
   auto build_keys = opts.keys_file.empty() ? make_sample_keys()
@@ -2026,6 +2034,21 @@ benchmark_result run_benchmark(options const& opts)
   if (result.lookup == lookup_mode::warpcache && result.major < 7) {
     throw std::runtime_error("lookup-mode=warpcache requires compute capability 7.0 or newer");
   }
+  if (result.lookup == lookup_mode::blocksort) {
+    int shared_limit = 0;
+    auto const shared_bytes =
+      static_cast<std::size_t>(opts.threads) *
+      static_cast<std::size_t>(opts.items_per_thread) * 2u *
+      sizeof(std::uint32_t) * 3u;
+    throw_if_bad(cuDeviceGetAttribute(&shared_limit,
+                                      CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_BLOCK,
+                                      device),
+                 "cuDeviceGetAttribute(max_shared_memory_per_block)");
+    if (shared_bytes > static_cast<std::size_t>(shared_limit)) {
+      throw std::runtime_error(
+        "blocksort lookup mode exceeds the device shared-memory-per-block limit");
+    }
+  }
 
   primary_context_handle primary_context;
   primary_context.device = device;
@@ -2120,7 +2143,7 @@ benchmark_result run_benchmark(options const& opts)
   result.alloc_ms = elapsed_ms(alloc_start, alloc_stop);
   result.vram_explicit_bytes = result.probe_key_bytes +
                                (validate_membership ? result.key_bytes : 0) +
-                               result.table_data_bytes +
+                               (!opts.embed_table_data ? result.table_data_bytes : 0) +
                                (probe_keys.size() * sizeof(std::uint32_t)) +
                                ((result.lookup == lookup_mode::split)
                                   ? (probe_keys.size() * sizeof(std::uint32_t) * 2)
@@ -2255,7 +2278,7 @@ benchmark_result run_benchmark(options const& opts)
   if (opts.verify) {
     auto verify_start = steady_clock::now();
     if (probe_keys == build_keys) {
-      verify_indexes(indexes, &result);
+      verify_indexes(indexes, build_keys, probe_keys, &result);
     } else {
       for (std::size_t i = 0; i < probe_keys.size(); ++i) {
         auto const candidate =
