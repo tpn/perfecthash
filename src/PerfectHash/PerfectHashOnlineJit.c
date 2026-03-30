@@ -658,7 +658,6 @@ PhEmitOnlineCudaSource(
     OUTPUT_RAW("    return static_cast<uint32_t>((value_low + value_high) & index_mask);\n");
     OUTPUT_RAW("}\n\n");
 
-EmitKernels:
     if ((Flags & PH_ONLINE_JIT_CUDA_SOURCE_FLAG_OMIT_KERNELS) == 0) {
         if ((Flags & PH_ONLINE_JIT_CUDA_SOURCE_FLAG_OMIT_TABLE_DATA) != 0) {
             OUTPUT_RAW("__global__ void PERFECTHASH_ONLINE_JIT_INDEX_KERNEL_NAME("
@@ -1295,12 +1294,17 @@ PhOnlineJitGetTableInfo(
     TableInfo->KeySizeInBytes = Info->KeySizeInBytes;
     TableInfo->OriginalKeySizeInBytes = Info->OriginalKeySizeInBytes;
     TableInfo->AssignedElementSizeInBytes = Info->AssignedElementSizeInBytes;
-    Result = PhMapPerfectHashHashFunctionToOnlineJit(
-        Table->Table->HashFunctionId,
-        (PH_ONLINE_JIT_HASH_FUNCTION *)&TableInfo->HashFunctionId
-    );
-    if (FAILED(Result)) {
-        return Result;
+    {
+        PH_ONLINE_JIT_HASH_FUNCTION PublicHashFunction;
+
+        Result = PhMapPerfectHashHashFunctionToOnlineJit(
+            Table->Table->HashFunctionId,
+            &PublicHashFunction
+        );
+        if (FAILED(Result)) {
+            return Result;
+        }
+        TableInfo->HashFunctionId = (uint32_t)PublicHashFunction;
     }
     TableInfo->MaskFunctionId = Table->Table->MaskFunctionId;
     TableInfo->HashMask = Info->HashMask;

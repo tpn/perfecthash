@@ -9,6 +9,7 @@ Query-driven extractor for TPC-H SF10 parquet data that materializes:
 
 Current query/join targets:
 
+- `q5_supplier_lineitem`
 - `q8_part_lineitem`
 - `q21_supplier_lineitem`
 

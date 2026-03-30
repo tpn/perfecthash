@@ -61,6 +61,22 @@ struct result_row {
   int device_ordinal = 0;
 };
 
+struct cuda_stream_handle {
+  cudaStream_t value{};
+  ~cuda_stream_handle()
+  {
+    if (value != nullptr) { cudaStreamDestroy(value); }
+  }
+};
+
+struct cuda_event_handle {
+  cudaEvent_t value{};
+  ~cuda_event_handle()
+  {
+    if (value != nullptr) { cudaEventDestroy(value); }
+  }
+};
+
 void throw_if_cuda(cudaError_t status, char const* what)
 {
   if (status != cudaSuccess) {
@@ -296,58 +312,52 @@ int main(int argc, char** argv)
     std::size_t free_after_set = 0;
     throw_if_cuda(cudaMemGetInfo(&free_after_set, &total_device_mem), "cudaMemGetInfo(after set)");
 
-    cudaStream_t stream{};
-    throw_if_cuda(cudaStreamCreate(&stream), "cudaStreamCreate");
-    cudaEvent_t start{};
-    cudaEvent_t stop{};
-    throw_if_cuda(cudaEventCreate(&start), "cudaEventCreate(start)");
-    throw_if_cuda(cudaEventCreate(&stop), "cudaEventCreate(stop)");
+    cuda_stream_handle stream{};
+    throw_if_cuda(cudaStreamCreate(&stream.value), "cudaStreamCreate");
+    cuda_event_handle start{};
+    cuda_event_handle stop{};
+    throw_if_cuda(cudaEventCreate(&start.value), "cudaEventCreate(start)");
+    throw_if_cuda(cudaEventCreate(&stop.value), "cudaEventCreate(stop)");
 
-    auto cleanup = [&]() {
-      cudaEventDestroy(stop);
-      cudaEventDestroy(start);
-      cudaStreamDestroy(stream);
-    };
-
-    throw_if_cuda(cudaEventRecord(start, stream), "cudaEventRecord(h2d start)");
+    throw_if_cuda(cudaEventRecord(start.value, stream.value), "cudaEventRecord(h2d start)");
     throw_if_cuda(cudaMemcpyAsync(thrust::raw_pointer_cast(d_build_keys.data()),
                                   host_build_keys.data(),
                                   build_key_count * sizeof(key_type),
                                   cudaMemcpyHostToDevice,
-                                  stream),
+                                  stream.value),
                   "cudaMemcpyAsync(build keys)");
-    throw_if_cuda(cudaEventRecord(stop, stream), "cudaEventRecord(h2d stop)");
-    throw_if_cuda(cudaEventSynchronize(stop), "cudaEventSynchronize(h2d)");
-    auto const h2d_keys_ms = ms_between(start, stop);
+    throw_if_cuda(cudaEventRecord(stop.value, stream.value), "cudaEventRecord(h2d stop)");
+    throw_if_cuda(cudaEventSynchronize(stop.value), "cudaEventSynchronize(h2d)");
+    auto const h2d_keys_ms = ms_between(start.value, stop.value);
 
-    throw_if_cuda(cudaEventRecord(start, stream), "cudaEventRecord(insert start)");
-    set.insert_async(d_build_keys.begin(), d_build_keys.end(), cuda::stream_ref{stream});
-    throw_if_cuda(cudaEventRecord(stop, stream), "cudaEventRecord(insert stop)");
-    throw_if_cuda(cudaEventSynchronize(stop), "cudaEventSynchronize(insert)");
-    auto const insert_ms = ms_between(start, stop);
+    throw_if_cuda(cudaEventRecord(start.value, stream.value), "cudaEventRecord(insert start)");
+    set.insert_async(d_build_keys.begin(), d_build_keys.end(), cuda::stream_ref{stream.value});
+    throw_if_cuda(cudaEventRecord(stop.value, stream.value), "cudaEventRecord(insert stop)");
+    throw_if_cuda(cudaEventSynchronize(stop.value), "cudaEventSynchronize(insert)");
+    auto const insert_ms = ms_between(start.value, stop.value);
     auto const build_ms = h2d_keys_ms + insert_ms;
 
     throw_if_cuda(cudaMemcpyAsync(thrust::raw_pointer_cast(d_probe_keys.data()),
                                   host_probe_keys.data(),
                                   probe_key_count * sizeof(key_type),
                                   cudaMemcpyHostToDevice,
-                                  stream),
+                                  stream.value),
                   "cudaMemcpyAsync(probe keys)");
-    throw_if_cuda(cudaStreamSynchronize(stream), "cudaStreamSynchronize(probe copy)");
+    throw_if_cuda(cudaStreamSynchronize(stream.value), "cudaStreamSynchronize(probe copy)");
 
     for (int i = 0; i < opts.warmup; ++i) {
-      set.find_async(d_probe_keys.begin(), d_probe_keys.end(), d_output.begin(), cuda::stream_ref{stream});
-      throw_if_cuda(cudaStreamSynchronize(stream), "cudaStreamSynchronize(warmup)");
+      set.find_async(d_probe_keys.begin(), d_probe_keys.end(), d_output.begin(), cuda::stream_ref{stream.value});
+      throw_if_cuda(cudaStreamSynchronize(stream.value), "cudaStreamSynchronize(warmup)");
     }
 
     std::vector<double> lookup_timings;
     lookup_timings.reserve(static_cast<std::size_t>(opts.iterations));
     for (int i = 0; i < opts.iterations; ++i) {
-      throw_if_cuda(cudaEventRecord(start, stream), "cudaEventRecord(find start)");
-      set.find_async(d_probe_keys.begin(), d_probe_keys.end(), d_output.begin(), cuda::stream_ref{stream});
-      throw_if_cuda(cudaEventRecord(stop, stream), "cudaEventRecord(find stop)");
-      throw_if_cuda(cudaEventSynchronize(stop), "cudaEventSynchronize(find)");
-      lookup_timings.push_back(ms_between(start, stop));
+      throw_if_cuda(cudaEventRecord(start.value, stream.value), "cudaEventRecord(find start)");
+      set.find_async(d_probe_keys.begin(), d_probe_keys.end(), d_output.begin(), cuda::stream_ref{stream.value});
+      throw_if_cuda(cudaEventRecord(stop.value, stream.value), "cudaEventRecord(find stop)");
+      throw_if_cuda(cudaEventSynchronize(stop.value), "cudaEventSynchronize(find)");
+      lookup_timings.push_back(ms_between(start.value, stop.value));
     }
 
     auto const [min_it, max_it] = std::minmax_element(lookup_timings.begin(), lookup_timings.end());
@@ -384,7 +394,7 @@ int main(int argc, char** argv)
     result.probe_key_bytes = probe_key_count * sizeof(key_type);
     result.output_bytes = probe_key_count * sizeof(key_type);
     result.capacity = set.capacity();
-    result.size = set.size(cuda::stream_ref{stream});
+    result.size = set.size(cuda::stream_ref{stream.value});
     result.slot_bytes = result.capacity * sizeof(key_type);
     result.requested_load_factor = opts.load_factor;
     result.actual_load_factor =
@@ -402,8 +412,6 @@ int main(int argc, char** argv)
     result.vram_total_bytes =
       (free_before_buffers >= free_after_set) ? (free_before_buffers - free_after_set) : 0;
     result.device_ordinal = opts.device_ordinal;
-
-    cleanup();
 
     if (opts.csv_header) { print_csv_header(); }
     if (opts.csv) { print_csv_row(result); }
