@@ -1829,6 +1829,10 @@ benchmark_result run_benchmark(options const& opts)
     auto const total_requests =
       static_cast<std::size_t>(opts.threads) *
       static_cast<std::size_t>(opts.items_per_thread) * 2u;
+    if (total_requests == 0 || (total_requests & (total_requests - 1u)) != 0) {
+      throw std::runtime_error(
+        "blocksort lookup mode requires threads * items_per_thread * 2 to be a power of two");
+    }
     auto const shared_bytes = total_requests * sizeof(std::uint32_t) * 3u;
     if (shared_bytes > (64u * 1024u)) {
       throw std::runtime_error(
@@ -2267,6 +2271,15 @@ benchmark_result run_benchmark(options const& opts)
                             downsized_keys32,
                             result.cpu_vector_effective,
                             &cpu_indexes);
+    if (validate_membership) {
+      for (std::size_t i = 0; i < cpu_indexes.size(); ++i) {
+        auto const candidate = cpu_indexes[i];
+        cpu_indexes[i] =
+          (candidate < build_keys.size() && build_keys[candidate] == probe_keys[i])
+            ? candidate
+            : std::numeric_limits<std::uint32_t>::max();
+      }
+    }
     if (cpu_indexes != indexes) {
       throw std::runtime_error("CPU and GPU index outputs differed");
     }

@@ -6,6 +6,7 @@
 #include <thrust/host_vector.h>
 
 #include <algorithm>
+#include <chrono>
 #include <cstdint>
 #include <fstream>
 #include <iomanip>
