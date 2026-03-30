@@ -158,7 +158,7 @@ struct options {
   std::string compile_mode_name = "ptx";
   std::string lookup_mode_name = "direct";
   std::string table_load_mode_name = "generic";
-  std::string cpu_backend_name = "rawdog-jit";
+  std::string cpu_backend_name = "none";
   std::string keys_file;
   std::string probe_keys_file;
   std::string source_out_path;
@@ -2499,7 +2499,7 @@ benchmark_result run_benchmark(options const& opts)
     result.verify_ms = elapsed_ms(verify_start, verify_stop);
   }
 
-  if (result.cpu_enabled) {
+  if (opts.verify && result.cpu_enabled) {
     auto const downsized_keys32 = make_downsized_keys32(probe_keys, cpu_table_info);
     std::vector<std::uint32_t> cpu_indexes;
     run_cpu_bulk_index_once(table.value,
