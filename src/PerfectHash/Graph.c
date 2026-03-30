@@ -544,6 +544,7 @@ Return Value:
     PPERFECT_HASH_CONTEXT Context;
     PASSIGNED_MEMORY_COVERAGE Coverage;
     PASSIGNED16_MEMORY_COVERAGE Coverage16;
+    BOOLEAN DebugCudaSolve;
 
     //
     // Initialize aliases.
@@ -554,12 +555,25 @@ Return Value:
     Table = Context->Table;
     NumberOfKeys = Table->Keys->NumberOfKeys.LowPart;
     Edges = Keys = (PKEY)Table->Keys->KeyArrayBaseAddress;
+    DebugCudaSolve = FALSE;
+
+#ifdef PH_WINDOWS
+    DebugCudaSolve = (GetEnvironmentVariableA("PH_DEBUG_CUDA_CHM02", NULL, 0) > 0);
+#else
+    DebugCudaSolve = (getenv("PH_DEBUG_CUDA_CHM02") != NULL);
+#endif
 
     //
     // Attempt to add all the keys to the graph.
     //
 
     Result = Graph->Vtbl->AddKeys(Graph, NumberOfKeys, Keys);
+
+    if (DebugCudaSolve && IsCuGraph(Graph)) {
+        fprintf(stderr,
+                "[GraphSolve] AddKeys result=0x%08x\n",
+                (unsigned)Result);
+    }
 
     if (FAILED(Result)) {
 
@@ -594,6 +608,14 @@ Return Value:
     //
 
     Result = Graph->Vtbl->IsAcyclic(Graph);
+    if (DebugCudaSolve && IsCuGraph(Graph)) {
+        fprintf(stderr,
+                "[GraphSolve] IsAcyclic result=0x%08x DeletedEdgeCount=%u "
+                "OrderIndex=%ld\n",
+                (unsigned)Result,
+                (unsigned)Graph->DeletedEdgeCount,
+                (long)Graph->OrderIndex);
+    }
     if (FAILED(Result)) {
 
         //
@@ -642,6 +664,12 @@ Return Value:
     //
 
     Result = Graph->Vtbl->Assign(Graph);
+
+    if (DebugCudaSolve && IsCuGraph(Graph)) {
+        fprintf(stderr,
+                "[GraphSolve] Assign result=0x%08x\n",
+                (unsigned)Result);
+    }
 
     //
     // Assign() should always succeed.
@@ -3974,6 +4002,7 @@ Return Value:
 {
     PGRAPH NewGraph;
     HRESULT Result = S_OK;
+    BOOLEAN DebugCudaSolve;
 
     //
     // Validate arguments.
@@ -3982,6 +4011,13 @@ Return Value:
     if (!ARGUMENT_PRESENT(Graph)) {
         return E_POINTER;
     }
+
+    DebugCudaSolve = FALSE;
+#ifdef PH_WINDOWS
+    DebugCudaSolve = (GetEnvironmentVariableA("PH_DEBUG_CUDA_CHM02", NULL, 0) > 0);
+#else
+    DebugCudaSolve = (getenv("PH_DEBUG_CUDA_CHM02") != NULL);
+#endif
 
     //
     // Acquire the exclusive graph lock for the duration of the routine.  The
@@ -4000,6 +4036,12 @@ Return Value:
     //
 
     Result = Graph->Vtbl->LoadInfo(Graph);
+
+    if (DebugCudaSolve && IsCuGraph(Graph)) {
+        fprintf(stderr,
+                "[GraphEnterSolvingLoop] LoadInfo result=0x%08x\n",
+                (unsigned)Result);
+    }
 
     if (FAILED(Result)) {
 
@@ -4040,6 +4082,11 @@ Return Value:
     while (GraphShouldWeContinueTryingToSolve(Graph)) {
 
         Result = Graph->Vtbl->Reset(Graph);
+        if (DebugCudaSolve && IsCuGraph(Graph)) {
+            fprintf(stderr,
+                    "[GraphEnterSolvingLoop] Reset result=0x%08x\n",
+                    (unsigned)Result);
+        }
         if (FAILED(Result)) {
             PH_ERROR(GraphReset, Result);
             break;
@@ -4048,6 +4095,16 @@ Return Value:
         }
 
         Result = Graph->Vtbl->LoadNewSeeds(Graph);
+        if (DebugCudaSolve && IsCuGraph(Graph)) {
+            fprintf(stderr,
+                    "[GraphEnterSolvingLoop] LoadNewSeeds result=0x%08x "
+                    "Seed1=%u Seed2=%u Seed3=%u Seed4=%u\n",
+                    (unsigned)Result,
+                    (unsigned)Graph->Seed1,
+                    (unsigned)Graph->Seed2,
+                    (unsigned)Graph->Seed3,
+                    (unsigned)Graph->Seed4);
+        }
         if (FAILED(Result)) {
 
             //
@@ -4061,6 +4118,11 @@ Return Value:
 
         NewGraph = NULL;
         Result = Graph->Vtbl->Solve(Graph, &NewGraph);
+        if (DebugCudaSolve && IsCuGraph(Graph)) {
+            fprintf(stderr,
+                    "[GraphEnterSolvingLoop] Solve result=0x%08x\n",
+                    (unsigned)Result);
+        }
         if (FAILED(Result)) {
             PH_ERROR(GraphSolve, Result);
             break;

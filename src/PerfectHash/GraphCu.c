@@ -1317,6 +1317,19 @@ End:
     return Result;
 }
 
+FORCEINLINE
+BOOLEAN
+IsCudaDebugEnabled(
+    VOID
+    )
+{
+#ifdef PH_WINDOWS
+    return (GetEnvironmentVariableA("PH_DEBUG_CUDA_CHM02", NULL, 0) > 0);
+#else
+    return (getenv("PH_DEBUG_CUDA_CHM02") != NULL);
+#endif
+}
+
 HRESULT
 GraphCuAddKeys(
     _In_ PGRAPH Graph,
@@ -1325,6 +1338,7 @@ GraphCuAddKeys(
     )
 {
     PCU Cu;
+    HRESULT Result;
 
     //
     // Keys have already been prepared on the GPU, so we don't need to use
@@ -1336,10 +1350,22 @@ GraphCuAddKeys(
 
     Cu = Graph->CuSolveContext->DeviceContext->Cu;
 
-    return Cu->AddKeys(Graph,
-                       Graph->CuBlocksPerGrid,
-                       Graph->CuThreadsPerBlock,
-                       Graph->CuSharedMemory);
+    Result = Cu->AddKeys(Graph,
+                         Graph->CuBlocksPerGrid,
+                         Graph->CuThreadsPerBlock,
+                         Graph->CuSharedMemory);
+
+    if (IsCudaDebugEnabled()) {
+        fprintf(stderr,
+                "[GraphCuAddKeys] Result=0x%08x HashKeysResult=0x%08x "
+                "VertexFailures=%u WarpFailures=%u\n",
+                (unsigned)Result,
+                (unsigned)Graph->CuHashKeysResult,
+                (unsigned)Graph->CuVertexCollisionFailures,
+                (unsigned)Graph->CuWarpVertexCollisionFailures);
+    }
+
+    return Result;
 }
 
 HRESULT
@@ -1371,6 +1397,16 @@ GraphCuIsAcyclic(
                            Graph->CuBlocksPerGrid,
                            Graph->CuThreadsPerBlock,
                            Graph->CuSharedMemory);
+
+    if (IsCudaDebugEnabled()) {
+        fprintf(stderr,
+                "[GraphCuIsAcyclic] GpuResult=0x%08x Attempts=%u "
+                "DeletedEdges=%u OrderIndex=%ld\n",
+                (unsigned)Result,
+                (unsigned)Graph->CuIsAcyclicPhase1Attempts,
+                (unsigned)Graph->DeletedEdgeCount,
+                (long)Graph->OrderIndex);
+    }
 
     //
     // If we weren't acyclic, return.
@@ -1438,56 +1474,106 @@ GraphCuIsAcyclic(
     ASSERT(Graph->CpuGraph != NULL);
     ASSERT(Graph->Impl == 3);
 
-    if (IsUsingAssigned16(Graph)) {
-        Result = Graph->CpuGraph->Vtbl->AddKeys(Graph->CpuGraph,
-                                                NumberOfKeys,
-                                                Keys);
-        if (FAILED(Result)) {
-            InterlockedIncrement64(
-                &Context->GpuAddKeysSuccessButCpuAddKeysFailures);
-            return Result;
-        } else {
-            InterlockedIncrement64(&Context->GpuAndCpuAddKeysSuccess);
-        }
-
-        Result = Graph->CpuGraph->Vtbl->IsAcyclic(Graph->CpuGraph);
-        if (FAILED(Result)) {
-            InterlockedIncrement64(
-                &Context->GpuIsAcyclicButCpuIsCyclicFailures);
-            return Result;
-        } else {
-            InterlockedIncrement64(&Context->GpuAndCpuIsAcyclicSuccess);
-        }
+    Result = Graph->CpuGraph->Vtbl->AddKeys(Graph->CpuGraph,
+                                            NumberOfKeys,
+                                            Keys);
+    if (FAILED(Result)) {
+        InterlockedIncrement64(
+            &Context->GpuAddKeysSuccessButCpuAddKeysFailures);
+        return Result;
     } else {
+        InterlockedIncrement64(&Context->GpuAndCpuAddKeysSuccess);
+    }
+
+    if (IsCudaDebugEnabled()) {
+        HRESULT CpuAcyclicResult;
+        ULONG MismatchIndex;
+        ULONG CpuOrder;
+        ULONG GpuOrder;
+
+        CpuAcyclicResult = Graph->CpuGraph->Vtbl->IsAcyclic(Graph->CpuGraph);
+        fprintf(stderr,
+                "[GraphCuIsAcyclic] CpuAcyclicOracleResult=0x%08x\n",
+                (unsigned)CpuAcyclicResult);
+
+        if (SUCCEEDED(CpuAcyclicResult)) {
+            MismatchIndex = (ULONG)-1;
+
+            if (IsUsingAssigned16(Graph)) {
+                for (ULONG Index = 0; Index < NumberOfKeys; Index++) {
+                    CpuOrder = ((PUSHORT)Graph->CpuGraph->Order16)[Index];
+                    GpuOrder = ((PUSHORT)Graph->Order16)[Index];
+                    if (CpuOrder != GpuOrder) {
+                        MismatchIndex = Index;
+                        fprintf(stderr,
+                                "[GraphCuIsAcyclic] OrderMismatch16 index=%u "
+                                "gpu=%u cpu=%u\n",
+                                (unsigned)Index,
+                                (unsigned)GpuOrder,
+                                (unsigned)CpuOrder);
+                        break;
+                    }
+                }
+            } else {
+                for (ULONG Index = 0; Index < NumberOfKeys; Index++) {
+                    CpuOrder = ((PULONG)Graph->CpuGraph->Order)[Index];
+                    GpuOrder = ((PULONG)Graph->Order)[Index];
+                    if (CpuOrder != GpuOrder) {
+                        MismatchIndex = Index;
+                        fprintf(stderr,
+                                "[GraphCuIsAcyclic] OrderMismatch index=%u "
+                                "gpu=%u cpu=%u\n",
+                                (unsigned)Index,
+                                (unsigned)GpuOrder,
+                                (unsigned)CpuOrder);
+                        break;
+                    }
+                }
+            }
+
+            if (MismatchIndex == (ULONG)-1) {
+                fprintf(stderr,
+                        "[GraphCuIsAcyclic] Order arrays match CPU oracle.\n");
+            }
+        }
+
+        Result = Graph->CpuGraph->Vtbl->Reset(Graph->CpuGraph);
+        if (FAILED(Result)) {
+            return Result;
+        }
+
         Result = Graph->CpuGraph->Vtbl->AddKeys(Graph->CpuGraph,
                                                 NumberOfKeys,
                                                 Keys);
         if (FAILED(Result)) {
-            InterlockedIncrement64(
-                &Context->GpuAddKeysSuccessButCpuAddKeysFailures);
             return Result;
-        } else {
-            InterlockedIncrement64(&Context->GpuAndCpuAddKeysSuccess);
-        }
-
-        Result = Graph->CpuGraph->Vtbl->IsAcyclic(Graph->CpuGraph);
-        if (FAILED(Result)) {
-            InterlockedIncrement64(
-                &Context->GpuIsAcyclicButCpuIsCyclicFailures);
-            return Result;
-        } else {
-            InterlockedIncrement64(&Context->GpuAndCpuIsAcyclicSuccess);
         }
     }
 
     //
-    // Copy the Order[] array from the CPU graph.
+    // The GPU path now owns the peel order.  Feed the captured Order[] into the
+    // CPU graph so Assign()/Verify() can act as an oracle during bring-up
+    // without recomputing IsAcyclic() on the CPU.
     //
 
-    ASSERT(SUCCEEDED(Result));
-    CopyMemory(Graph->Order,
-               Graph->CpuGraph->Order,
+    CopyMemory(Graph->CpuGraph->Order,
+               Graph->Order,
                Info->OrderSizeInBytes);
+
+    Graph->Flags.IsAcyclic = TRUE;
+    Graph->DeletedEdgeCount = NumberOfKeys;
+    Graph->OrderIndex = 0;
+
+    Graph->CpuGraph->Flags.IsAcyclic = TRUE;
+    Graph->CpuGraph->DeletedEdgeCount = NumberOfKeys;
+
+    if (IsUsingAssigned16(Graph)) {
+        Graph->CpuGraph->Order16Index = 0;
+    } else {
+        Graph->CpuGraph->OrderIndex = 0;
+    }
+
+    InterlockedIncrement64(&Context->GpuAndCpuIsAcyclicSuccess);
 
     return Result;
 }
@@ -1500,7 +1586,18 @@ GraphCuAssign(
     PRTL Rtl;
     HRESULT Result;
 
+    if (IsCudaDebugEnabled()) {
+        fprintf(stderr,
+                "[GraphCuAssign] Enter IsAcyclic=%u OrderIndex=%ld CpuOrderIndex=%ld\n",
+                (unsigned)Graph->Flags.IsAcyclic,
+                (long)Graph->OrderIndex,
+                (long)Graph->CpuGraph->OrderIndex);
+    }
+
     Result = Graph->CpuGraph->Vtbl->Assign(Graph->CpuGraph);
+    if (IsCudaDebugEnabled()) {
+        fprintf(stderr, "[GraphCuAssign] CpuAssignResult=0x%08x\n", (unsigned)Result);
+    }
     if (FAILED(Result)) {
         return Result;
     }
