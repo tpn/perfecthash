@@ -68,14 +68,14 @@ These are synchronized phase timings around the CUDA-backed phase wrappers, not
 
 Compatibility note:
 
-- this branch intentionally changes the CSV schema by removing the stale
-  `GpuIsAcyclicButCpuIsCyclicFailures` field and adding the four `Cu*`
-  timing fields above
-- downstream CSV consumers should treat this as a schema change for the
-  correctness-first CUDA bring-up path
+- this branch preserves the historical
+  `GpuIsAcyclicButCpuIsCyclicFailures` column as a zero-valued compatibility
+  stub in order to keep downstream CSV column positions stable
+- this branch intentionally adds the four `Cu*` timing fields above
 - the existing non-CUDA timing fields should continue to use the same timing
   base; the Linux `QueryPerformanceFrequency()` fix is included specifically so
-  those timings remain coherent on this platform
+  those timings remain coherent on this platform as well as for the new CUDA
+  timing fields
 
 ## Failure-Path Expectations
 
@@ -86,6 +86,8 @@ Compatibility note:
   controlled by `PH_DEBUG_CUDA_CHM02`.
 - Non-debug runs are expected to surface failure through the normal `HRESULT`
   and verification paths, not through verbose stderr diagnostics.
+- The current serial CUDA kernels are correctness-first and must not be treated
+  as throughput-optimized production behavior.
 
 ## Debug Surface
 
@@ -93,8 +95,10 @@ The following debug surface is intentionally supported for this bring-up phase:
 
 - `PH_DEBUG_CUDA_CHM02`
 - stderr logging from the CUDA `Chm02` path
-- known-seed regression harnesses that use the debug log to confirm the expected
-  GPU path was exercised
+- stable debug tokens used by the known-seed regression harnesses:
+  - `PH_CHM02_CUDA_ORDER_OK`
+  - `PH_CHM02_CUDA_ASSIGN_OK`
+  - `PH_CHM02_CUDA_VERIFY_OK`
 
 This surface is explicitly considered temporary bring-up instrumentation, not a
  long-term stable user-facing API.
@@ -105,11 +109,11 @@ This surface is explicitly considered temporary bring-up instrumentation, not a
 2. Establish known-seed Linux no-file-io parity.
 3. Establish Linux file-io parity.
 4. Move assignment and verify onto the GPU.
-5. Add focused CUDA regression coverage:
+5. Expose explicit per-phase CUDA timing fields for measurement.
+6. Add focused CUDA regression coverage:
    - known-seed path
    - non-`Assigned16` generated path
    - timing-field presence
-6. Expose explicit per-phase CUDA timing fields for measurement.
 
 ## Acceptance
 

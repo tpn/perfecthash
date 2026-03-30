@@ -279,6 +279,10 @@ Abstract:
           Context->GpuAddKeysSuccessButCpuAddKeysFailures,                                   \
           OUTPUT_INT)                                                                        \
                                                                                              \
+    ENTRY(GpuIsAcyclicButCpuIsCyclicFailures,                                                \
+          0,                                                                                 \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
     ENTRY(GpuAndCpuAddKeysSuccess,                                                           \
           Context->GpuAndCpuAddKeysSuccess,                                                  \
           OUTPUT_INT)                                                                        \

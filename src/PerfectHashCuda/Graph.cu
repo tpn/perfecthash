@@ -1010,7 +1010,7 @@ GraphCuAssignSerialKernel(
         const Edge3Type *Edge3 = &Edges3[Edge];
         VertexType Vertex1;
         VertexType Vertex2;
-        AssignedType Value;
+        uint32_t Value;
 
         if (!GraphCuIsVisitedVertex(Graph, Edge3->Vertex1)) {
             Vertex1 = Edge3->Vertex1;
@@ -1020,9 +1020,11 @@ GraphCuAssignSerialKernel(
             Vertex2 = Edge3->Vertex1;
         }
 
-        Value = (AssignedType)(Edge - Assigned[Vertex2]);
-        if (Value >= NumberOfEdges) {
-            Value = (AssignedType)(Value + NumberOfEdges);
+        Value = ((uint32_t)Edge +
+                 (uint32_t)NumberOfEdges -
+                 (uint32_t)Assigned[Vertex2]);
+        if (Value >= (uint32_t)NumberOfEdges) {
+            Value -= (uint32_t)NumberOfEdges;
         }
 
         //
@@ -1030,7 +1032,7 @@ GraphCuAssignSerialKernel(
         // this kernel runs.  Avoid trapping the device here; surface any
         // actual behavioral regressions through the normal verify path.
         //
-        Assigned[Vertex1] = Value;
+        Assigned[Vertex1] = (AssignedType)Value;
 
         GraphCuRegisterVertexVisit(Graph, Vertex1);
         GraphCuRegisterVertexVisit(Graph, Vertex2);

@@ -1793,6 +1793,7 @@ GraphCuIsAcyclic(
             fprintf(stderr,
                     "[GraphCuIsAcyclic] GpuOrderValidationResult=0x%08x\n",
                     (unsigned)GpuOrderValidationResult);
+            fprintf(stderr, "PH_CHM02_CUDA_ORDER_OK\n");
         } else {
             fprintf(stderr,
                     "[GraphCuIsAcyclic] GpuOrderValidationResult=0x%08x "
@@ -1869,11 +1870,19 @@ GraphCuAssign(
 
     if (IsCudaDebugGraph(Graph)) {
         fprintf(stderr, "[GraphCuAssign] GpuAssignResult=0x%08x\n", (unsigned)Result);
+        if (SUCCEEDED(Result)) {
+            fprintf(stderr, "PH_CHM02_CUDA_ASSIGN_OK\n");
+        }
     }
     if (FAILED(Result)) {
         return Result;
     }
 
+    //
+    // The Cu graph load-info path allocates Assigned as managed memory and
+    // Cu->Assign() synchronizes the stream before returning, so the host copy
+    // below is reading coherent data.
+    //
     CopyMemory(Graph->CpuGraph->Assigned,
                Graph->Assigned,
                Graph->Info->AssignedSizeInBytes);
@@ -1918,6 +1927,9 @@ GraphCuVerify(
 
     if (IsCudaDebugGraph(Graph)) {
         fprintf(stderr, "[GraphCuVerify] GpuVerifyResult=0x%08x\n", (unsigned)Result);
+        if (SUCCEEDED(Result)) {
+            fprintf(stderr, "PH_CHM02_CUDA_VERIFY_OK\n");
+        }
     }
 
     return Result;
