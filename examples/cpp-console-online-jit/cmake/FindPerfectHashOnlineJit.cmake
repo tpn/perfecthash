@@ -29,10 +29,13 @@ list(REMOVE_DUPLICATES _ph_search_hints)
 
 find_path(
     PERFECTHASH_ONLINE_JIT_INCLUDE_DIR
-    NAMES PerfectHashOnlineJit.h
+    NAMES
+        PerfectHash/PerfectHashOnlineJit.h
+        PerfectHashOnlineJit.h
     HINTS ${_ph_search_hints}
     PATH_SUFFIXES
         include
+        .
 )
 
 set(_ph_lib_suffixes)

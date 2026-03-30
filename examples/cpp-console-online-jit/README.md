@@ -77,6 +77,24 @@ Optional arguments:
 - `--backend <rawdog-jit|llvm-jit|auto>`
 - `--hash <name>`
 - `--vector-width <0|1|2|4|8|16>`
+- `--dump-cuda-source`
+- `--omit-kernels`
+- `--source-out <path>`
+
+### Dump Generated CUDA Source
+
+```bash
+./build/examples/cpp-console-online-jit/cpp-console-online-jit \
+  --backend rawdog-jit \
+  --hash mulshrolate3rx \
+  --source-out /tmp/online_jit_table.cu \
+  --omit-kernels
+```
+
+`--omit-kernels` emits only the inline lookup fragment (`index_from_key()`,
+constants, table data, and helpers) and leaves kernel shape to the downstream
+consumer. This is the mode intended for NVRTC/LTO-IR pipelines that want
+call-site specialization such as `ITEMS_PER_THREAD` unrolling.
 
 ## Notes
 

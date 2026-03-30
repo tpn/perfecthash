@@ -44,6 +44,24 @@ extern "C" {
 typedef struct PH_ONLINE_JIT_CONTEXT PH_ONLINE_JIT_CONTEXT;
 typedef struct PH_ONLINE_JIT_TABLE PH_ONLINE_JIT_TABLE;
 
+typedef struct PH_ONLINE_JIT_TABLE_INFO {
+    uint32_t KeySizeInBytes;
+    uint32_t OriginalKeySizeInBytes;
+    uint32_t AssignedElementSizeInBytes;
+    uint32_t HashFunctionId;
+    uint32_t MaskFunctionId;
+    uint32_t HashMask;
+    uint32_t IndexMask;
+    uint32_t Seed1;
+    uint32_t Seed2;
+    uint32_t Seed3;
+    uint32_t Seed4;
+    uint32_t Seed5;
+    uint64_t NumberOfKeys;
+    uint64_t NumberOfTableElements;
+    uint64_t DownsizeBitmap;
+} PH_ONLINE_JIT_TABLE_INFO;
+
 typedef enum PH_ONLINE_JIT_HASH_FUNCTION {
     PhOnlineJitHashMultiplyShiftR = 0,
     PhOnlineJitHashMultiplyShiftLR,
@@ -73,6 +91,8 @@ typedef enum PH_ONLINE_JIT_MAX_ISA {
 } PH_ONLINE_JIT_MAX_ISA;
 
 #define PH_ONLINE_JIT_COMPILE_FLAG_STRICT_VECTOR_WIDTH (1u << 0)
+#define PH_ONLINE_JIT_CUDA_SOURCE_FLAG_OMIT_KERNELS    (1u << 0)
+#define PH_ONLINE_JIT_CUDA_SOURCE_FLAG_OMIT_TABLE_DATA (1u << 1)
 
 PH_ONLINE_JIT_API
 int32_t
@@ -131,6 +151,52 @@ PhOnlineJitCompileTableEx(
 
 PH_ONLINE_JIT_API
 int32_t
+PhOnlineJitGetCudaSource(
+    PH_ONLINE_JIT_TABLE *Table,
+    char **SourceText,
+    size_t *SourceSize
+    );
+
+PH_ONLINE_JIT_API
+int32_t
+PhOnlineJitGetCudaSourceEx(
+    PH_ONLINE_JIT_TABLE *Table,
+    uint32_t Flags,
+    char **SourceText,
+    size_t *SourceSize
+    );
+
+PH_ONLINE_JIT_API
+void
+PhOnlineJitFreeCudaSource(
+    char *SourceText
+    );
+
+PH_ONLINE_JIT_API
+int32_t
+PhOnlineJitGetCudaTableData(
+    PH_ONLINE_JIT_TABLE *Table,
+    void **TableData,
+    size_t *TableDataSize,
+    uint32_t *TableDataElementSize,
+    size_t *NumberOfTableElements
+    );
+
+PH_ONLINE_JIT_API
+void
+PhOnlineJitFreeCudaTableData(
+    void *TableData
+    );
+
+PH_ONLINE_JIT_API
+int32_t
+PhOnlineJitGetTableInfo(
+    PH_ONLINE_JIT_TABLE *Table,
+    PH_ONLINE_JIT_TABLE_INFO *TableInfo
+    );
+
+PH_ONLINE_JIT_API
+int32_t
 PhOnlineJitIndex32(
     PH_ONLINE_JIT_TABLE *Table,
     uint32_t Key,
@@ -143,6 +209,14 @@ PhOnlineJitIndex64(
     PH_ONLINE_JIT_TABLE *Table,
     uint64_t Key,
     uint32_t *Index
+    );
+
+PH_ONLINE_JIT_API
+int32_t
+PhOnlineJitIndex32x2(
+    PH_ONLINE_JIT_TABLE *Table,
+    const uint32_t *Keys,
+    uint32_t *Indexes
     );
 
 PH_ONLINE_JIT_API

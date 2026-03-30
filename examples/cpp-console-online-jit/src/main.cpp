@@ -1,5 +1,6 @@
 #include <PerfectHash/PerfectHashOnlineJit.h>
 
+#include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
@@ -96,7 +97,9 @@ void PreloadLlvmRuntimeLibrary(PH_ONLINE_JIT_BACKEND backend) {
 void PrintUsage(const char *argv0) {
   std::cout << "Usage: " << argv0
             << " [--backend <rawdog-jit|llvm-jit|auto>]"
-               " [--hash <name>] [--vector-width <0|1|2|4|8|16>]\n";
+               " [--hash <name>] [--vector-width <0|1|2|4|8|16>]"
+               " [--dump-cuda-source] [--omit-kernels]"
+               " [--source-out <path>]\n";
   std::cout << "Hash names: multiplyshiftr, multiplyshiftrx, mulshrolate1rx,\n";
   std::cout << "            mulshrolate2rx, mulshrolate3rx, mulshrolate4rx\n";
 }
@@ -110,7 +113,10 @@ int main(int argc, char **argv) {
 
   std::string hash_name = "mulshrolate2rx";
   std::string backend_name = "rawdog-jit";
+  std::string source_out_path;
   uint32_t vector_width = 16;
+  bool dump_cuda_source = false;
+  bool omit_kernels = false;
 
   for (int index = 1; index < argc; ++index) {
     const std::string arg = argv[index];
@@ -131,6 +137,21 @@ int main(int argc, char **argv) {
 
     if (arg == "--vector-width" && index + 1 < argc) {
       vector_width = static_cast<uint32_t>(std::stoul(argv[++index]));
+      continue;
+    }
+
+    if (arg == "--dump-cuda-source") {
+      dump_cuda_source = true;
+      continue;
+    }
+
+    if (arg == "--omit-kernels") {
+      omit_kernels = true;
+      continue;
+    }
+
+    if (arg == "--source-out" && index + 1 < argc) {
+      source_out_path = argv[++index];
       continue;
     }
 
@@ -175,6 +196,46 @@ int main(int argc, char **argv) {
               << "\n";
     PhOnlineJitClose(context);
     return 1;
+  }
+
+  if (dump_cuda_source || !source_out_path.empty()) {
+    char *cuda_source = nullptr;
+    size_t cuda_source_size = 0;
+    uint32_t source_flags = omit_kernels ? PH_ONLINE_JIT_CUDA_SOURCE_FLAG_OMIT_KERNELS : 0;
+
+    result = PhOnlineJitGetCudaSourceEx(table,
+                                        source_flags,
+                                        &cuda_source,
+                                        &cuda_source_size);
+    if (!Succeeded(result)) {
+      std::cerr << "PhOnlineJitGetCudaSourceEx() failed: " << ToHex(result)
+                << "\n";
+      PhOnlineJitReleaseTable(table);
+      PhOnlineJitClose(context);
+      return 1;
+    }
+
+    if (!source_out_path.empty()) {
+      std::ofstream out(source_out_path, std::ios::binary);
+      if (!out) {
+        std::cerr << "Unable to open source output path: " << source_out_path
+                  << "\n";
+        PhOnlineJitFreeCudaSource(cuda_source);
+        PhOnlineJitReleaseTable(table);
+        PhOnlineJitClose(context);
+        return 1;
+      }
+      out.write(cuda_source, static_cast<std::streamsize>(cuda_source_size));
+    }
+
+    if (dump_cuda_source) {
+      std::cout.write(cuda_source, static_cast<std::streamsize>(cuda_source_size));
+      if (cuda_source_size == 0 || cuda_source[cuda_source_size - 1] != '\n') {
+        std::cout << '\n';
+      }
+    }
+
+    PhOnlineJitFreeCudaSource(cuda_source);
   }
 
   result = PhOnlineJitCompileTable(context,
