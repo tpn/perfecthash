@@ -257,6 +257,8 @@ int main(int argc, char** argv)
 
     auto const host_build_keys = load_keys_file(opts.keys_file, opts.max_keys);
     auto const build_key_count = host_build_keys.size();
+    auto sorted_build_keys = host_build_keys;
+    std::sort(sorted_build_keys.begin(), sorted_build_keys.end());
     auto const host_probe_keys = opts.probe_keys_file.empty()
       ? host_build_keys
       : load_keys_file(opts.probe_keys_file, opts.max_probe_keys);
@@ -344,7 +346,8 @@ int main(int argc, char** argv)
       auto const verify_start = std::chrono::steady_clock::now();
       thrust::host_vector<key_type> h_output = d_output;
       for (std::size_t i = 0; i < probe_key_count; ++i) {
-        bool const in_build = std::binary_search(host_build_keys.begin(), host_build_keys.end(), host_probe_keys[i]);
+        bool const in_build =
+          std::binary_search(sorted_build_keys.begin(), sorted_build_keys.end(), host_probe_keys[i]);
         if (in_build) {
           if (h_output[i] == empty_key || h_output[i] != host_probe_keys[i]) {
             throw std::runtime_error("Verification failed at index " + std::to_string(i));

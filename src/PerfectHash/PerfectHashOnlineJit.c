@@ -599,7 +599,10 @@ EmitKernels:
         if ((Flags & PH_ONLINE_JIT_CUDA_SOURCE_FLAG_OMIT_TABLE_DATA) != 0) {
             OUTPUT_RAW("        out[i] = index_from_key(query_keys[i], table_data);\n");
         } else {
-            OUTPUT_RAW("        out[i] = index_from_key(query_keys[i], table_data);\n");
+            OUTPUT_RAW("        out[i] = index_from_key(query_keys[i], "
+                       "perfecthash::generated::");
+            OUTPUT_STRING(Name);
+            OUTPUT_RAW("::table_data);\n");
         }
         OUTPUT_RAW("    }\n");
         OUTPUT_RAW("}\n\n");

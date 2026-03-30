@@ -712,6 +712,7 @@ __device__ __forceinline__ void direct_probe_tile(
   const generated::original_key_type (&input)[ITEMS_PER_THREAD],
   const generated::table_data_type* table_data,
   const generated::original_key_type* build_keys,
+  size_t build_key_count,
   uint32_t (&output)[ITEMS_PER_THREAD])
 {
 #pragma unroll
@@ -722,7 +723,8 @@ __device__ __forceinline__ void direct_probe_tile(
     const uint32_t index = static_cast<uint32_t>((value_low + value_high) & generated::index_mask);
 )";
   if (validate_membership) {
-    source << R"(    output[item] = (build_keys[index] == input[item]) ? index : 0xFFFFFFFFu;
+    source << R"(    output[item] =
+      (index < build_key_count && build_keys[index] == input[item]) ? index : 0xFFFFFFFFu;
 )";
   } else {
     source << R"(    output[item] = index;
@@ -813,6 +815,7 @@ extern "C" __global__ void probe_kernel(
 )";
     if (validate_membership) {
       source << R"(  const perfecthash::generated::online_jit_table::original_key_type* build_keys,
+  size_t build_key_count,
 )";
     }
     if (!embed_table_data) {
@@ -846,9 +849,9 @@ extern "C" __global__ void probe_kernel(
     }
     source << ", ";
     if (validate_membership) {
-      source << "build_keys";
+      source << "build_keys, build_key_count";
     } else {
-      source << "nullptr";
+      source << "nullptr, 0";
     }
     source << R"(, local_out);
 
@@ -1059,15 +1062,17 @@ extern "C" __global__ void blocksort_probe_kernel(
   for (uint32_t i = tid; i < TOTAL_REQUESTS; i += THREADS) {
     const uint32_t slot = shared_slots[i];
     if (slot != INVALID_SLOT) {
-      shared_partials[shared_dests[i]] = perfecthash::consumer::load_table_value()";
-    if (embed_table_data) {
-      source << R"(
-        generated::table_data, slot);)";
-    } else {
-      source << R"(
-        table_data, slot);)";
-    }
-    source << R"(
+)";
+  if (embed_table_data) {
+    source << R"(      shared_partials[shared_dests[i]] =
+        perfecthash::consumer::load_table_value(generated::table_data, slot);
+)";
+  } else {
+    source << R"(      shared_partials[shared_dests[i]] =
+        perfecthash::consumer::load_table_value(table_data, slot);
+)";
+  }
+  source << R"(
     }
   }
   __syncthreads();
@@ -2136,11 +2141,14 @@ benchmark_result run_benchmark(options const& opts)
                                     static_cast<std::size_t>(opts.threads * opts.items_per_thread) - 1) /
                                    static_cast<std::size_t>(opts.threads * opts.items_per_thread));
   std::size_t count = probe_keys.size();
+  std::size_t build_key_count = build_keys.size();
   if (result.lookup == lookup_mode::direct) {
     void* embedded_params_no_check[] = {&d_keys.value, &d_indexes.value, &count};
-    void* embedded_params_check[] = {&d_keys.value, &d_build_keys.value, &d_indexes.value, &count};
+    void* embedded_params_check[] = {
+      &d_keys.value, &d_build_keys.value, &build_key_count, &d_indexes.value, &count};
     void* detached_params_no_check[] = {&d_keys.value, &d_table.value, &d_indexes.value, &count};
-    void* detached_params_check[] = {&d_keys.value, &d_build_keys.value, &d_table.value, &d_indexes.value, &count};
+    void* detached_params_check[] = {
+      &d_keys.value, &d_build_keys.value, &build_key_count, &d_table.value, &d_indexes.value, &count};
     auto kernel_timings = run_probe_iterations(direct_function,
                                                opts.embed_table_data
                                                  ? (validate_membership ? embedded_params_check : embedded_params_no_check)
