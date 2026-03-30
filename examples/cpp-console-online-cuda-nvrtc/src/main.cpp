@@ -1922,6 +1922,9 @@ benchmark_result run_benchmark(options const& opts)
   result.cpu_backend_requested = opts.cpu_backend_name;
   result.cpu_vector_requested = opts.cpu_vector_width;
   result.cpu_strict_vector_width = opts.cpu_strict_vector_width;
+  if (result.cpu_enabled && opts.cpu_backend_name == "rawdog-jit" && opts.cpu_vector_width == 2) {
+    throw std::runtime_error("cpu-backend=rawdog-jit does not support cpu-vector-width=2");
+  }
   bool const validate_membership = !opts.probe_keys_file.empty();
 
   if (validate_membership && result.lookup != lookup_mode::direct) {

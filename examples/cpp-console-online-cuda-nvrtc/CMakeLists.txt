@@ -190,7 +190,6 @@ if(DEFINED PH_ONLINE_CUDA_NVRTC_FULL_LIBRARY AND
 endif()
 if(CUDAToolkit_LIBRARY_ROOT)
     list(APPEND _ph_runtime_dirs "${CUDAToolkit_LIBRARY_ROOT}")
-    list(APPEND _ph_runtime_dirs "${CUDAToolkit_LIBRARY_ROOT}/stubs")
 endif()
 list(REMOVE_DUPLICATES _ph_runtime_dirs)
 

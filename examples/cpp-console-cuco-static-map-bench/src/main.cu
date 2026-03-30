@@ -305,6 +305,12 @@ int main(int argc, char** argv)
 
     auto constexpr empty_key = std::numeric_limits<key_type>::max();
     auto constexpr empty_value = std::numeric_limits<value_type>::max();
+    if (std::find(host_build_keys.begin(), host_build_keys.end(), empty_key) != host_build_keys.end()) {
+      throw std::runtime_error("Build keys contain the reserved empty-key sentinel");
+    }
+    if (std::find(host_probe_keys.begin(), host_probe_keys.end(), empty_key) != host_probe_keys.end()) {
+      throw std::runtime_error("Probe keys contain the reserved empty-key sentinel");
+    }
 
     auto map = cuco::static_map{build_key_count,
                                 opts.load_factor,

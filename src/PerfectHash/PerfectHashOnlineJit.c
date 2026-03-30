@@ -333,10 +333,8 @@ PhEmitOnlineCudaSource(
     OUTPUT_RAW("#ifndef PERFECTHASH_ONLINE_JIT_INDEX_KERNEL_NAME\n");
     OUTPUT_RAW("#define PERFECTHASH_ONLINE_JIT_INDEX_KERNEL_NAME index_kernel\n");
     OUTPUT_RAW("#endif\n\n");
-    OUTPUT_RAW("using uint16_t = unsigned short;\n");
-    OUTPUT_RAW("using uint32_t = unsigned int;\n");
-    OUTPUT_RAW("using uint64_t = unsigned long long;\n");
-    OUTPUT_RAW("using size_t = decltype(sizeof(int));\n\n");
+    OUTPUT_RAW("#include <stddef.h>\n");
+    OUTPUT_RAW("#include <stdint.h>\n\n");
 
     OUTPUT_RAW("namespace perfecthash::generated::"
                "PERFECTHASH_ONLINE_JIT_NAMESPACE_NAME {\n\n");
