@@ -17,6 +17,19 @@ Abstract:
 #include "Chm01.h"
 #include "Chm02Private.h"
 
+FORCEINLINE
+BOOLEAN
+IsChm02CudaDebugEnabled(
+    VOID
+    )
+{
+#ifdef PH_WINDOWS
+    return (GetEnvironmentVariableA("PH_DEBUG_CUDA_CHM02", NULL, 0) > 0);
+#else
+    return (getenv("PH_DEBUG_CUDA_CHM02") != NULL);
+#endif
+}
+
 //
 // Main table creation implementation routine for Chm02.
 //
@@ -129,6 +142,7 @@ Return Value:
     PPERFECT_HASH_CONTEXT Context;
     BOOL WaitForAllEvents = TRUE;
     PERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags;
+    BOOLEAN DebugCuda;
     PPH_CU_DEVICE_CONTEXT DeviceContext;
     PPH_CU_DEVICE_CONTEXTS DeviceContexts;
     PPH_CU_SOLVE_CONTEXTS SolveContexts;
@@ -182,6 +196,7 @@ Return Value:
 
     TableCreateFlags.AsULongLong = Table->TableCreateFlags.AsULongLong;
     Silent = (TableCreateFlags.Silent != FALSE);
+    DebugCuda = IsChm02CudaDebugEnabled();
 
     //
     // Initialize variables used if we jump to Error early-on.
@@ -517,6 +532,14 @@ Return Value:
     WaitForThreadpoolWorkCallbacks(Context->MainWork, TRUE);
     WaitForThreadpoolWorkCallbacks(Context->FinishedWork, FALSE);
 
+    if (DebugCuda) {
+        fprintf(stderr,
+                "[Chm02] Threadpool callbacks drained. FinishedCount=%lld "
+                "FirstSolvedWins=%u\n",
+                (long long)Context->FinishedCount,
+                (unsigned)FirstSolvedGraphWins(Context));
+    }
+
     Success = (Context->FinishedCount > 0);
 
     if (!Success && !CtrlCPressed) {
@@ -634,6 +657,14 @@ Return Value:
         ASSERT(ListEntry);
         Graph = CONTAINING_RECORD(ListEntry, GRAPH, ListEntry);
 
+        if (DebugCuda) {
+            fprintf(stderr,
+                    "[Chm02] Pulled winning graph from finished list: %p "
+                    "IsCuGraph=%u\n",
+                    Graph,
+                    (unsigned)IsCuGraph(Graph));
+        }
+
     } else {
 
         EnterCriticalSection(&Context->BestGraphCriticalSection);
@@ -643,6 +674,14 @@ Return Value:
 
         if (!Graph) {
             goto Error;
+        }
+
+        if (DebugCuda) {
+            fprintf(stderr,
+                    "[Chm02] Selected best graph from context: %p "
+                    "IsCuGraph=%u\n",
+                    Graph,
+                    (unsigned)IsCuGraph(Graph));
         }
     }
 
@@ -677,6 +716,15 @@ Return Value:
 
     Context->SolvedContext = Graph;
 
+    if (DebugCuda) {
+        fprintf(stderr,
+                "[Chm02] Context->SolvedContext set. MaxDepth=%u "
+                "EmptyVertices=%u Collisions=%u\n",
+                (unsigned)Graph->MaximumTraversalDepth,
+                (unsigned)Graph->NumberOfEmptyVertices,
+                (unsigned)Graph->Collisions);
+    }
+
     //
     // Graphs always pass verification in normal circumstances.  The only time
     // they don't is if there's an internal bug in our code.  So, knowing that
@@ -694,6 +742,15 @@ Return Value:
         SUBMIT_SAVE_FILE_WORK();
 
     } else {
+
+        if (DebugCuda) {
+            fprintf(stderr,
+                    "[Chm02] NoFileIo path entered. IsCuGraph=%u "
+                    "AssignedElementSize=%u NumberOfTableElements=%llu\n",
+                    (unsigned)IsCuGraph(Graph),
+                    (unsigned)TableInfoOnDisk->AssignedElementSizeInBytes,
+                    (unsigned long long)TableInfoOnDisk->NumberOfTableElements.QuadPart);
+        }
 
         PGRAPH_INFO_ON_DISK NewGraphInfoOnDisk;
 
@@ -727,6 +784,10 @@ Return Value:
                    GraphInfoOnDisk,
                    sizeof(*NewGraphInfoOnDisk));
 
+        if (DebugCuda) {
+            fprintf(stderr, "[Chm02] Copied GraphInfoOnDisk.\n");
+        }
+
         //
         // Sanity check the first seed is not 0.
         //
@@ -744,6 +805,13 @@ Return Value:
         CopyMemory(&NewGraphInfoOnDisk->TableInfoOnDisk.FirstSeed,
                    &Graph->FirstSeed,
                    Graph->NumberOfSeeds * sizeof(Graph->FirstSeed));
+
+        if (DebugCuda) {
+            fprintf(stderr,
+                    "[Chm02] Copied seeds. FirstSeed=%u NumberOfSeeds=%u\n",
+                    (unsigned)Graph->FirstSeed,
+                    (unsigned)Graph->NumberOfSeeds);
+        }
 
         //
         // Switch the pointers.
@@ -783,7 +851,7 @@ Return Value:
 
             SizeInBytes = (
                 TableInfoOnDisk->NumberOfTableElements.QuadPart *
-                TableInfoOnDisk->KeySizeInBytes
+                TableInfoOnDisk->AssignedElementSizeInBytes
             );
 
             TryLargePageVirtualAlloc = Rtl->Vtbl->TryLargePageVirtualAlloc;
@@ -795,6 +863,15 @@ Return Value:
                                                    &LargePagesForTableData);
 
             Table->TableDataBaseAddress = BaseAddress;
+            Table->TableDataSizeInBytes = SizeInBytes;
+
+            if (DebugCuda) {
+                fprintf(stderr,
+                        "[Chm02] Allocated table data SizeInBytes=%lld "
+                        "BaseAddress=%p\n",
+                        (long long)SizeInBytes,
+                        BaseAddress);
+            }
 
             if (!BaseAddress) {
                 Result = E_OUTOFMEMORY;
@@ -821,6 +898,10 @@ Return Value:
                        Graph->Assigned,
                        SizeInBytes);
 
+            if (DebugCuda) {
+                fprintf(stderr, "[Chm02] Copied table data from Graph->Assigned.\n");
+            }
+
         }
 
     }
@@ -832,9 +913,17 @@ Return Value:
 
     CONTEXT_START_TIMERS(Verify);
 
+    if (DebugCuda) {
+        fprintf(stderr, "[Chm02] About to call Graph->Verify().\n");
+    }
+
     Result = Graph->Vtbl->Verify(Graph);
 
     CONTEXT_END_TIMERS(Verify);
+
+    if (DebugCuda) {
+        fprintf(stderr, "[Chm02] Verify result=0x%08x\n", (unsigned)Result);
+    }
 
     //
     // Set the verified table event (regardless of whether or not we succeeded
@@ -848,12 +937,19 @@ Return Value:
         goto Error;
     }
 
+    if (DebugCuda) {
+        fprintf(stderr, "[Chm02] VerifiedTableEvent signaled.\n");
+    }
+
     if (FAILED(Result)) {
         Result = PH_E_TABLE_VERIFICATION_FAILED;
         goto Error;
     }
 
     if (NoFileIo(Table)) {
+        if (DebugCuda) {
+            fprintf(stderr, "[Chm02] NoFileIo exit after verify.\n");
+        }
         goto End;
     }
 

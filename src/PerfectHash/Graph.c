@@ -3864,15 +3864,20 @@ Return Value:
         ASSERT(Context->NewBestGraphCount == 0);
         ASSERT(Context->FirstAttemptSolved == 0);
         SpareGraph = Context->SpareGraph;
-        ASSERT(SpareGraph != NULL);
-        ASSERT(IsSpareGraph(SpareGraph));
-        SpareGraph->Flags.IsSpare = FALSE;
-        Context->SpareGraph = NULL;
         Context->BestGraph = Graph;
         FoundBestGraph = TRUE;
         Coverage->BestGraphNumber = ++Context->NewBestGraphCount;
         Context->FirstAttemptSolved = Graph->Attempt;
-        Result = PH_S_USE_NEW_GRAPH_FOR_SOLVING;
+
+        if (SpareGraph != NULL) {
+            ASSERT(IsSpareGraph(SpareGraph));
+            SpareGraph->Flags.IsSpare = FALSE;
+            Context->SpareGraph = NULL;
+            Result = PH_S_USE_NEW_GRAPH_FOR_SOLVING;
+        } else {
+            StopGraphSolving = TRUE;
+            Result = PH_S_STOP_GRAPH_SOLVING;
+        }
     }
 
     //
@@ -6959,6 +6964,7 @@ Return Value:
     PPERFECT_HASH_CONTEXT Context;
     PASSIGNED16_MEMORY_COVERAGE Coverage;
     PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE_ID CoverageType;
+    BOOLEAN DebugCudaSolve;
 
     //
     // Initialize aliases.
@@ -6969,6 +6975,22 @@ Return Value:
     CoverageType = Context->BestCoverageType;
     Attempt = Coverage->Attempt;
     ElapsedMilliseconds = GetTickCount64() - Context->StartMilliseconds;
+    DebugCudaSolve = FALSE;
+
+#ifdef PH_WINDOWS
+    DebugCudaSolve = (GetEnvironmentVariableA("PH_DEBUG_CUDA_CHM02", NULL, 0) > 0);
+#else
+    DebugCudaSolve = (getenv("PH_DEBUG_CUDA_CHM02") != NULL);
+#endif
+
+    if (DebugCudaSolve && IsCuGraph(Graph)) {
+        fprintf(stderr,
+                "[GraphRegisterSolved16NoBestCoverage] Enter "
+                "BestGraph=%p SpareGraph=%p SolutionNumber=%llu\n",
+                Context->BestGraph,
+                Context->SpareGraph,
+                (unsigned long long)Graph->SolutionNumber);
+    }
 
     //
     // Indicate continue graph solving by default.
@@ -7002,15 +7024,19 @@ Return Value:
         ASSERT(Context->NewBestGraphCount == 0);
         ASSERT(Context->FirstAttemptSolved == 0);
         SpareGraph = Context->SpareGraph;
-        ASSERT(SpareGraph != NULL);
-        ASSERT(IsSpareGraph(SpareGraph));
-        SpareGraph->Flags.IsSpare = FALSE;
-        Context->SpareGraph = NULL;
         Context->BestGraph = Graph;
         FoundBestGraph = TRUE;
         Coverage->BestGraphNumber = ++Context->NewBestGraphCount;
         Context->FirstAttemptSolved = Graph->Attempt;
-        Result = PH_S_USE_NEW_GRAPH_FOR_SOLVING;
+        if (SpareGraph != NULL) {
+            ASSERT(IsSpareGraph(SpareGraph));
+            SpareGraph->Flags.IsSpare = FALSE;
+            Context->SpareGraph = NULL;
+            Result = PH_S_USE_NEW_GRAPH_FOR_SOLVING;
+        } else {
+            StopGraphSolving = TRUE;
+            Result = PH_S_STOP_GRAPH_SOLVING;
+        }
     }
 
     //
@@ -7018,6 +7044,16 @@ Return Value:
     //
 
     LeaveCriticalSection(&Context->BestGraphCriticalSection);
+
+    if (DebugCudaSolve && IsCuGraph(Graph)) {
+        fprintf(stderr,
+                "[GraphRegisterSolved16NoBestCoverage] AfterCS "
+                "FoundBestGraph=%u Result=0x%08x SpareGraph=%p BestGraph=%p\n",
+                (unsigned)FoundBestGraph,
+                (unsigned)Result,
+                SpareGraph,
+                Context->BestGraph);
+    }
 
 End:
 
@@ -7046,6 +7082,15 @@ End:
         ASSERT(Result == PH_S_USE_NEW_GRAPH_FOR_SOLVING);
         ASSERT(SpareGraph != NULL);
         *NewGraphPointer = SpareGraph;
+    }
+
+    if (DebugCudaSolve && IsCuGraph(Graph)) {
+        fprintf(stderr,
+                "[GraphRegisterSolved16NoBestCoverage] Exit Result=0x%08x "
+                "NewGraph=%p Stop=%u\n",
+                (unsigned)Result,
+                *NewGraphPointer,
+                (unsigned)StopGraphSolving);
     }
 
     EVENT_WRITE_GRAPH_FOUND(Found);
