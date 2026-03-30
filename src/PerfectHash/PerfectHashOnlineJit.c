@@ -361,7 +361,7 @@ PhEmitOnlineCudaSource(
                                       TableInfo->NumberOfKeys.QuadPart
                                   ),
                                   '\0');
-    OUTPUT_STRING(DecimalString.Buffer);
+    OUTPUT_STRING(&DecimalString);
     OUTPUT_RAW(";\n");
     OUTPUT_RAW("inline constexpr size_t number_of_table_elements = ");
     DecimalString.Buffer = NumberOfTableElementsBuffer;
@@ -373,7 +373,7 @@ PhEmitOnlineCudaSource(
                                       TableInfo->NumberOfTableElements.QuadPart
                                   ),
                                   '\0');
-    OUTPUT_STRING(DecimalString.Buffer);
+    OUTPUT_STRING(&DecimalString);
     OUTPUT_RAW(";\n\n");
 
     OUTPUT_RAW("inline constexpr uint32_t hash_mask = ");

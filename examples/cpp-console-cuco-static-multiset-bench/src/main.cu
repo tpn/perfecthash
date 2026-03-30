@@ -257,6 +257,9 @@ int main(int argc, char** argv)
 
     auto const host_build_keys = load_keys_file(opts.keys_file, opts.max_keys);
     auto const build_key_count = host_build_keys.size();
+    if (build_key_count == 0) {
+      throw std::runtime_error("No build keys available to benchmark");
+    }
     auto sorted_build_keys = host_build_keys;
     std::sort(sorted_build_keys.begin(), sorted_build_keys.end());
     auto const host_probe_keys = opts.probe_keys_file.empty()
