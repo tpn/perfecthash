@@ -220,7 +220,9 @@ def extract_q21(con, output_root: Path):
         ), q1_expanded as (
             select q1.n_supp_by_order, li.l_orderkey, li.l_suppkey
             from q1
-            join lineitem li on q1.l_orderkey = li.l_orderkey
+            join lineitem li
+              on q1.l_orderkey = li.l_orderkey
+             and li.l_receiptdate > li.l_commitdate
             join orders o on li.l_orderkey = o.o_orderkey
             where q1.n_supp_by_order = 1
               and o.o_orderstatus = 'F'
@@ -246,7 +248,9 @@ def extract_q21(con, output_root: Path):
         ), q1_expanded as (
             select q1.n_supp_by_order, li.l_orderkey, li.l_suppkey
             from q1
-            join lineitem li on q1.l_orderkey = li.l_orderkey
+            join lineitem li
+              on q1.l_orderkey = li.l_orderkey
+             and li.l_receiptdate > li.l_commitdate
             join orders o on li.l_orderkey = o.o_orderkey
             where q1.n_supp_by_order = 1
               and o.o_orderstatus = 'F'

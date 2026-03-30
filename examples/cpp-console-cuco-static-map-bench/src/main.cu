@@ -278,9 +278,13 @@ int main(int argc, char** argv)
     }
     auto sorted_build_keys = host_build_keys;
     std::sort(sorted_build_keys.begin(), sorted_build_keys.end());
-    auto const host_probe_keys = opts.probe_keys_file.empty()
+    auto host_probe_keys = opts.probe_keys_file.empty()
       ? host_build_keys
       : load_keys_file(opts.probe_keys_file, opts.max_probe_keys);
+    if (opts.probe_keys_file.empty() && opts.max_probe_keys > 0 &&
+        host_probe_keys.size() > opts.max_probe_keys) {
+      host_probe_keys.resize(static_cast<std::size_t>(opts.max_probe_keys));
+    }
     auto const probe_key_count = host_probe_keys.size();
 
     if (build_key_count > static_cast<std::size_t>(std::numeric_limits<value_type>::max())) {

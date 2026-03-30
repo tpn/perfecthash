@@ -1372,6 +1372,88 @@ std::vector<double> run_probe_iterations(CUfunction function,
   return timings;
 }
 
+std::vector<double> run_split_probe_iterations(CUfunction compute_function,
+                                               void** compute_params,
+                                               CUfunction gather_function,
+                                               void** gather_params,
+                                               int blocks,
+                                               int threads,
+                                               int warmup,
+                                               int iterations)
+{
+  event_handle start_event;
+  event_handle stop_event;
+  throw_if_bad(cuEventCreate(&start_event.value, CU_EVENT_DEFAULT), "cuEventCreate(start)");
+  throw_if_bad(cuEventCreate(&stop_event.value, CU_EVENT_DEFAULT), "cuEventCreate(stop)");
+
+  for (int iteration = 0; iteration < warmup; ++iteration) {
+    throw_if_bad(cuLaunchKernel(compute_function,
+                                static_cast<unsigned>(blocks),
+                                1,
+                                1,
+                                static_cast<unsigned>(threads),
+                                1,
+                                1,
+                                0,
+                                0,
+                                compute_params,
+                                nullptr),
+                 "cuLaunchKernel(split warmup compute)");
+    throw_if_bad(cuLaunchKernel(gather_function,
+                                static_cast<unsigned>(blocks),
+                                1,
+                                1,
+                                static_cast<unsigned>(threads),
+                                1,
+                                1,
+                                0,
+                                0,
+                                gather_params,
+                                nullptr),
+                 "cuLaunchKernel(split warmup gather)");
+    throw_if_bad(cuCtxSynchronize(), "cuCtxSynchronize(split warmup)");
+  }
+
+  std::vector<double> timings;
+  timings.reserve(static_cast<std::size_t>(iterations));
+  for (int iteration = 0; iteration < iterations; ++iteration) {
+    throw_if_bad(cuEventRecord(start_event.value, 0), "cuEventRecord(split start)");
+    throw_if_bad(cuLaunchKernel(compute_function,
+                                static_cast<unsigned>(blocks),
+                                1,
+                                1,
+                                static_cast<unsigned>(threads),
+                                1,
+                                1,
+                                0,
+                                0,
+                                compute_params,
+                                nullptr),
+                 "cuLaunchKernel(split compute)");
+    throw_if_bad(cuLaunchKernel(gather_function,
+                                static_cast<unsigned>(blocks),
+                                1,
+                                1,
+                                static_cast<unsigned>(threads),
+                                1,
+                                1,
+                                0,
+                                0,
+                                gather_params,
+                                nullptr),
+                 "cuLaunchKernel(split gather)");
+    throw_if_bad(cuEventRecord(stop_event.value, 0), "cuEventRecord(split stop)");
+    throw_if_bad(cuEventSynchronize(stop_event.value), "cuEventSynchronize(split stop)");
+
+    float kernel_ms = 0.0f;
+    throw_if_bad(cuEventElapsedTime(&kernel_ms, start_event.value, stop_event.value),
+                 "cuEventElapsedTime(split)");
+    timings.push_back(static_cast<double>(kernel_ms));
+  }
+
+  return timings;
+}
+
 struct timing_stats {
   double avg = 0.0;
   double min = 0.0;
@@ -1868,6 +1950,10 @@ benchmark_result run_benchmark(options const& opts)
   auto probe_keys = opts.probe_keys_file.empty()
     ? build_keys
     : load_keys_file(opts.probe_keys_file, opts.max_probe_keys);
+  if (opts.probe_keys_file.empty() && opts.max_probe_keys > 0 &&
+      probe_keys.size() > opts.max_probe_keys) {
+    probe_keys.resize(static_cast<std::size_t>(opts.max_probe_keys));
+  }
   if (probe_keys.empty()) {
     throw std::runtime_error("No probe keys available to benchmark");
   }
@@ -2212,9 +2298,18 @@ benchmark_result run_benchmark(options const& opts)
                                                  opts.iterations);
       auto const gather_stats = summarize_timings(gather_timings);
       result.slot_gather_avg_ms = gather_stats.avg;
-      result.kernel_avg_ms = compute_stats.avg + gather_stats.avg;
-      result.kernel_min_ms = compute_stats.min + gather_stats.min;
-      result.kernel_max_ms = compute_stats.max + gather_stats.max;
+      auto combined_timings = run_split_probe_iterations(compute_slots_function,
+                                                         compute_params,
+                                                         gather_function,
+                                                         gather_params,
+                                                         result.blocks,
+                                                         opts.threads,
+                                                         opts.warmup,
+                                                         opts.iterations);
+      auto const combined_stats = summarize_timings(combined_timings);
+      result.kernel_avg_ms = combined_stats.avg;
+      result.kernel_min_ms = combined_stats.min;
+      result.kernel_max_ms = combined_stats.max;
     } else {
       void* gather_params[] = {&d_slot1.value, &d_slot2.value, &d_table.value, &d_indexes.value, &count};
       auto gather_timings = run_probe_iterations(gather_function,
@@ -2225,9 +2320,18 @@ benchmark_result run_benchmark(options const& opts)
                                                  opts.iterations);
       auto const gather_stats = summarize_timings(gather_timings);
       result.slot_gather_avg_ms = gather_stats.avg;
-      result.kernel_avg_ms = compute_stats.avg + gather_stats.avg;
-      result.kernel_min_ms = compute_stats.min + gather_stats.min;
-      result.kernel_max_ms = compute_stats.max + gather_stats.max;
+      auto combined_timings = run_split_probe_iterations(compute_slots_function,
+                                                         compute_params,
+                                                         gather_function,
+                                                         gather_params,
+                                                         result.blocks,
+                                                         opts.threads,
+                                                         opts.warmup,
+                                                         opts.iterations);
+      auto const combined_stats = summarize_timings(combined_timings);
+      result.kernel_avg_ms = combined_stats.avg;
+      result.kernel_min_ms = combined_stats.min;
+      result.kernel_max_ms = combined_stats.max;
     }
   } else if (result.lookup == lookup_mode::warpcache) {
     void* embedded_params[] = {&d_keys.value, &d_indexes.value, &count};
