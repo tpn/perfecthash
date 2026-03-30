@@ -16,6 +16,7 @@ Abstract:
 #include "stdafx.h"
 #include <PerfectHash/PerfectHashOnlineJit.h>
 
+#include <stdint.h>
 #include <stdlib.h>
 
 extern DLL_GET_CLASS_OBJECT PerfectHashDllGetClassObject;
@@ -170,6 +171,16 @@ PhCompileOnlineJitBackend(
 {
     HRESULT Result;
     PERFECT_HASH_TABLE_COMPILE_FLAGS CompileFlags = {0};
+    PTABLE_INFO_ON_DISK TableInfo;
+
+    if (!ARGUMENT_PRESENT(Context) ||
+        !ARGUMENT_PRESENT(Table) ||
+        !ARGUMENT_PRESENT(Table->Table) ||
+        !ARGUMENT_PRESENT(Table->Table->TableInfoOnDisk)) {
+        return E_INVALIDARG;
+    }
+
+    TableInfo = Table->Table->TableInfoOnDisk;
 
     CompileFlags.Jit = TRUE;
 
@@ -344,6 +355,84 @@ PhOnlineJitCreateTable32(
     );
     if (FAILED(Result)) {
         return Result;
+    }
+
+    Wrapper = (PH_ONLINE_JIT_TABLE *)calloc(1, sizeof(*Wrapper));
+    if (!Wrapper) {
+        Table->Vtbl->Release(Table);
+        return E_OUTOFMEMORY;
+    }
+
+    Wrapper->Table = Table;
+    *TablePointer = Wrapper;
+
+    return S_OK;
+}
+
+PH_ONLINE_JIT_API
+int32_t
+PhOnlineJitCreateTable64(
+    PH_ONLINE_JIT_CONTEXT *Context,
+    PH_ONLINE_JIT_HASH_FUNCTION HashFunction,
+    const uint64_t *Keys,
+    uint64_t NumberOfKeys,
+    PH_ONLINE_JIT_TABLE **TablePointer
+    )
+{
+    HRESULT Result;
+    PERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlags = {0};
+    PERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags = {0};
+    PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId;
+    PPERFECT_HASH_TABLE Table = NULL;
+    PH_ONLINE_JIT_TABLE *Wrapper = NULL;
+
+    if (!ARGUMENT_PRESENT(Context) ||
+        !ARGUMENT_PRESENT(Context->Online) ||
+        !ARGUMENT_PRESENT(Keys) ||
+        NumberOfKeys == 0 ||
+        !ARGUMENT_PRESENT(TablePointer)) {
+        return E_INVALIDARG;
+    }
+
+    *TablePointer = NULL;
+
+    Result = PhMapOnlineJitHashFunction(HashFunction, &HashFunctionId);
+    if (FAILED(Result)) {
+        return Result;
+    }
+
+    KeysLoadFlags.SortKeys = TRUE;
+    KeysLoadFlags.KeysAreSorted = FALSE;
+
+    TableCreateFlags.NoFileIo = TRUE;
+    TableCreateFlags.Quiet = TRUE;
+    TableCreateFlags.DoNotTryUseHash16Impl = TRUE;
+
+    Result = Context->Online->Vtbl->CreateTableFromKeys(
+        Context->Online,
+        PerfectHashChm01AlgorithmId,
+        HashFunctionId,
+        PerfectHashAndMaskFunctionId,
+        sizeof(ULONGLONG),
+        (ULONGLONG)NumberOfKeys,
+        (PVOID)Keys,
+        &KeysLoadFlags,
+        &TableCreateFlags,
+        NULL,
+        &Table
+    );
+    if (FAILED(Result)) {
+        return Result;
+    }
+    if (!ARGUMENT_PRESENT(Table)) {
+        return E_UNEXPECTED;
+    }
+
+    if (!ARGUMENT_PRESENT(Table->TableInfoOnDisk) ||
+        Table->TableInfoOnDisk->OriginalKeySizeInBytes <= sizeof(uint32_t) ||
+        Table->TableInfoOnDisk->KeySizeInBytes > sizeof(uint32_t)) {
+        Table->Vtbl->Release(Table);
+        return PH_E_NOT_IMPLEMENTED;
     }
 
     Wrapper = (PH_ONLINE_JIT_TABLE *)calloc(1, sizeof(*Wrapper));
@@ -549,13 +638,51 @@ PhOnlineJitIndex32(
     uint32_t *Index
     )
 {
+    PTABLE_INFO_ON_DISK TableInfo;
+
     if (!ARGUMENT_PRESENT(Table) ||
         !ARGUMENT_PRESENT(Table->Table) ||
         !ARGUMENT_PRESENT(Index)) {
         return E_INVALIDARG;
     }
 
+    TableInfo = Table->Table->TableInfoOnDisk;
+    if (ARGUMENT_PRESENT(TableInfo) &&
+        TableInfo->OriginalKeySizeInBytes > sizeof(uint32_t)) {
+        return PH_E_NOT_IMPLEMENTED;
+    }
+
     return Table->Table->Vtbl->Index(Table->Table, (ULONG)Key, (PULONG)Index);
+}
+
+PH_ONLINE_JIT_API
+int32_t
+PhOnlineJitIndex64(
+    PH_ONLINE_JIT_TABLE *Table,
+    uint64_t Key,
+    uint32_t *Index
+    )
+{
+    PTABLE_INFO_ON_DISK TableInfo;
+    ULONG DownsizedKey;
+
+    if (!ARGUMENT_PRESENT(Table) ||
+        !ARGUMENT_PRESENT(Index)) {
+        return E_INVALIDARG;
+    }
+
+    if (!ARGUMENT_PRESENT(Table->Table) ||
+        !ARGUMENT_PRESENT(Table->Table->TableInfoOnDisk)) {
+        return E_INVALIDARG;
+    }
+
+    TableInfo = Table->Table->TableInfoOnDisk;
+    if (TableInfo->OriginalKeySizeInBytes <= sizeof(uint32_t) ||
+        TableInfo->KeySizeInBytes > sizeof(uint32_t)) {
+        return PH_E_NOT_IMPLEMENTED;
+    }
+    DownsizedKey = (ULONG)ExtractBits64((ULONGLONG)Key, Table->Table->DownsizeBitmap);
+    return Table->Table->Vtbl->Index(Table->Table, DownsizedKey, (PULONG)Index);
 }
 
 PH_ONLINE_JIT_API

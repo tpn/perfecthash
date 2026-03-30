@@ -20,6 +20,7 @@ endif()
 
 add_executable(perfecthash_unit_tests
     PerfectHashArgvTests.cpp
+    PerfectHashOnlineJitTests.cpp
     PerfectHashOnlineTests.cpp
 )
 
@@ -32,6 +33,7 @@ target_link_libraries(perfecthash_unit_tests
 perfecthash_apply_common_definitions(perfecthash_unit_tests)
 target_compile_definitions(perfecthash_unit_tests
     PRIVATE PERFECTHASH_TEST_ROOT_DIR="${PERFECTHASH_ROOT_DIR}"
+    PRIVATE PERFECTHASH_TEST_BUILD_LIB_DIR="$<TARGET_FILE_DIR:PerfectHash>"
 )
 
 set_target_properties(perfecthash_unit_tests PROPERTIES
@@ -42,6 +44,22 @@ set_target_properties(perfecthash_unit_tests PROPERTIES
 if(PERFECTHASH_HAS_RAWDOG_JIT)
     target_compile_definitions(perfecthash_unit_tests PRIVATE PH_HAS_RAWDOG_JIT)
 endif()
+
+add_executable(perfecthash_online_jit_invalid_env
+    PerfectHashOnlineJitInvalidEnv.cpp
+)
+
+target_link_libraries(perfecthash_online_jit_invalid_env
+    PRIVATE
+        PerfectHash
+)
+
+perfecthash_apply_common_definitions(perfecthash_online_jit_invalid_env)
+
+set_target_properties(perfecthash_online_jit_invalid_env PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED YES
+)
 
 add_executable(perfecthash_benchmarks
     PerfectHashBenchmarks.cpp
@@ -66,6 +84,14 @@ endif()
 include(GoogleTest)
 gtest_discover_tests(perfecthash_unit_tests
     TEST_PREFIX "perfecthash_unit_tests."
+)
+
+add_test(
+    NAME perfecthash_unit_tests.PerfectHashOnlineJitInvalidEnvRejected
+    COMMAND ${CMAKE_COMMAND} -E env
+        LD_LIBRARY_PATH=$<TARGET_FILE_DIR:PerfectHash>
+        PERFECT_HASH_ONLINE_MAX_CONCURRENCY=abc
+        $<TARGET_FILE:perfecthash_online_jit_invalid_env>
 )
 
 add_test(

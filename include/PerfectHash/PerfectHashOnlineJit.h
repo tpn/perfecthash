@@ -9,7 +9,12 @@ Module Name:
 Abstract:
 
     This header exposes a minimal public API for runtime creation of
-    32-bit perfect hash tables via online mode with RawDog JIT and LLVM JIT.
+    32-bit and 64-bit perfect hash tables via online mode with RawDog JIT and
+    LLVM JIT.
+
+    The 64-bit wrapper path currently supports 64-bit inputs that downsize to
+    a 32-bit runtime table representation. Full-width 64-bit JIT index support
+    is not exposed via this minimal wrapper surface.
 
 --*/
 
@@ -93,6 +98,16 @@ PhOnlineJitCreateTable32(
 
 PH_ONLINE_JIT_API
 int32_t
+PhOnlineJitCreateTable64(
+    PH_ONLINE_JIT_CONTEXT *Context,
+    PH_ONLINE_JIT_HASH_FUNCTION HashFunction,
+    const uint64_t *Keys,
+    uint64_t NumberOfKeys,
+    PH_ONLINE_JIT_TABLE **TablePointer
+    );
+
+PH_ONLINE_JIT_API
+int32_t
 PhOnlineJitCompileTable(
     PH_ONLINE_JIT_CONTEXT *Context,
     PH_ONLINE_JIT_TABLE *Table,
@@ -119,6 +134,14 @@ int32_t
 PhOnlineJitIndex32(
     PH_ONLINE_JIT_TABLE *Table,
     uint32_t Key,
+    uint32_t *Index
+    );
+
+PH_ONLINE_JIT_API
+int32_t
+PhOnlineJitIndex64(
+    PH_ONLINE_JIT_TABLE *Table,
+    uint64_t Key,
     uint32_t *Index
     );
 
