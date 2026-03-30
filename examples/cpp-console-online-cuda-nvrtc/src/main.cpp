@@ -454,7 +454,11 @@ std::size_t peak_rss_bytes()
 #if !defined(_WIN32)
   struct rusage usage {};
   if (getrusage(RUSAGE_SELF, &usage) == 0) {
+#if defined(__APPLE__)
+    return static_cast<std::size_t>(usage.ru_maxrss);
+#else
     return static_cast<std::size_t>(usage.ru_maxrss) * 1024ull;
+#endif
   }
 #endif
   return 0;
@@ -2019,6 +2023,9 @@ benchmark_result run_benchmark(options const& opts)
                                     CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR,
                                     device),
                "cuDeviceGetAttribute(minor)");
+  if (result.lookup == lookup_mode::warpcache && result.major < 7) {
+    throw std::runtime_error("lookup-mode=warpcache requires compute capability 7.0 or newer");
+  }
 
   primary_context_handle primary_context;
   primary_context.device = device;

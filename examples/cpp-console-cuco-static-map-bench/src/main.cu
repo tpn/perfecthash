@@ -382,6 +382,7 @@ int main(int argc, char** argv)
     if (opts.verify) {
       auto const verify_start = std::chrono::steady_clock::now();
       thrust::host_vector<value_type> h_values = d_values;
+      bool const same_probe_stream = (host_probe_keys == host_build_keys);
       for (std::size_t i = 0; i < probe_key_count; ++i) {
         bool const in_build =
           std::binary_search(sorted_build_keys.begin(), sorted_build_keys.end(), host_probe_keys[i]);
@@ -389,7 +390,7 @@ int main(int argc, char** argv)
           if (h_values[i] == empty_value) {
             throw std::runtime_error("Verification failed at index " + std::to_string(i));
           }
-          if (host_probe_keys == host_build_keys && h_values[i] != static_cast<value_type>(i)) {
+          if (same_probe_stream && h_values[i] != static_cast<value_type>(i)) {
             throw std::runtime_error("Verification failed at index " + std::to_string(i));
           }
           if (static_cast<std::size_t>(h_values[i]) >= build_key_count ||
