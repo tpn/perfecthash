@@ -39,6 +39,13 @@ The current `Chm02` CUDA implementation remains correctness-first, not
   - Linux with CUDA enabled
   - existing regression coverage on the configured CUDA host
 
+The following supporting code changes are considered in-scope for this branch:
+
+- Linux file-work compatibility fixes needed for the `Chm02Compat` path
+- CSV/timing schema updates needed to surface CUDA phase timing
+- the Linux `QueryPerformanceFrequency()` correction that makes those timings
+  sane on non-Windows builds
+
 ## Fallback / Debugging Policy
 
 - Normal operation should use the GPU path for add-keys, acyclic detection,
@@ -58,6 +65,51 @@ The following CSV fields are emitted:
 
 These are synchronized phase timings around the CUDA-backed phase wrappers, not
  raw kernel-only device timings.
+
+Compatibility note:
+
+- this branch intentionally changes the CSV schema by removing the stale
+  `GpuIsAcyclicButCpuIsCyclicFailures` field and adding the four `Cu*`
+  timing fields above
+- downstream CSV consumers should treat this as a schema change for the
+  correctness-first CUDA bring-up path
+- the existing non-CUDA timing fields should continue to use the same timing
+  base; the Linux `QueryPerformanceFrequency()` fix is included specifically so
+  those timings remain coherent on this platform
+
+## Failure-Path Expectations
+
+- Cyclic graphs are expected to return normal non-success solve results; they
+  are not considered internal errors.
+- CUDA-disabled builds are expected to continue using the non-CUDA code paths.
+- GPU order-validation and extra CPU-oracle diagnostics are debug-only aids,
+  controlled by `PH_DEBUG_CUDA_CHM02`.
+- Non-debug runs are expected to surface failure through the normal `HRESULT`
+  and verification paths, not through verbose stderr diagnostics.
+
+## Debug Surface
+
+The following debug surface is intentionally supported for this bring-up phase:
+
+- `PH_DEBUG_CUDA_CHM02`
+- stderr logging from the CUDA `Chm02` path
+- known-seed regression harnesses that use the debug log to confirm the expected
+  GPU path was exercised
+
+This surface is explicitly considered temporary bring-up instrumentation, not a
+ long-term stable user-facing API.
+
+## Staged Task List
+
+1. Fix correctness blockers in the legacy CUDA `Chm02` path.
+2. Establish known-seed Linux no-file-io parity.
+3. Establish Linux file-io parity.
+4. Move assignment and verify onto the GPU.
+5. Add focused CUDA regression coverage:
+   - known-seed path
+   - non-`Assigned16` generated path
+   - timing-field presence
+6. Expose explicit per-phase CUDA timing fields for measurement.
 
 ## Acceptance
 
