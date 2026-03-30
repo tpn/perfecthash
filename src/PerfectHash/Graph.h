@@ -1875,6 +1875,15 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     ULONG CuIsAcyclicPhase1Attempts;
 
     //
+    // Explicit CUDA phase timings for performance benchmarking.
+    //
+
+    LARGE_INTEGER CuAddKeysElapsedMicroseconds;
+    LARGE_INTEGER CuIsAcyclicElapsedMicroseconds;
+    LARGE_INTEGER CuAssignElapsedMicroseconds;
+    LARGE_INTEGER CuVerifyElapsedMicroseconds;
+
+    //
     // CUDA RNG details.
     //
 
@@ -2157,6 +2166,7 @@ extern GRAPH_REGISTER_SOLVED GraphRegisterSolved;
 #ifdef _M_X64
 extern GRAPH_REGISTER_SOLVED GraphRegisterSolvedTsx;
 #endif
+
 extern GRAPH_SHOULD_WE_CONTINUE_TRYING_TO_SOLVE
     GraphShouldWeContinueTryingToSolve;
 extern GRAPH_ADD_KEYS GraphAddKeys;

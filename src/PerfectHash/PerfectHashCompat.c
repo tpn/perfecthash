@@ -615,7 +615,7 @@ QueryPerformanceFrequency(
     _Out_ LARGE_INTEGER* lpFrequency
     )
 {
-    lpFrequency->QuadPart = 1000;
+    lpFrequency->QuadPart = 1000000000ull;
     return TRUE;
 }
 

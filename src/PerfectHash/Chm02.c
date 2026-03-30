@@ -709,6 +709,17 @@ Return Value:
 
     COPY_GRAPH_COUNTERS_FROM_GRAPH_TO_TABLE();
 
+#ifdef PH_USE_CUDA
+    Table->CuAddKeysElapsedMicroseconds.QuadPart =
+        Graph->CuAddKeysElapsedMicroseconds.QuadPart;
+    Table->CuIsAcyclicElapsedMicroseconds.QuadPart =
+        Graph->CuIsAcyclicElapsedMicroseconds.QuadPart;
+    Table->CuAssignElapsedMicroseconds.QuadPart =
+        Graph->CuAssignElapsedMicroseconds.QuadPart;
+    Table->CuVerifyElapsedMicroseconds.QuadPart =
+        Graph->CuVerifyElapsedMicroseconds.QuadPart;
+#endif
+
     //
     // Note this graph as the one solved to the context.  This is used by the
     // save file work callback we dispatch below.

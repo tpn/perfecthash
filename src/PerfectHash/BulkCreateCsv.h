@@ -424,6 +424,22 @@ Abstract:
           Context->VerifyElapsedMicroseconds.QuadPart,                                       \
           OUTPUT_INT)                                                                        \
                                                                                              \
+    ENTRY(CuAddKeysMicroseconds,                                                             \
+          Table->CuAddKeysElapsedMicroseconds.QuadPart,                                      \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
+    ENTRY(CuIsAcyclicMicroseconds,                                                           \
+          Table->CuIsAcyclicElapsedMicroseconds.QuadPart,                                    \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
+    ENTRY(CuAssignMicroseconds,                                                              \
+          Table->CuAssignElapsedMicroseconds.QuadPart,                                       \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
+    ENTRY(CuVerifyMicroseconds,                                                              \
+          Table->CuVerifyElapsedMicroseconds.QuadPart,                                       \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
     ENTRY(BenchmarkWarmups,                                                                  \
           Table->BenchmarkWarmups,                                                           \
           OUTPUT_INT)                                                                        \
