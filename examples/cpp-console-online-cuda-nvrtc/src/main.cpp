@@ -2292,10 +2292,26 @@ benchmark_result run_benchmark(options const& opts)
         }
       }
       if (!indexes.empty()) {
-        auto const [min_it, max_it] = std::minmax_element(indexes.begin(), indexes.end());
-        result.index_min = *min_it;
-        result.index_max = *max_it;
-        result.index_span = static_cast<std::size_t>(result.index_max) + 1;
+        std::uint32_t min_index = std::numeric_limits<std::uint32_t>::max();
+        std::uint32_t max_index = 0;
+        bool saw_hit = false;
+        for (auto const index : indexes) {
+          if (index == std::numeric_limits<std::uint32_t>::max()) {
+            continue;
+          }
+          min_index = std::min(min_index, index);
+          max_index = std::max(max_index, index);
+          saw_hit = true;
+        }
+        if (saw_hit) {
+          result.index_min = min_index;
+          result.index_max = max_index;
+          result.index_span = static_cast<std::size_t>(result.index_max) + 1;
+        } else {
+          result.index_min = 0;
+          result.index_max = 0;
+          result.index_span = 0;
+        }
       }
     }
     auto verify_stop = steady_clock::now();
