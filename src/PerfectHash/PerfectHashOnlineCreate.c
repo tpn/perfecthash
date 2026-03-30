@@ -15,7 +15,129 @@ Abstract:
 
 #include "stdafx.h"
 
+#include <errno.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+
 PERFECT_HASH_ONLINE_CREATE_TABLE_FROM_KEYS PerfectHashOnlineCreateTableFromKeys;
+
+static INIT_ONCE PerfectHashOnlineMaxConcurrencyInitOnce = INIT_ONCE_STATIC_INIT;
+static HRESULT PerfectHashOnlineMaxConcurrencyInitResult = S_FALSE;
+static BOOLEAN PerfectHashOnlineMaxConcurrencyOverridePresent = FALSE;
+static ULONG PerfectHashOnlineMaxConcurrencyOverrideValue = 0;
+
+static
+char *
+GetPerfectHashOnlineMaxConcurrencyEnvSnapshot(
+    VOID
+    )
+{
+#ifdef PH_WINDOWS
+    char *Value = NULL;
+    size_t Length = 0;
+    errno_t Result;
+
+    Result = _dupenv_s(&Value,
+                       &Length,
+                       "PERFECT_HASH_ONLINE_MAX_CONCURRENCY");
+    if (Result != 0 || !Value || Length == 0) {
+        if (Value) {
+            free(Value);
+        }
+        return NULL;
+    }
+    return Value;
+#else
+    const char *Value = getenv("PERFECT_HASH_ONLINE_MAX_CONCURRENCY");
+    if (!Value || !*Value) {
+        return NULL;
+    }
+    return strdup(Value);
+#endif
+}
+
+static
+BOOL
+CALLBACK
+InitPerfectHashOnlineMaxConcurrencyOverride(
+    _Inout_ PINIT_ONCE InitOnce,
+    _Inout_opt_ PVOID Parameter,
+    _Outptr_opt_result_maybenull_ PVOID *Context
+    )
+{
+    char *MaximumConcurrencyEnv;
+    char *End;
+    unsigned long long RawMaximumConcurrency;
+
+    UNREFERENCED_PARAMETER(InitOnce);
+    UNREFERENCED_PARAMETER(Parameter);
+
+    if (ARGUMENT_PRESENT(Context)) {
+        *Context = NULL;
+    }
+
+    MaximumConcurrencyEnv = GetPerfectHashOnlineMaxConcurrencyEnvSnapshot();
+    if (!MaximumConcurrencyEnv || !*MaximumConcurrencyEnv) {
+        if (MaximumConcurrencyEnv) {
+            free(MaximumConcurrencyEnv);
+        }
+        PerfectHashOnlineMaxConcurrencyInitResult = S_FALSE;
+        return TRUE;
+    }
+
+    if (*MaximumConcurrencyEnv == '-') {
+        free(MaximumConcurrencyEnv);
+        PerfectHashOnlineMaxConcurrencyInitResult = E_INVALIDARG;
+        return TRUE;
+    }
+
+    errno = 0;
+    End = NULL;
+    RawMaximumConcurrency = strtoull(MaximumConcurrencyEnv,
+                                     &End,
+                                     10);
+    if (errno == ERANGE ||
+        End == MaximumConcurrencyEnv ||
+        *End != '\0' ||
+        RawMaximumConcurrency > UINT32_MAX) {
+        free(MaximumConcurrencyEnv);
+        PerfectHashOnlineMaxConcurrencyInitResult = E_INVALIDARG;
+        return TRUE;
+    }
+
+    PerfectHashOnlineMaxConcurrencyOverrideValue = (ULONG)RawMaximumConcurrency;
+    PerfectHashOnlineMaxConcurrencyOverridePresent = TRUE;
+    PerfectHashOnlineMaxConcurrencyInitResult = S_OK;
+    free(MaximumConcurrencyEnv);
+    return TRUE;
+}
+
+static
+HRESULT
+GetPerfectHashOnlineMaxConcurrencyOverride(
+    _Out_ PULONG MaximumConcurrency
+    )
+{
+    InitOnceExecuteOnce(&PerfectHashOnlineMaxConcurrencyInitOnce,
+                        InitPerfectHashOnlineMaxConcurrencyOverride,
+                        NULL,
+                        NULL);
+
+    if (FAILED(PerfectHashOnlineMaxConcurrencyInitResult)) {
+        return PerfectHashOnlineMaxConcurrencyInitResult;
+    }
+
+    if (!PerfectHashOnlineMaxConcurrencyOverridePresent) {
+        return S_FALSE;
+    }
+
+    if (ARGUMENT_PRESENT(MaximumConcurrency)) {
+        *MaximumConcurrency = PerfectHashOnlineMaxConcurrencyOverrideValue;
+    }
+
+    return S_OK;
+}
 
 _Use_decl_annotations_
 HRESULT
@@ -205,6 +327,42 @@ Return Value:
     if (FAILED(Result)) {
         PH_ERROR(PerfectHashContextCreateInstance, Result);
         goto Error;
+    }
+
+    {
+        ULONG MaximumConcurrency;
+        ULONG DefaultMaximumConcurrency;
+
+        //
+        // This is an embedded-host convenience escape hatch. It is process
+        // global by construction because it is sourced from the environment;
+        // we snapshot it once and then treat it as a fixed process-wide cap.
+        //
+
+        Result = GetPerfectHashOnlineMaxConcurrencyOverride(&MaximumConcurrency);
+        if (FAILED(Result)) {
+            PH_ERROR(PerfectHashContextSetMaximumConcurrency, Result);
+            goto Error;
+        }
+        if (Result == S_OK) {
+            Result = Context->Vtbl->GetMaximumConcurrency(Context,
+                                                          &DefaultMaximumConcurrency);
+            if (FAILED(Result)) {
+                PH_ERROR(PerfectHashContextGetMaximumConcurrency, Result);
+                goto Error;
+            }
+            if (MaximumConcurrency > DefaultMaximumConcurrency) {
+                MaximumConcurrency = DefaultMaximumConcurrency;
+            }
+            if (MaximumConcurrency > 0) {
+                Result = Context->Vtbl->SetMaximumConcurrency(Context,
+                                                              MaximumConcurrency);
+                if (FAILED(Result)) {
+                    PH_ERROR(PerfectHashContextSetMaximumConcurrency, Result);
+                    goto Error;
+                }
+            }
+        }
     }
 
     Result = Online->Vtbl->CreateInstance(Online,
