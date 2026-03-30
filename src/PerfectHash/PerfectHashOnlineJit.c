@@ -1237,7 +1237,7 @@ PhOnlineJitGetCudaTableData(
         return PH_E_NOT_IMPLEMENTED;
     }
 
-    if (!ARGUMENT_PRESENT(Source)) {
+    if (Source == NULL) {
         return E_POINTER;
     }
 

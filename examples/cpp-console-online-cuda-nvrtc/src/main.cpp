@@ -44,7 +44,9 @@ bool succeeded(std::int32_t hr) { return hr >= 0; }
 
 bool is_supported_hash_name(std::string const& name)
 {
-  return (name == "multiplyshiftr" || name == "multiplyshiftrx" ||
+  return (name == "multiplyshiftr" || name == "multiplyshiftlr" ||
+          name == "multiplyshiftrmultiply" || name == "multiplyshiftr2" ||
+          name == "multiplyshiftrx" ||
           name == "mulshrolate1rx" || name == "mulshrolate2rx" ||
           name == "mulshrolate3rx" || name == "mulshrolate4rx");
 }
@@ -52,6 +54,9 @@ bool is_supported_hash_name(std::string const& name)
 PH_ONLINE_JIT_HASH_FUNCTION parse_hash_function(std::string const& name)
 {
   if (name == "multiplyshiftr") { return PhOnlineJitHashMultiplyShiftR; }
+  if (name == "multiplyshiftlr") { return PhOnlineJitHashMultiplyShiftLR; }
+  if (name == "multiplyshiftrmultiply") { return PhOnlineJitHashMultiplyShiftRMultiply; }
+  if (name == "multiplyshiftr2") { return PhOnlineJitHashMultiplyShiftR2; }
   if (name == "multiplyshiftrx") { return PhOnlineJitHashMultiplyShiftRX; }
   if (name == "mulshrolate1rx") { return PhOnlineJitHashMulshrolate1RX; }
   if (name == "mulshrolate2rx") { return PhOnlineJitHashMulshrolate2RX; }

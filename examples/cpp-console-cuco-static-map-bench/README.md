@@ -18,7 +18,7 @@ GPU key-to-index lookup path.
 ```bash
 cmake -S examples/cpp-console-cuco-static-map-bench \
       -B build/examples/cpp-console-cuco-static-map-bench \
-      -DCUCO_ROOT=/home/trentn/src/cucollections
+      -DCUCO_ROOT=/path/to/cucollections
 
 cmake --build build/examples/cpp-console-cuco-static-map-bench -j
 ```

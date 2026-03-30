@@ -18,7 +18,7 @@ used in `cudf` than the `static_map` benchmark.
 ```bash
 cmake -S examples/cpp-console-cuco-static-multiset-bench \
       -B build/examples/cpp-console-cuco-static-multiset-bench \
-      -DCUCO_ROOT=/home/trentn/src/cucollections
+      -DCUCO_ROOT=/path/to/cucollections
 
 cmake --build build/examples/cpp-console-cuco-static-multiset-bench -j
 ```
