@@ -292,9 +292,19 @@ if(TARGET PerfectHashCreateExe AND TARGET PerfectHashBulkCreateExe)
                 -P ${CMAKE_CURRENT_SOURCE_DIR}/run_cli_chm02_cuda_known_seed_test.cmake
         )
 
+        add_test(
+            NAME perfecthash.cuda.chm02.generated33000.nofileio
+            COMMAND ${CMAKE_COMMAND}
+                -DTEST_EXE=$<TARGET_FILE:PerfectHashCreateExe>
+                -DTEST_OUTPUT=${TEST_OUTPUT_DIR}/cuda-chm02-generated33000-nofileio
+                -DTEST_PYTHON=${Python3_EXECUTABLE}
+                -P ${CMAKE_CURRENT_SOURCE_DIR}/run_cli_chm02_cuda_generated_33000_test.cmake
+        )
+
         set_tests_properties(
             perfecthash.cuda.chm02.hologram.nofileio
             perfecthash.cuda.chm02.hologram.fileio
+            perfecthash.cuda.chm02.generated33000.nofileio
             PROPERTIES
                 LABELS "cuda"
         )
