@@ -956,6 +956,87 @@ GraphCuIsAcyclicSerialKernel(
     }
 }
 
+template<typename GraphType>
+DEVICE
+bool
+GraphCuIsVisitedVertex(
+    _In_ GraphType *Graph,
+    _In_ typename GraphType::VertexType Vertex
+    )
+{
+    auto *Bitmap = (uint64_t *)Graph->VisitedVerticesBitmap.Buffer;
+    const uint64_t Mask = (1ull << ((uint64_t)Vertex & 63ull));
+    return ((Bitmap[(uint64_t)Vertex >> 6] & Mask) != 0);
+}
+
+template<typename GraphType>
+DEVICE
+void
+GraphCuRegisterVertexVisit(
+    _In_ GraphType *Graph,
+    _In_ typename GraphType::VertexType Vertex
+    )
+{
+    auto *Bitmap = (uint64_t *)Graph->VisitedVerticesBitmap.Buffer;
+    const uint64_t Mask = (1ull << ((uint64_t)Vertex & 63ull));
+    Bitmap[(uint64_t)Vertex >> 6] |= Mask;
+}
+
+template<typename GraphType>
+GLOBAL
+VOID
+GraphCuAssignSerialKernel(
+    _In_ GraphType *Graph
+    )
+{
+    using AssignedType = typename GraphType::AssignedType;
+    using Edge3Type = typename GraphType::Edge3Type;
+    using EdgeType = typename GraphType::EdgeType;
+    using OrderType = typename GraphType::OrderType;
+    using VertexType = typename GraphType::VertexType;
+
+    if (blockIdx.x != 0 || threadIdx.x != 0) {
+        return;
+    }
+
+    auto *Assigned = (AssignedType *)Graph->Assigned;
+    auto *Edges3 = (Edge3Type *)Graph->Edges3;
+    auto *Order = (OrderType *)Graph->Order;
+    const EdgeType NumberOfEdges = (EdgeType)Graph->NumberOfEdges;
+
+    ASSERT(Graph->Flags.IsAcyclic);
+
+    for (uint32_t Index = (uint32_t)Graph->OrderIndex;
+         Index < Graph->NumberOfKeys;
+         Index++)
+    {
+        const EdgeType Edge = (EdgeType)Order[Index];
+        const Edge3Type *Edge3 = &Edges3[Edge];
+        VertexType Vertex1;
+        VertexType Vertex2;
+        AssignedType Value;
+
+        if (!GraphCuIsVisitedVertex(Graph, Edge3->Vertex1)) {
+            Vertex1 = Edge3->Vertex1;
+            Vertex2 = Edge3->Vertex2;
+        } else {
+            Vertex1 = Edge3->Vertex2;
+            Vertex2 = Edge3->Vertex1;
+        }
+
+        Value = (AssignedType)(Edge - Assigned[Vertex2]);
+        if (Value >= NumberOfEdges) {
+            Value = (AssignedType)(Value + NumberOfEdges);
+        }
+
+        ASSERT(Assigned[Vertex1] == INITIAL_ASSIGNMENT_VALUE);
+        Assigned[Vertex1] = Value;
+
+        GraphCuRegisterVertexVisit(Graph, Vertex1);
+        GraphCuRegisterVertexVisit(Graph, Vertex2);
+    }
+}
+
 EXTERN_C
 HOST
 HRESULT
@@ -970,7 +1051,6 @@ GraphCuIsAcyclic(
     LONG DeviceOrderIndex = 0;
     ULONG DeviceDeletedEdges = 0;
 
-    HRESULT Result;
     PGRAPH DeviceGraph;
     CUstream_st* Stream;
     PPH_CU_SOLVE_CONTEXT SolveContext;
@@ -1065,8 +1145,45 @@ GraphCuIsAcyclic(
         }
     }
 
-End:
     return (IsAcyclic ? S_OK : PH_E_GRAPH_CYCLIC_FAILURE);
+}
+
+EXTERN_C
+HOST
+HRESULT
+GraphCuAssign(
+    _In_ PGRAPH Graph,
+    _In_ ULONG BlocksPerGrid,
+    _In_ ULONG ThreadsPerBlock,
+    _In_ ULONG SharedMemoryInBytes
+    )
+{
+    HRESULT Result = S_OK;
+    PGRAPH DeviceGraph;
+    CUstream_st *Stream;
+    PPH_CU_SOLVE_CONTEXT SolveContext;
+
+    (void)BlocksPerGrid;
+    (void)ThreadsPerBlock;
+    (void)SharedMemoryInBytes;
+
+    SolveContext = Graph->CuSolveContext;
+    DeviceGraph = SolveContext->DeviceGraph;
+    Stream = (CUstream_st *)SolveContext->Stream;
+
+    if (IsUsingAssigned16(Graph)) {
+        GraphCuAssignSerialKernel<GRAPH16><<<1, 1, 0, Stream>>>(
+            (PGRAPH16)DeviceGraph
+        );
+    } else {
+        GraphCuAssignSerialKernel<GRAPH32><<<1, 1, 0, Stream>>>(
+            (PGRAPH32)DeviceGraph
+        );
+    }
+
+    CUDA_CALL(cudaStreamSynchronize(Stream));
+
+    return Result;
 }
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab filetype=cuda formatoptions=croql   :
