@@ -295,6 +295,19 @@ Return Value:
     FREE_MANAGED_ARRAY(CuVertexLocks);
     FREE_MANAGED_ARRAY(CuEdgeLocks);
 
+#define FREE_MANAGED_BITMAP_BUFFER(Name)                                   \
+    if (Graph->Name.Buffer != NULL) {                                      \
+        CuResult = Cu->MemFree((CU_DEVICE_POINTER)Graph->Name.Buffer);     \
+        if (CU_FAILED(CuResult)) {                                         \
+            CU_ERROR(GraphCuRundown_MemFree_##Name##_ManagedBitmapBuffer,  \
+                     CuResult);                                             \
+        } else {                                                           \
+            Graph->Name.Buffer = NULL;                                     \
+        }                                                                  \
+    }
+
+    FREE_MANAGED_BITMAP_BUFFER(VisitedVerticesBitmap);
+
     //
     // Free applicable assigned arrays.
     //
@@ -704,9 +717,35 @@ Return Value:
     }
 
     ALLOC_HOST_BITMAP_BUFFER(DeletedEdgesBitmap);
-    ALLOC_HOST_BITMAP_BUFFER(VisitedVerticesBitmap);
     ALLOC_HOST_BITMAP_BUFFER(AssignedBitmap);
     ALLOC_HOST_BITMAP_BUFFER(IndexBitmap);
+
+#define ALLOC_MANAGED_BITMAP_BUFFER(Name)                                 \
+    if (Info->Name##BufferSizeInBytes > 0) {                              \
+        if (Graph->Name.Buffer != NULL) {                                 \
+            CuResult = Cu->MemFree((CU_DEVICE_POINTER)Graph->Name.Buffer); \
+            if (CU_FAILED(CuResult)) {                                    \
+                CU_ERROR(GraphCuLoadInfo_MemFree_##Name##_ManagedBitmap,   \
+                         CuResult);                                        \
+                Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;                \
+                goto Error;                                               \
+            }                                                             \
+            Graph->Name.Buffer = NULL;                                    \
+        }                                                                 \
+        CuResult = Cu->MemAllocManaged(                                   \
+            (PCU_DEVICE_POINTER)&Graph->Name.Buffer,                      \
+            (SIZE_T)Info->Name##BufferSizeInBytes,                        \
+            CU_MEM_ATTACH_GLOBAL                                          \
+        );                                                                \
+        if (CU_FAILED(CuResult)) {                                        \
+            CU_ERROR(GraphCuLoadInfo_MemAllocManaged_##Name##_Bitmap,     \
+                     CuResult);                                            \
+            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;                    \
+            goto Error;                                                   \
+        }                                                                 \
+    }
+
+    ALLOC_MANAGED_BITMAP_BUFFER(VisitedVerticesBitmap);
 
     //
     // Check to see if we're in "first graph wins" mode, and have also been
@@ -990,9 +1029,26 @@ Return Value:
     }
 
     ZERO_BITMAP_BUFFER(DeletedEdgesBitmap);
-    ZERO_BITMAP_BUFFER(VisitedVerticesBitmap);
     ZERO_BITMAP_BUFFER(AssignedBitmap);
     ZERO_BITMAP_BUFFER(IndexBitmap);
+
+#define ZERO_MANAGED_BITMAP_BUFFER(Name)                                 \
+    if (Info->Name##BufferSizeInBytes > 0) {                             \
+        CuResult = Cu->MemsetD8Async(                                    \
+            (PVOID)Graph->Name.Buffer,                                   \
+            0,                                                           \
+            Info->Name##BufferSizeInBytes,                               \
+            SolveContext->Stream                                         \
+        );                                                               \
+        if (CU_FAILED(CuResult)) {                                       \
+            CU_ERROR(GraphCuReset_MemsetD8Async_##Name##_Bitmap,         \
+                     CuResult);                                           \
+            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;                   \
+            goto Error;                                                  \
+        }                                                                \
+    }
+
+    ZERO_MANAGED_BITMAP_BUFFER(VisitedVerticesBitmap);
 
     //
     // "Empty" all of the nodes.
@@ -1413,6 +1469,9 @@ Name(                                                            \
                                                                  \
     for (Index = NumberOfKeys; Index > 0; Index--) {             \
         ULONG OrderIndex;                                        \
+                                                                 \
+        Vertex1 = NULL;                                          \
+        Vertex2 = NULL;                                          \
                                                                  \
         OrderIndex = Index - 1;                                  \
                                                                  \

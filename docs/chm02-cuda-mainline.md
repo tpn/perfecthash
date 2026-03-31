@@ -20,6 +20,15 @@ The branch promotes the legacy `Chm02` CUDA path from a CPU-assisted bring-up
   - timing-field presence
 - Expose explicit per-phase CUDA timing fields for measurement.
 
+## Current Mainline Meaning
+
+For this branch, “mainline” means:
+
+- the major `Chm02` solve phases are GPU-backed
+- the path is correctness-first, not throughput-first
+- CPU graph state is still required as part of the current implementation for
+  bring-up compatibility and oracle-style validation support
+
 ## Non-Goals
 
 - High-throughput GPU solving.
@@ -33,7 +42,9 @@ The current `Chm02` CUDA implementation remains correctness-first, not
 ## Supported Scope
 
 - Algorithm: `Chm02`
-- Hash path: known-good seeded hash families already supported by the repo
+- Hash path: the branch is only accepted against the combinations covered by
+  the focused regression matrix below; broader hash-family support remains a
+  follow-on concern
 - CUDA path: single-graph bring-up / validation
 - Platform focus:
   - Linux with CUDA enabled
@@ -103,6 +114,9 @@ The following debug surface is intentionally supported for this bring-up phase:
 This surface is explicitly considered temporary bring-up instrumentation, not a
  long-term stable user-facing API.
 
+For this branch, however, the three `PH_CHM02_CUDA_*_OK` tokens are treated as
+ a supported test contract for the focused known-seed regression harness.
+
 ## Staged Task List
 
 1. Fix correctness blockers in the legacy CUDA `Chm02` path.
@@ -114,10 +128,18 @@ This surface is explicitly considered temporary bring-up instrumentation, not a
    - known-seed path
    - non-`Assigned16` generated path
    - timing-field presence
+7. Verify release-like behavior without relying on a silent CPU fallback:
+   - no-file-io path
+   - file-io path
+   - non-debug failure propagation remains via normal `HRESULT` / verify paths
 
 ## Acceptance
 
 - The focused CUDA `Chm02` regression tests pass when CUDA is enabled.
-- Known-seed `Chm02` CUDA runs succeed on Linux.
-- File-io and no-file-io paths both work in the covered scenarios.
+- Known-seed Linux coverage passes for:
+  - HologramWorld known-seed, no-file-io
+  - HologramWorld known-seed, file-io
+- Generated non-`Assigned16` coverage passes for:
+  - generated `33000`-key case
 - Timing fields are present and non-negative in CSV output.
+- CUDA-disabled builds continue to use the non-CUDA path.
