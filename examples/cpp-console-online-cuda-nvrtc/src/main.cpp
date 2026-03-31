@@ -859,11 +859,16 @@ __device__ __forceinline__ uint32_t warp_cached_load(
 template <int ITEMS_PER_THREAD>
 __device__ __forceinline__ void warp_cached_probe_tile(
   const generated::original_key_type (&input)[ITEMS_PER_THREAD],
+  const bool (&valid)[ITEMS_PER_THREAD],
   const generated::table_data_type* table_data,
   uint32_t (&output)[ITEMS_PER_THREAD])
 {
 #pragma unroll
   for (int item = 0; item < ITEMS_PER_THREAD; ++item) {
+    if (!valid[item]) {
+      output[item] = 0;
+      continue;
+    }
     const generated::slot_pair_type slots = generated::slot_pair_from_key(input[item]);
     const uint32_t value_low = warp_cached_load(table_data, slots.first);
     const uint32_t value_high = warp_cached_load(table_data, slots.second);
@@ -874,11 +879,17 @@ __device__ __forceinline__ void warp_cached_probe_tile(
 template <int ITEMS_PER_THREAD>
 __device__ __forceinline__ void compute_slot_tile(
   const generated::original_key_type (&input)[ITEMS_PER_THREAD],
+  const bool (&valid)[ITEMS_PER_THREAD],
   uint32_t (&slot1)[ITEMS_PER_THREAD],
   uint32_t (&slot2)[ITEMS_PER_THREAD])
 {
 #pragma unroll
   for (int item = 0; item < ITEMS_PER_THREAD; ++item) {
+    if (!valid[item]) {
+      slot1[item] = 0;
+      slot2[item] = 0;
+      continue;
+    }
     const generated::slot_pair_type slots = generated::slot_pair_from_key(input[item]);
     slot1[item] = slots.first;
     slot2[item] = slots.second;
@@ -889,11 +900,16 @@ template <int ITEMS_PER_THREAD>
 __device__ __forceinline__ void gather_tile(
   const uint32_t (&slot1)[ITEMS_PER_THREAD],
   const uint32_t (&slot2)[ITEMS_PER_THREAD],
+  const bool (&valid)[ITEMS_PER_THREAD],
   const generated::table_data_type* table_data,
   uint32_t (&output)[ITEMS_PER_THREAD])
 {
 #pragma unroll
   for (int item = 0; item < ITEMS_PER_THREAD; ++item) {
+    if (!valid[item]) {
+      output[item] = 0;
+      continue;
+    }
     const uint32_t value_low = load_table_value(table_data, slot1[item]);
     const uint32_t value_high = load_table_value(table_data, slot2[item]);
     output[item] = static_cast<uint32_t>((value_low + value_high) & generated::index_mask);
@@ -990,16 +1006,20 @@ extern "C" __global__ void compute_slots_kernel(
     (static_cast<size_t>(blockIdx.x) * blockDim.x + threadIdx.x) * ITEMS;
 
   generated::original_key_type local_keys[ITEMS] = {};
+  bool local_valid[ITEMS] = {};
   uint32_t local_slot1[ITEMS] = {};
   uint32_t local_slot2[ITEMS] = {};
 
 #pragma unroll
   for (int item = 0; item < ITEMS; ++item) {
     const size_t idx = thread_base + static_cast<size_t>(item);
-    if (idx < count) { local_keys[item] = keys[idx]; }
+    if (idx < count) {
+      local_keys[item] = keys[idx];
+      local_valid[item] = true;
+    }
   }
 
-  perfecthash::consumer::compute_slot_tile<ITEMS>(local_keys, local_slot1, local_slot2);
+  perfecthash::consumer::compute_slot_tile<ITEMS>(local_keys, local_valid, local_slot1, local_slot2);
 
 #pragma unroll
   for (int item = 0; item < ITEMS; ++item) {
@@ -1031,6 +1051,7 @@ extern "C" __global__ void gather_kernel(
 
   uint32_t local_slot1[ITEMS] = {};
   uint32_t local_slot2[ITEMS] = {};
+  bool local_valid[ITEMS] = {};
   uint32_t local_out[ITEMS] = {};
 
 #pragma unroll
@@ -1039,10 +1060,11 @@ extern "C" __global__ void gather_kernel(
     if (idx < count) {
       local_slot1[item] = slot1_in[idx];
       local_slot2[item] = slot2_in[idx];
+      local_valid[item] = true;
     }
   }
 
-  perfecthash::consumer::gather_tile<ITEMS>(local_slot1, local_slot2, )";
+  perfecthash::consumer::gather_tile<ITEMS>(local_slot1, local_slot2, local_valid, )";
     if (embed_table_data) {
       source << "generated::table_data";
     } else {
@@ -1077,15 +1099,19 @@ extern "C" __global__ void warpcache_probe_kernel(
     (static_cast<size_t>(blockIdx.x) * blockDim.x + threadIdx.x) * ITEMS;
 
   generated::original_key_type local_keys[ITEMS] = {};
+  bool local_valid[ITEMS] = {};
   uint32_t local_out[ITEMS] = {};
 
 #pragma unroll
   for (int item = 0; item < ITEMS; ++item) {
     const size_t idx = thread_base + static_cast<size_t>(item);
-    if (idx < count) { local_keys[item] = keys[idx]; }
+    if (idx < count) {
+      local_keys[item] = keys[idx];
+      local_valid[item] = true;
+    }
   }
 
-  perfecthash::consumer::warp_cached_probe_tile<ITEMS>(local_keys, )";
+  perfecthash::consumer::warp_cached_probe_tile<ITEMS>(local_keys, local_valid, )";
     if (embed_table_data) {
       source << "generated::table_data";
     } else {
@@ -1159,10 +1185,17 @@ extern "C" __global__ void blocksort_probe_kernel(
       for (uint32_t i = tid; i < TOTAL_REQUESTS; i += THREADS) {
         const uint32_t ixj = i ^ j;
         if (ixj > i) {
+          const bool i_invalid = (shared_slots[i] == INVALID_SLOT);
+          const bool ixj_invalid = (shared_slots[ixj] == INVALID_SLOT);
           const bool ascending = ((i & k) == 0);
-          const bool should_swap =
-            ascending ? (shared_slots[i] > shared_slots[ixj])
-                      : (shared_slots[i] < shared_slots[ixj]);
+          bool should_swap = false;
+          if (i_invalid != ixj_invalid) {
+            should_swap = i_invalid && !ixj_invalid;
+          } else if (!i_invalid) {
+            should_swap =
+              ascending ? (shared_slots[i] > shared_slots[ixj])
+                        : (shared_slots[i] < shared_slots[ixj]);
+          }
           if (should_swap) {
             perfecthash::consumer::swap_request(shared_slots[i],
                                                 shared_slots[ixj],

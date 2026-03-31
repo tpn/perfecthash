@@ -227,60 +227,62 @@ def extract_q21(con, output_root: Path):
         order by k
     """
     probe_stream_sql = """
-        with q1 as (
-            select l_orderkey, count(l_suppkey) as n_supp_by_order
-            from (
-                select l_orderkey, l_suppkey
-                from lineitem
-                where l_receiptdate > l_commitdate
-                  and l_orderkey in (
-                    select l_orderkey
-                    from lineitem
-                    group by l_orderkey
-                    having count(l_suppkey) > 1
-                  )
-            ) t
+        with multi_supplier_orders as (
+            select l_orderkey
+            from lineitem
             group by l_orderkey
-        ), q1_expanded as (
-            select q1.n_supp_by_order, li.l_orderkey, li.l_suppkey
-            from q1
-            join lineitem li
-              on q1.l_orderkey = li.l_orderkey
-             and li.l_receiptdate > li.l_commitdate
-            join orders o on li.l_orderkey = o.o_orderkey
-            where q1.n_supp_by_order = 1
-              and o.o_orderstatus = 'F'
+            having count(l_suppkey) > 1
+        ), late_lineitems as (
+            select li.l_orderkey, li.l_suppkey
+            from lineitem li
+            join multi_supplier_orders mso on li.l_orderkey = mso.l_orderkey
+            where li.l_receiptdate > li.l_commitdate
+        ), late_supplier_counts as (
+            select l_orderkey, count(l_suppkey) as n_supp_by_order
+            from late_lineitems
+            group by l_orderkey
+        ), saudi_suppliers as (
+            select s_suppkey
+            from supplier
+            join nation on s_nationkey = n_nationkey
+            where n_name = 'SAUDI ARABIA'
         )
-        select l_suppkey as k
-        from q1_expanded
+        select lli.l_suppkey as k
+        from late_supplier_counts lsc
+        join late_lineitems lli on lsc.l_orderkey = lli.l_orderkey
+        join orders o on lli.l_orderkey = o.o_orderkey
+        join saudi_suppliers ss on lli.l_suppkey = ss.s_suppkey
+        where lsc.n_supp_by_order = 1
+          and o.o_orderstatus = 'F'
     """
     probe_freq_sql = """
-        with q1 as (
-            select l_orderkey, count(l_suppkey) as n_supp_by_order
-            from (
-                select l_orderkey, l_suppkey
-                from lineitem
-                where l_receiptdate > l_commitdate
-                  and l_orderkey in (
-                    select l_orderkey
-                    from lineitem
-                    group by l_orderkey
-                    having count(l_suppkey) > 1
-                  )
-            ) t
+        with multi_supplier_orders as (
+            select l_orderkey
+            from lineitem
             group by l_orderkey
-        ), q1_expanded as (
-            select q1.n_supp_by_order, li.l_orderkey, li.l_suppkey
-            from q1
-            join lineitem li
-              on q1.l_orderkey = li.l_orderkey
-             and li.l_receiptdate > li.l_commitdate
-            join orders o on li.l_orderkey = o.o_orderkey
-            where q1.n_supp_by_order = 1
-              and o.o_orderstatus = 'F'
+            having count(l_suppkey) > 1
+        ), late_lineitems as (
+            select li.l_orderkey, li.l_suppkey
+            from lineitem li
+            join multi_supplier_orders mso on li.l_orderkey = mso.l_orderkey
+            where li.l_receiptdate > li.l_commitdate
+        ), late_supplier_counts as (
+            select l_orderkey, count(l_suppkey) as n_supp_by_order
+            from late_lineitems
+            group by l_orderkey
+        ), saudi_suppliers as (
+            select s_suppkey
+            from supplier
+            join nation on s_nationkey = n_nationkey
+            where n_name = 'SAUDI ARABIA'
         )
-        select l_suppkey as k, count(*) as cnt
-        from q1_expanded
+        select lli.l_suppkey as k, count(*) as cnt
+        from late_supplier_counts lsc
+        join late_lineitems lli on lsc.l_orderkey = lli.l_orderkey
+        join orders o on lli.l_orderkey = o.o_orderkey
+        join saudi_suppliers ss on lli.l_suppkey = ss.s_suppkey
+        where lsc.n_supp_by_order = 1
+          and o.o_orderstatus = 'F'
         group by l_suppkey
     """
 
