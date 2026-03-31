@@ -816,16 +816,11 @@ __device__ __forceinline__ void direct_probe_tile(
       continue;
     }
     const generated::slot_pair_type slots = generated::slot_pair_from_key(input[item]);
-)";
-  if (validate_membership) {
-    source << R"(    if (slots.first >= generated::number_of_table_elements ||
+    if (slots.first >= generated::number_of_table_elements ||
         slots.second >= generated::number_of_table_elements) {
       output[item] = 0xFFFFFFFFu;
       continue;
     }
-)";
-  }
-  source << R"(
     const uint32_t value_low = load_table_value(table_data, slots.first);
     const uint32_t value_high = load_table_value(table_data, slots.second);
     const uint32_t index = static_cast<uint32_t>((value_low + value_high) & generated::index_mask);
@@ -1533,18 +1528,34 @@ std::vector<double> run_probe_iterations(CUfunction function,
   return timings;
 }
 
-std::vector<double> run_split_probe_iterations(CUfunction compute_function,
-                                               void** compute_params,
-                                               CUfunction gather_function,
-                                               void** gather_params,
-                                               int blocks,
-                                               int threads,
-                                               int warmup,
-                                               int iterations)
+struct timing_stats {
+  double avg = 0.0;
+  double min = 0.0;
+  double max = 0.0;
+};
+
+timing_stats summarize_timings(std::vector<double> const& timings);
+
+struct split_timing_stats {
+  timing_stats total;
+  timing_stats compute;
+  timing_stats gather;
+};
+
+split_timing_stats run_split_probe_iterations(CUfunction compute_function,
+                                              void** compute_params,
+                                              CUfunction gather_function,
+                                              void** gather_params,
+                                              int blocks,
+                                              int threads,
+                                              int warmup,
+                                              int iterations)
 {
   event_handle start_event;
+  event_handle compute_stop_event;
   event_handle stop_event;
   throw_if_bad(cuEventCreate(&start_event.value, CU_EVENT_DEFAULT), "cuEventCreate(start)");
+  throw_if_bad(cuEventCreate(&compute_stop_event.value, CU_EVENT_DEFAULT), "cuEventCreate(compute stop)");
   throw_if_bad(cuEventCreate(&stop_event.value, CU_EVENT_DEFAULT), "cuEventCreate(stop)");
 
   for (int iteration = 0; iteration < warmup; ++iteration) {
@@ -1575,8 +1586,12 @@ std::vector<double> run_split_probe_iterations(CUfunction compute_function,
     throw_if_bad(cuCtxSynchronize(), "cuCtxSynchronize(split warmup)");
   }
 
-  std::vector<double> timings;
-  timings.reserve(static_cast<std::size_t>(iterations));
+  std::vector<double> total_timings;
+  std::vector<double> compute_timings;
+  std::vector<double> gather_timings;
+  total_timings.reserve(static_cast<std::size_t>(iterations));
+  compute_timings.reserve(static_cast<std::size_t>(iterations));
+  gather_timings.reserve(static_cast<std::size_t>(iterations));
   for (int iteration = 0; iteration < iterations; ++iteration) {
     throw_if_bad(cuEventRecord(start_event.value, 0), "cuEventRecord(split start)");
     throw_if_bad(cuLaunchKernel(compute_function,
@@ -1591,6 +1606,7 @@ std::vector<double> run_split_probe_iterations(CUfunction compute_function,
                                 compute_params,
                                 nullptr),
                  "cuLaunchKernel(split compute)");
+    throw_if_bad(cuEventRecord(compute_stop_event.value, 0), "cuEventRecord(split compute stop)");
     throw_if_bad(cuLaunchKernel(gather_function,
                                 static_cast<unsigned>(blocks),
                                 1,
@@ -1606,20 +1622,26 @@ std::vector<double> run_split_probe_iterations(CUfunction compute_function,
     throw_if_bad(cuEventRecord(stop_event.value, 0), "cuEventRecord(split stop)");
     throw_if_bad(cuEventSynchronize(stop_event.value), "cuEventSynchronize(split stop)");
 
-    float kernel_ms = 0.0f;
-    throw_if_bad(cuEventElapsedTime(&kernel_ms, start_event.value, stop_event.value),
-                 "cuEventElapsedTime(split)");
-    timings.push_back(static_cast<double>(kernel_ms));
+    float total_ms = 0.0f;
+    float compute_ms = 0.0f;
+    float gather_ms = 0.0f;
+    throw_if_bad(cuEventElapsedTime(&total_ms, start_event.value, stop_event.value),
+                 "cuEventElapsedTime(split total)");
+    throw_if_bad(cuEventElapsedTime(&compute_ms, start_event.value, compute_stop_event.value),
+                 "cuEventElapsedTime(split compute)");
+    throw_if_bad(cuEventElapsedTime(&gather_ms, compute_stop_event.value, stop_event.value),
+                 "cuEventElapsedTime(split gather)");
+    total_timings.push_back(static_cast<double>(total_ms));
+    compute_timings.push_back(static_cast<double>(compute_ms));
+    gather_timings.push_back(static_cast<double>(gather_ms));
   }
 
-  return timings;
+  split_timing_stats stats;
+  stats.total = summarize_timings(total_timings);
+  stats.compute = summarize_timings(compute_timings);
+  stats.gather = summarize_timings(gather_timings);
+  return stats;
 }
-
-struct timing_stats {
-  double avg = 0.0;
-  double min = 0.0;
-  double max = 0.0;
-};
 
 timing_stats summarize_timings(std::vector<double> const& timings)
 {
@@ -2451,59 +2473,36 @@ benchmark_result run_benchmark(options const& opts)
     result.kernel_max_ms = stats.max;
   } else if (result.lookup == lookup_mode::split) {
     void* compute_params[] = {&d_keys.value, &d_slot1.value, &d_slot2.value, &count};
-    auto compute_timings = run_probe_iterations(compute_slots_function,
-                                                compute_params,
-                                                result.blocks,
-                                                opts.threads,
-                                                opts.warmup,
-                                                opts.iterations);
-    auto const compute_stats = summarize_timings(compute_timings);
-    result.slot_compute_avg_ms = compute_stats.avg;
-
     if (opts.embed_table_data) {
       void* gather_params[] = {&d_slot1.value, &d_slot2.value, &d_indexes.value, &count};
-      auto gather_timings = run_probe_iterations(gather_function,
-                                                 gather_params,
-                                                 result.blocks,
-                                                 opts.threads,
-                                                 opts.warmup,
-                                                 opts.iterations);
-      auto const gather_stats = summarize_timings(gather_timings);
-      result.slot_gather_avg_ms = gather_stats.avg;
-      auto combined_timings = run_split_probe_iterations(compute_slots_function,
-                                                         compute_params,
-                                                         gather_function,
-                                                         gather_params,
-                                                         result.blocks,
-                                                         opts.threads,
-                                                         opts.warmup,
-                                                         opts.iterations);
-      auto const combined_stats = summarize_timings(combined_timings);
-      result.kernel_avg_ms = combined_stats.avg;
-      result.kernel_min_ms = combined_stats.min;
-      result.kernel_max_ms = combined_stats.max;
+      auto const split_stats = run_split_probe_iterations(compute_slots_function,
+                                                          compute_params,
+                                                          gather_function,
+                                                          gather_params,
+                                                          result.blocks,
+                                                          opts.threads,
+                                                          opts.warmup,
+                                                          opts.iterations);
+      result.slot_compute_avg_ms = split_stats.compute.avg;
+      result.slot_gather_avg_ms = split_stats.gather.avg;
+      result.kernel_avg_ms = split_stats.total.avg;
+      result.kernel_min_ms = split_stats.total.min;
+      result.kernel_max_ms = split_stats.total.max;
     } else {
       void* gather_params[] = {&d_slot1.value, &d_slot2.value, &d_table.value, &d_indexes.value, &count};
-      auto gather_timings = run_probe_iterations(gather_function,
-                                                 gather_params,
-                                                 result.blocks,
-                                                 opts.threads,
-                                                 opts.warmup,
-                                                 opts.iterations);
-      auto const gather_stats = summarize_timings(gather_timings);
-      result.slot_gather_avg_ms = gather_stats.avg;
-      auto combined_timings = run_split_probe_iterations(compute_slots_function,
-                                                         compute_params,
-                                                         gather_function,
-                                                         gather_params,
-                                                         result.blocks,
-                                                         opts.threads,
-                                                         opts.warmup,
-                                                         opts.iterations);
-      auto const combined_stats = summarize_timings(combined_timings);
-      result.kernel_avg_ms = combined_stats.avg;
-      result.kernel_min_ms = combined_stats.min;
-      result.kernel_max_ms = combined_stats.max;
+      auto const split_stats = run_split_probe_iterations(compute_slots_function,
+                                                          compute_params,
+                                                          gather_function,
+                                                          gather_params,
+                                                          result.blocks,
+                                                          opts.threads,
+                                                          opts.warmup,
+                                                          opts.iterations);
+      result.slot_compute_avg_ms = split_stats.compute.avg;
+      result.slot_gather_avg_ms = split_stats.gather.avg;
+      result.kernel_avg_ms = split_stats.total.avg;
+      result.kernel_min_ms = split_stats.total.min;
+      result.kernel_max_ms = split_stats.total.max;
     }
   } else if (result.lookup == lookup_mode::warpcache) {
     void* embedded_params[] = {&d_keys.value, &d_indexes.value, &count};
