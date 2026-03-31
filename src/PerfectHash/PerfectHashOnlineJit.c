@@ -1219,6 +1219,13 @@ PhOnlineJitGetCudaTableData(
     TableInfo = Table->Table->TableInfoOnDisk;
     NumberOfTableElements64 = TableInfo->NumberOfTableElements.QuadPart;
     ElementSizeInBytes = TableInfo->AssignedElementSizeInBytes;
+    if (ElementSizeInBytes == 0) {
+        return E_INVALIDARG;
+    }
+    if (NumberOfTableElements64 >
+        (((ULONGLONG)~((size_t)0)) / (ULONGLONG)ElementSizeInBytes)) {
+        return E_OUTOFMEMORY;
+    }
     CopySize = (size_t)(NumberOfTableElements64 * (ULONGLONG)ElementSizeInBytes);
 
     if (ElementSizeInBytes == sizeof(USHORT)) {

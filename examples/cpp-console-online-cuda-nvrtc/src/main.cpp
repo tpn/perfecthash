@@ -703,6 +703,9 @@ std::uint32_t index_from_key_host(std::uint64_t key,
                                   void const* table_data)
 {
   auto const slots = slot_pair_from_key_host(key, hash_function, info);
+  if (slots.first >= info.NumberOfTableElements || slots.second >= info.NumberOfTableElements) {
+    throw std::runtime_error("Host slot pair exceeded exported table bounds");
+  }
   auto const low = table_value_from_host_data(table_data, info, slots.first);
   auto const high = table_value_from_host_data(table_data, info, slots.second);
   return static_cast<std::uint32_t>((low + high) & info.IndexMask);
@@ -808,6 +811,16 @@ __device__ __forceinline__ void direct_probe_tile(
 #pragma unroll
   for (int item = 0; item < ITEMS_PER_THREAD; ++item) {
     const generated::slot_pair_type slots = generated::slot_pair_from_key(input[item]);
+)";
+  if (validate_membership) {
+    source << R"(    if (slots.first >= generated::number_of_table_elements ||
+        slots.second >= generated::number_of_table_elements) {
+      output[item] = 0xFFFFFFFFu;
+      continue;
+    }
+)";
+  }
+  source << R"(
     const uint32_t value_low = load_table_value(table_data, slots.first);
     const uint32_t value_high = load_table_value(table_data, slots.second);
     const uint32_t index = static_cast<uint32_t>((value_low + value_high) & generated::index_mask);
@@ -1650,8 +1663,8 @@ void verify_indexes(std::vector<std::uint32_t> const& indexes,
                     benchmark_result* result)
 {
   if (indexes.empty()) { return; }
-  if (build_keys.size() != probe_keys.size() || indexes.size() != probe_keys.size()) {
-    throw std::runtime_error("Verification inputs must have matching sizes");
+  if (indexes.size() != probe_keys.size()) {
+    throw std::runtime_error("Verification indexes must match probe stream length");
   }
 
   auto const [min_it, max_it] = std::minmax_element(indexes.begin(), indexes.end());
