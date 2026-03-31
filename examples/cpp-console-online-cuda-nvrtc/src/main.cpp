@@ -2148,6 +2148,12 @@ benchmark_result run_benchmark(options const& opts)
                  "PhOnlineJitGetCudaTableData");
     auto table_export_stop = steady_clock::now();
     result.table_export_ms = elapsed_ms(table_export_start, table_export_stop);
+  } else {
+    result.table_data_bytes =
+      static_cast<std::size_t>(cpu_table_info.NumberOfTableElements) *
+      static_cast<std::size_t>(cpu_table_info.AssignedElementSizeInBytes);
+    result.table_data_elements = static_cast<std::size_t>(cpu_table_info.NumberOfTableElements);
+    result.table_data_element_size = cpu_table_info.AssignedElementSizeInBytes;
   }
 
   auto emit_start = steady_clock::now();

@@ -307,8 +307,10 @@ PhEstimateCudaSourceBytes(
 }
 
 #define PH_ONLINE_CUDA_INDENT() do {      \
-    *(PULONG)Output = 0x20202020;         \
-    Output += sizeof(ULONG);              \
+    *Output++ = ' ';                      \
+    *Output++ = ' ';                      \
+    *Output++ = ' ';                      \
+    *Output++ = ' ';                      \
 } while (0)
 
 static
