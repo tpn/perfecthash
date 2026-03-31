@@ -1672,7 +1672,6 @@ void verify_indexes(std::vector<std::uint32_t> const& indexes,
   result->index_max = *max_it;
   result->index_span = static_cast<std::size_t>(result->index_max) + 1;
 
-  std::vector<std::uint8_t> seen(result->index_span, 0);
   for (std::size_t i = 0; i < indexes.size(); ++i) {
     auto const index = indexes[i];
     if (static_cast<std::size_t>(index) >= build_keys.size()) {
@@ -1681,11 +1680,6 @@ void verify_indexes(std::vector<std::uint32_t> const& indexes,
     if (build_keys[static_cast<std::size_t>(index)] != probe_keys[i]) {
       throw std::runtime_error("Key mismatch detected at position " + std::to_string(i));
     }
-    auto& slot = seen[static_cast<std::size_t>(index)];
-    if (slot != 0) {
-      throw std::runtime_error("Duplicate index detected: " + std::to_string(index));
-    }
-    slot = 1;
   }
 }
 

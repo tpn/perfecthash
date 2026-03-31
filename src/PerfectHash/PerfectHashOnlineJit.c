@@ -263,6 +263,9 @@ PhEstimateCudaSourceBytes(
     PTABLE_INFO_ON_DISK TableInfo;
     ULONGLONG NumberOfTableElements;
     ULONGLONG TableElementBytes;
+    ULONGLONG ValuesPerLine;
+    ULONGLONG CharsPerValue;
+    ULONGLONG NumberOfLines;
     ULONGLONG BaseSize;
     ULONGLONG RequiredSize;
 
@@ -282,13 +285,24 @@ PhEstimateCudaSourceBytes(
     if ((Flags & PH_ONLINE_JIT_CUDA_SOURCE_FLAG_OMIT_TABLE_DATA) != 0) {
         TableElementBytes = 0;
     } else {
-        TableElementBytes = 16;
+        if (TableInfo->AssignedElementSizeInBytes == sizeof(USHORT)) {
+            ValuesPerLine = 8;
+            CharsPerValue = 8;
+        } else {
+            ValuesPerLine = 4;
+            CharsPerValue = 12;
+        }
+        NumberOfLines = (NumberOfTableElements + ValuesPerLine - 1) / ValuesPerLine;
+        TableElementBytes =
+            (NumberOfTableElements * CharsPerValue) +
+            (NumberOfLines * 4) +
+            32;
     }
 
     RequiredSize = (
         BaseSize +
-        (NumberOfTableElements * TableElementBytes) +
-        (128 * 1024)
+        TableElementBytes +
+        (256 * 1024)
     );
 
     *AllocationSizePointer = ALIGN_UP(RequiredSize, BaseSize);
