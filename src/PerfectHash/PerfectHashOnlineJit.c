@@ -1261,7 +1261,7 @@ PhOnlineJitGetCudaTableData(
         return E_OUTOFMEMORY;
     }
 
-    CopyMemory(Buffer, Source, CopySize);
+    memcpy(Buffer, Source, CopySize);
 
     *TableData = Buffer;
     if (ARGUMENT_PRESENT(TableDataSize)) {

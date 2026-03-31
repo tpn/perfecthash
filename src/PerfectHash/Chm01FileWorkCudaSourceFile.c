@@ -59,13 +59,16 @@ PrepareCudaSourceFileChm01(
     //
 
     BaseSize = Context->SystemAllocationGranularity;
-    TableElementBytes = 16;
+    TableElementBytes = (
+        TableInfo->AssignedElementSizeInBytes == sizeof(USHORT) ? 12 : 16
+    );
     KeyElementBytes = (
-        Keys->OriginalKeySizeType == LongLongType ? 24 : 16
+        Keys->OriginalKeySizeType == LongLongType ? 28 : 20
     );
 
     RequiredSize = (
         BaseSize +
+        (256 * 1024) +
         (NumberOfTableElements * TableElementBytes) +
         (NumberOfKeys * KeyElementBytes)
     );
