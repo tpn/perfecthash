@@ -112,6 +112,7 @@ def summarize_probe_freq(con, sql: str) -> dict:
 
 
 def write_top_distinct_subset(con, output_path: Path, sql: str, fraction: float) -> dict:
+    fraction_sql = f"{fraction:.12f}"
     subset_sql = f"""
     with freq as (
       {sql}
@@ -120,12 +121,13 @@ def write_top_distinct_subset(con, output_path: Path, sql: str, fraction: float)
         k,
         cnt,
         row_number() over(order by cnt desc, k) as rn,
-        count(*) over() as dk
+        count(*) over() as dk,
+        greatest(1, cast(ceil(count(*) over() * {fraction_sql}) as bigint)) as selected_count
       from freq
     )
     select k
     from ranked
-    where rn <= ceil(dk * {fraction})
+    where rn <= selected_count
     order by k
     """
     rows = con.execute(subset_sql).fetchall()
@@ -136,6 +138,8 @@ def write_top_distinct_subset(con, output_path: Path, sql: str, fraction: float)
         "count": count,
         "bytes": count * 8,
         "fraction_of_distinct": fraction,
+        "selection_mode": "ceil_with_minimum_one",
+        "minimum_distinct_keys": 1,
     }
 
 

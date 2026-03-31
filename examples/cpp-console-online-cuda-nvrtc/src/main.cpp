@@ -803,6 +803,7 @@ __device__ __forceinline__ uint32_t load_table_value(
 template <int ITEMS_PER_THREAD>
 __device__ __forceinline__ void direct_probe_tile(
   const generated::original_key_type (&input)[ITEMS_PER_THREAD],
+  const bool (&valid)[ITEMS_PER_THREAD],
   const generated::table_data_type* table_data,
   const generated::original_key_type* build_keys,
   size_t build_key_count,
@@ -810,6 +811,10 @@ __device__ __forceinline__ void direct_probe_tile(
 {
 #pragma unroll
   for (int item = 0; item < ITEMS_PER_THREAD; ++item) {
+    if (!valid[item]) {
+      output[item] = 0;
+      continue;
+    }
     const generated::slot_pair_type slots = generated::slot_pair_from_key(input[item]);
 )";
   if (validate_membership) {
@@ -936,15 +941,19 @@ extern "C" __global__ void probe_kernel(
     (static_cast<size_t>(blockIdx.x) * blockDim.x + threadIdx.x) * ITEMS;
 
   generated::original_key_type local_keys[ITEMS] = {};
+  bool local_valid[ITEMS] = {};
   uint32_t local_out[ITEMS] = {};
 
 #pragma unroll
   for (int item = 0; item < ITEMS; ++item) {
     const size_t idx = thread_base + static_cast<size_t>(item);
-    if (idx < count) { local_keys[item] = keys[idx]; }
+    if (idx < count) {
+      local_keys[item] = keys[idx];
+      local_valid[item] = true;
+    }
   }
 
-  perfecthash::consumer::direct_probe_tile<ITEMS>(local_keys, )";
+  perfecthash::consumer::direct_probe_tile<ITEMS>(local_keys, local_valid, )";
     if (embed_table_data) {
       source << "generated::table_data";
     } else {
@@ -1132,11 +1141,15 @@ extern "C" __global__ void blocksort_probe_kernel(
       shared_slots[request_base + 1] = slots.second;
       shared_dests[request_base] = request_base;
       shared_dests[request_base + 1] = request_base + 1u;
+      shared_partials[request_base] = 0;
+      shared_partials[request_base + 1] = 0;
     } else {
       shared_slots[request_base] = INVALID_SLOT;
       shared_slots[request_base + 1] = INVALID_SLOT;
       shared_dests[request_base] = request_base;
       shared_dests[request_base + 1] = request_base + 1u;
+      shared_partials[request_base] = 0;
+      shared_partials[request_base + 1] = 0;
     }
   }
   __syncthreads();
