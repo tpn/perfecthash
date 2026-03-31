@@ -910,6 +910,11 @@ __device__ __forceinline__ void gather_tile(
       output[item] = 0;
       continue;
     }
+    if (slot1[item] >= generated::number_of_table_elements ||
+        slot2[item] >= generated::number_of_table_elements) {
+      output[item] = 0xFFFFFFFFu;
+      continue;
+    }
     const uint32_t value_low = load_table_value(table_data, slot1[item]);
     const uint32_t value_high = load_table_value(table_data, slot2[item]);
     output[item] = static_cast<uint32_t>((value_low + value_high) & generated::index_mask);
@@ -2208,6 +2213,16 @@ benchmark_result run_benchmark(options const& opts)
     if (cpu_table_info.KeySizeInBytes > 4) {
       throw std::runtime_error(
         "CPU bulk-index benchmark requires a table downsized to 32-bit keys");
+    }
+    if (cpu_table_info.OriginalKeySizeInBytes > 4) {
+      if (cpu_table_info.DownsizeBitmap == 0) {
+        throw std::runtime_error(
+          "CPU bulk-index benchmark requires a lossless 64-to-32 downsizing transform");
+      }
+      if (probe_keys != build_keys) {
+        throw std::runtime_error(
+          "CPU bulk-index benchmark on downsized 64-bit tables is only supported for self-probe workloads");
+      }
     }
 
     preload_llvm_runtime_library(opts.cpu_backend_name);

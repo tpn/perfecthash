@@ -295,6 +295,10 @@ int main(int argc, char** argv)
     }
     auto sorted_build_keys = host_build_keys;
     std::sort(sorted_build_keys.begin(), sorted_build_keys.end());
+    if (std::adjacent_find(sorted_build_keys.begin(), sorted_build_keys.end()) !=
+        sorted_build_keys.end()) {
+      throw std::runtime_error("Build keys must be unique for the static_map benchmark");
+    }
     auto host_probe_keys = opts.probe_keys_file.empty()
       ? host_build_keys
       : load_keys_file(opts.probe_keys_file, opts.max_probe_keys);
