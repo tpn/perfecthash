@@ -2357,7 +2357,7 @@ benchmark_result run_benchmark(options const& opts)
     auto const shared_bytes =
       static_cast<std::size_t>(opts.threads) *
       static_cast<std::size_t>(opts.items_per_thread) * 2u *
-      sizeof(std::uint32_t) * 3u;
+      sizeof(std::uint32_t) * 4u;
     throw_if_bad(cuDeviceGetAttribute(&shared_limit,
                                       CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_BLOCK,
                                       device),
