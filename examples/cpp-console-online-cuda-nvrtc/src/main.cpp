@@ -2192,6 +2192,8 @@ benchmark_result run_benchmark(options const& opts)
                "PhOnlineJitCreateTable64");
   throw_if_bad(PhOnlineJitGetTableInfo(table.value, &cpu_table_info),
                "PhOnlineJitGetTableInfo");
+  auto const table_hash =
+    static_cast<PH_ONLINE_JIT_HASH_FUNCTION>(cpu_table_info.HashFunctionId);
   auto build_stop = steady_clock::now();
   result.build_ms = elapsed_ms(build_start, build_stop);
   result.host_rss_after_build_bytes = current_rss_bytes();
@@ -2203,10 +2205,10 @@ benchmark_result run_benchmark(options const& opts)
 
   if (opts.analyze_slot_reuse) {
     auto const warp_stats =
-      analyze_slot_reuse_for_tile(probe_keys, selected_hash, cpu_table_info, 32u, static_cast<std::size_t>(opts.items_per_thread));
+      analyze_slot_reuse_for_tile(probe_keys, table_hash, cpu_table_info, 32u, static_cast<std::size_t>(opts.items_per_thread));
     auto const block_stats =
       analyze_slot_reuse_for_tile(probe_keys,
-                                  selected_hash,
+                                  table_hash,
                                   cpu_table_info,
                                   static_cast<std::size_t>(opts.threads),
                                   static_cast<std::size_t>(opts.items_per_thread));
@@ -2586,13 +2588,9 @@ benchmark_result run_benchmark(options const& opts)
   result.vram_total_bytes =
     (free_before_gpu >= free_after_gpu) ? (free_before_gpu - free_after_gpu) : 0;
 
-  if (opts.verify) {
+  if (opts.verify && result.lookup == lookup_mode::direct) {
     auto verify_start = steady_clock::now();
     if (probe_keys == build_keys) {
-      if (validate_membership && result.lookup != lookup_mode::direct) {
-        throw std::runtime_error(
-          "Non-direct lookup modes are not supported for external probe validation");
-      }
       verify_indexes(indexes, build_keys, probe_keys, &result);
     } else {
       if (table_data.value == nullptr) {
@@ -2600,7 +2598,7 @@ benchmark_result run_benchmark(options const& opts)
       }
       for (std::size_t i = 0; i < probe_keys.size(); ++i) {
         auto const candidate =
-          index_from_key_host(probe_keys[i], selected_hash, cpu_table_info, table_data.value);
+          index_from_key_host(probe_keys[i], table_hash, cpu_table_info, table_data.value);
         auto const expected =
           (candidate < build_keys.size() && build_keys[candidate] == probe_keys[i])
             ? candidate

@@ -108,6 +108,11 @@ else()
     endif()
     if(PH_ONLINE_CUDA_NVRTC_FULL_LIBRARY)
         set(PH_ONLINE_CUDA_NVRTC_TARGET "${PH_ONLINE_CUDA_NVRTC_FULL_LIBRARY}")
+        if((NOT DEFINED PERFECTHASH_ONLINE_JIT_INCLUDE_DIR OR
+            PERFECTHASH_ONLINE_JIT_INCLUDE_DIR STREQUAL "") AND
+           EXISTS "${PERFECTHASH_ROOT}/include/PerfectHash/PerfectHashOnlineJit.h")
+            set(PERFECTHASH_ONLINE_JIT_INCLUDE_DIR "${PERFECTHASH_ROOT}/include")
+        endif()
     else()
         set(PH_ONLINE_CUDA_NVRTC_TARGET PerfectHash::OnlineJit)
     endif()
