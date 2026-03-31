@@ -957,7 +957,7 @@ PhOnlineJitCompileTableEx(
 {
     HRESULT Result;
     HRESULT LastResult;
-    ULONG CandidateWidths[4] = {0};
+    ULONG CandidateWidths[8] = {0};
     ULONG CandidateCount = 0;
     ULONG Index;
     BOOLEAN StrictVectorWidth;

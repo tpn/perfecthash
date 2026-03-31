@@ -768,6 +768,11 @@ std::string compose_translation_unit(std::string const& fragment,
                                      lookup_mode mode,
                                      table_load_mode table_load)
 {
+  if (validate_membership && mode != lookup_mode::direct) {
+    throw std::runtime_error(
+      "compose_translation_unit only supports membership validation for lookup-mode=direct");
+  }
+
   std::ostringstream source;
   source << fragment << "\n";
   source << R"(
@@ -1149,15 +1154,31 @@ extern "C" __global__ void blocksort_probe_kernel(
     if (slot != INVALID_SLOT) {
 )";
   if (embed_table_data) {
-    source << R"(      shared_partials[shared_dests[i]] =
-        perfecthash::consumer::load_table_value(generated::table_data, slot);
+    source << R"(      if (i == 0 || shared_slots[i - 1] != slot) {
+        shared_partials[shared_dests[i]] =
+          perfecthash::consumer::load_table_value(generated::table_data, slot);
+      }
 )";
   } else {
-    source << R"(      shared_partials[shared_dests[i]] =
-        perfecthash::consumer::load_table_value(table_data, slot);
+    source << R"(      if (i == 0 || shared_slots[i - 1] != slot) {
+        shared_partials[shared_dests[i]] =
+          perfecthash::consumer::load_table_value(table_data, slot);
+      }
 )";
   }
   source << R"(
+    }
+  }
+  __syncthreads();
+
+  for (uint32_t i = tid; i < TOTAL_REQUESTS; i += THREADS) {
+    const uint32_t slot = shared_slots[i];
+    if (slot != INVALID_SLOT && i > 0 && shared_slots[i - 1] == slot) {
+      uint32_t first = i - 1;
+      while (first > 0 && shared_slots[first - 1] == slot) {
+        --first;
+      }
+      shared_partials[shared_dests[i]] = shared_partials[shared_dests[first]];
     }
   }
   __syncthreads();

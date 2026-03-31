@@ -98,15 +98,20 @@ two assigned-table offsets and immediately performs the two table reads.
 
 This is intended for backend analysis. It does not reorder or coalesce the
 requests yet; it simply separates address generation from the random gathers.
+Like the other non-`direct` modes, it is currently intended for self-probe or
+known-member workloads, not external build/probe-stream validation.
 
 `--lookup-mode warpcache` keeps the fused structure but uses warp-local
 duplicate detection for slot loads, so identical slot requests within a warp
-can be serviced once and broadcast with warp intrinsics.
+can be serviced once and broadcast with warp intrinsics. It is currently
+intended for self-probe or known-member workloads, not external build/probe
+stream validation.
 
 `--lookup-mode blocksort` is a heavier experimental path that sorts all slot
 requests for a block in shared memory before performing the assigned-table
 loads, then scatters the gathered values back to the original outputs. It is a
-clustering experiment, not a production path.
+clustering experiment, not a production path, and is currently intended for
+self-probe or known-member workloads.
 
 `--table-load-mode generic` uses normal global loads for the assigned table.
 
