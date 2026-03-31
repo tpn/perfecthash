@@ -36,7 +36,15 @@ def write_u64_file(path: Path, values) -> int:
 
 
 def materialize_build_keys(con, output_path: Path, sql: str) -> dict:
-    rows = con.execute(sql).fetchall()
+    rows = con.execute(
+        f"""
+        select distinct k
+        from (
+          {sql}
+        )
+        order by k
+        """
+    ).fetchall()
     values = [row[0] for row in rows]
     count = write_u64_file(output_path, values)
     return {

@@ -2508,6 +2508,10 @@ benchmark_result run_benchmark(options const& opts)
   if (opts.verify) {
     auto verify_start = steady_clock::now();
     if (probe_keys == build_keys) {
+      if (validate_membership && result.lookup != lookup_mode::direct) {
+        throw std::runtime_error(
+          "Non-direct lookup modes are not supported for external probe validation");
+      }
       verify_indexes(indexes, build_keys, probe_keys, &result);
     } else {
       if (table_data.value == nullptr) {
