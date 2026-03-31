@@ -1304,7 +1304,7 @@ PhOnlineJitGetTableInfo(
     }
 
     Info = Table->Table->TableInfoOnDisk;
-    ZeroStructPointer(TableInfo);
+    memset(TableInfo, 0, sizeof(*TableInfo));
 
     TableInfo->KeySizeInBytes = Info->KeySizeInBytes;
     TableInfo->OriginalKeySizeInBytes = Info->OriginalKeySizeInBytes;
