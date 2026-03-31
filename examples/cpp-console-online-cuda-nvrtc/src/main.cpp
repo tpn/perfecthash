@@ -2049,6 +2049,14 @@ benchmark_result run_benchmark(options const& opts)
   if (build_keys.empty()) {
     throw std::runtime_error("No keys available to benchmark");
   }
+  {
+    auto sorted_build_keys = build_keys;
+    std::sort(sorted_build_keys.begin(), sorted_build_keys.end());
+    if (std::adjacent_find(sorted_build_keys.begin(), sorted_build_keys.end()) !=
+        sorted_build_keys.end()) {
+      throw std::runtime_error("Build keys must be unique for the PerfectHash benchmark");
+    }
+  }
   result.key_source = opts.keys_file.empty() ? std::string{"built-in-sample"} : opts.keys_file;
   result.key_count = build_keys.size();
   result.key_bytes = build_keys.size() * sizeof(std::uint64_t);
@@ -2495,6 +2503,9 @@ benchmark_result run_benchmark(options const& opts)
     if (probe_keys == build_keys) {
       verify_indexes(indexes, build_keys, probe_keys, &result);
     } else {
+      if (table_data.value == nullptr) {
+        throw std::runtime_error("Verification requires host-accessible table data");
+      }
       for (std::size_t i = 0; i < probe_keys.size(); ++i) {
         auto const candidate =
           index_from_key_host(probe_keys[i], selected_hash, cpu_table_info, table_data.value);

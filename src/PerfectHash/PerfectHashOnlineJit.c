@@ -136,36 +136,26 @@ PhMapPerfectHashHashFunctionToOnlineJit(
         return E_POINTER;
     }
 
-    switch (HashFunctionId) {
-        case PerfectHashHashMultiplyShiftRFunctionId:
-            *HashFunction = PhOnlineJitHashMultiplyShiftR;
-            break;
-        case PerfectHashHashMultiplyShiftLRFunctionId:
-            *HashFunction = PhOnlineJitHashMultiplyShiftLR;
-            break;
-        case PerfectHashHashMultiplyShiftRMultiplyFunctionId:
-            *HashFunction = PhOnlineJitHashMultiplyShiftRMultiply;
-            break;
-        case PerfectHashHashMultiplyShiftR2FunctionId:
-            *HashFunction = PhOnlineJitHashMultiplyShiftR2;
-            break;
-        case PerfectHashHashMultiplyShiftRXFunctionId:
-            *HashFunction = PhOnlineJitHashMultiplyShiftRX;
-            break;
-        case PerfectHashHashMulshrolate1RXFunctionId:
-            *HashFunction = PhOnlineJitHashMulshrolate1RX;
-            break;
-        case PerfectHashHashMulshrolate2RXFunctionId:
-            *HashFunction = PhOnlineJitHashMulshrolate2RX;
-            break;
-        case PerfectHashHashMulshrolate3RXFunctionId:
-            *HashFunction = PhOnlineJitHashMulshrolate3RX;
-            break;
-        case PerfectHashHashMulshrolate4RXFunctionId:
-            *HashFunction = PhOnlineJitHashMulshrolate4RX;
-            break;
-        default:
-            return E_INVALIDARG;
+    if (HashFunctionId == PerfectHashHashMultiplyShiftRFunctionId) {
+        *HashFunction = PhOnlineJitHashMultiplyShiftR;
+    } else if (HashFunctionId == PerfectHashHashMultiplyShiftLRFunctionId) {
+        *HashFunction = PhOnlineJitHashMultiplyShiftLR;
+    } else if (HashFunctionId == PerfectHashHashMultiplyShiftRMultiplyFunctionId) {
+        *HashFunction = PhOnlineJitHashMultiplyShiftRMultiply;
+    } else if (HashFunctionId == PerfectHashHashMultiplyShiftR2FunctionId) {
+        *HashFunction = PhOnlineJitHashMultiplyShiftR2;
+    } else if (HashFunctionId == PerfectHashHashMultiplyShiftRXFunctionId) {
+        *HashFunction = PhOnlineJitHashMultiplyShiftRX;
+    } else if (HashFunctionId == PerfectHashHashMulshrolate1RXFunctionId) {
+        *HashFunction = PhOnlineJitHashMulshrolate1RX;
+    } else if (HashFunctionId == PerfectHashHashMulshrolate2RXFunctionId) {
+        *HashFunction = PhOnlineJitHashMulshrolate2RX;
+    } else if (HashFunctionId == PerfectHashHashMulshrolate3RXFunctionId) {
+        *HashFunction = PhOnlineJitHashMulshrolate3RX;
+    } else if (HashFunctionId == PerfectHashHashMulshrolate4RXFunctionId) {
+        *HashFunction = PhOnlineJitHashMulshrolate4RX;
+    } else {
+        return E_INVALIDARG;
     }
 
     return S_OK;
@@ -1244,7 +1234,7 @@ PhOnlineJitGetCudaTableData(
     }
 
     Buffer = malloc(CopySize);
-    if (!ARGUMENT_PRESENT(Buffer)) {
+    if (Buffer == NULL) {
         return E_OUTOFMEMORY;
     }
 
