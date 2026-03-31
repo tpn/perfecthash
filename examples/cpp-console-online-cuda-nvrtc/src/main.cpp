@@ -865,6 +865,11 @@ __device__ __forceinline__ void warp_cached_probe_tile(
       continue;
     }
     const generated::slot_pair_type slots = generated::slot_pair_from_key(input[item]);
+    if (slots.first >= generated::number_of_table_elements ||
+        slots.second >= generated::number_of_table_elements) {
+      output[item] = 0xFFFFFFFFu;
+      continue;
+    }
     const uint32_t value_low = warp_cached_load(table_data, slots.first);
     const uint32_t value_high = warp_cached_load(table_data, slots.second);
     output[item] = static_cast<uint32_t>((value_low + value_high) & generated::index_mask);
@@ -2107,6 +2112,9 @@ benchmark_result run_benchmark(options const& opts)
   if (validate_membership && result.lookup != lookup_mode::direct) {
     throw std::runtime_error(
       "Separate build/probe streams are currently only supported for lookup-mode=direct");
+  }
+  if (opts.verify && result.lookup != lookup_mode::direct) {
+    throw std::runtime_error("--verify is currently only supported for lookup-mode=direct");
   }
 
   if (result.lookup == lookup_mode::blocksort) {

@@ -1146,6 +1146,10 @@ PhOnlineJitGetCudaSourceEx(
         !ARGUMENT_PRESENT(SourceText)) {
         return E_INVALIDARG;
     }
+    if ((Flags & ~(PH_ONLINE_JIT_CUDA_SOURCE_FLAG_OMIT_KERNELS |
+                   PH_ONLINE_JIT_CUDA_SOURCE_FLAG_OMIT_TABLE_DATA)) != 0) {
+        return E_INVALIDARG;
+    }
 
     *SourceText = NULL;
     if (ARGUMENT_PRESENT(SourceSize)) {
