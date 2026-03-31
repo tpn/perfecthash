@@ -1156,6 +1156,7 @@ extern "C" __global__ void blocksort_probe_kernel(
 
   __shared__ uint32_t shared_slots[TOTAL_REQUESTS];
   __shared__ uint32_t shared_dests[TOTAL_REQUESTS];
+  __shared__ uint32_t shared_values[TOTAL_REQUESTS];
   __shared__ uint32_t shared_partials[TOTAL_REQUESTS];
 
   const uint32_t tid = threadIdx.x;
@@ -1172,6 +1173,8 @@ extern "C" __global__ void blocksort_probe_kernel(
       shared_slots[request_base + 1] = slots.second;
       shared_dests[request_base] = request_base;
       shared_dests[request_base + 1] = request_base + 1u;
+      shared_values[request_base] = 0;
+      shared_values[request_base + 1] = 0;
       shared_partials[request_base] = 0;
       shared_partials[request_base + 1] = 0;
     } else {
@@ -1179,6 +1182,8 @@ extern "C" __global__ void blocksort_probe_kernel(
       shared_slots[request_base + 1] = INVALID_SLOT;
       shared_dests[request_base] = request_base;
       shared_dests[request_base + 1] = request_base + 1u;
+      shared_values[request_base] = 0;
+      shared_values[request_base + 1] = 0;
       shared_partials[request_base] = 0;
       shared_partials[request_base + 1] = 0;
     }
@@ -1219,13 +1224,13 @@ extern "C" __global__ void blocksort_probe_kernel(
 )";
   if (embed_table_data) {
     source << R"(      if (i == 0 || shared_slots[i - 1] != slot) {
-        shared_partials[shared_dests[i]] =
+        shared_values[i] =
           perfecthash::consumer::load_table_value(generated::table_data, slot);
       }
 )";
   } else {
     source << R"(      if (i == 0 || shared_slots[i - 1] != slot) {
-        shared_partials[shared_dests[i]] =
+        shared_values[i] =
           perfecthash::consumer::load_table_value(table_data, slot);
       }
 )";
@@ -1242,7 +1247,15 @@ extern "C" __global__ void blocksort_probe_kernel(
       while (first > 0 && shared_slots[first - 1] == slot) {
         --first;
       }
-      shared_partials[shared_dests[i]] = shared_partials[shared_dests[first]];
+      shared_values[i] = shared_values[first];
+    }
+  }
+  __syncthreads();
+
+  for (uint32_t i = tid; i < TOTAL_REQUESTS; i += THREADS) {
+    const uint32_t slot = shared_slots[i];
+    if (slot != INVALID_SLOT) {
+      shared_partials[shared_dests[i]] = shared_values[i];
     }
   }
   __syncthreads();

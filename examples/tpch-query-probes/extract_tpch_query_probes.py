@@ -283,7 +283,7 @@ def extract_q21(con, output_root: Path):
         join saudi_suppliers ss on lli.l_suppkey = ss.s_suppkey
         where lsc.n_supp_by_order = 1
           and o.o_orderstatus = 'F'
-        group by l_suppkey
+        group by lli.l_suppkey
     """
 
     target_dir = output_root / name
