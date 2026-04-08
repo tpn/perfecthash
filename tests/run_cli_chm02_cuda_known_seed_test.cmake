@@ -8,6 +8,11 @@ if(NOT DEFINED TEST_OUTPUT)
   message(FATAL_ERROR "TEST_OUTPUT is required")
 endif()
 
+set(test_enable_debug TRUE)
+if(DEFINED TEST_ENABLE_DEBUG)
+  set(test_enable_debug "${TEST_ENABLE_DEBUG}")
+endif()
+
 file(TO_NATIVE_PATH "${TEST_EXE}" test_exe_native)
 file(TO_NATIVE_PATH "${TEST_KEYS}" test_keys_native)
 file(TO_NATIVE_PATH "${TEST_OUTPUT}" test_output_native)
@@ -67,13 +72,22 @@ else()
   list(APPEND args "--NoFileIo" "--DisableCsvOutputFile")
 endif()
 
-execute_process(
-  COMMAND ${CMAKE_COMMAND} -E env PH_DEBUG_CUDA_CHM02=1
-          "${test_exe_native}" "${test_keys_native}" "${test_output_native}" ${args}
-  RESULT_VARIABLE result
-  OUTPUT_VARIABLE stdout
-  ERROR_VARIABLE stderr
-)
+if(test_enable_debug)
+  execute_process(
+    COMMAND ${CMAKE_COMMAND} -E env PH_DEBUG_CUDA_CHM02=1
+            "${test_exe_native}" "${test_keys_native}" "${test_output_native}" ${args}
+    RESULT_VARIABLE result
+    OUTPUT_VARIABLE stdout
+    ERROR_VARIABLE stderr
+  )
+else()
+  execute_process(
+    COMMAND "${test_exe_native}" "${test_keys_native}" "${test_output_native}" ${args}
+    RESULT_VARIABLE result
+    OUTPUT_VARIABLE stdout
+    ERROR_VARIABLE stderr
+  )
+endif()
 
 message(STATUS "stdout: ${stdout}")
 message(STATUS "stderr: ${stderr}")

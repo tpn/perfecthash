@@ -3869,8 +3869,19 @@ Return Value:
             Context->SpareGraph = NULL;
             Result = PH_S_USE_NEW_GRAPH_FOR_SOLVING;
         } else {
-            StopGraphSolving = TRUE;
-            Result = PH_S_STOP_GRAPH_SOLVING;
+            //
+            // The legacy invariant is that a spare graph exists whenever we
+            // want to keep solving after capturing the first solved graph.
+            // The current Chm02 CUDA correctness path can legitimately run
+            // without a spare graph under the covered single-graph settings,
+            // in which case we preserve the solved graph by stopping.
+            //
+            if (IsCuGraph(Graph)) {
+                StopGraphSolving = TRUE;
+                Result = PH_S_STOP_GRAPH_SOLVING;
+            } else {
+                ASSERT(SpareGraph != NULL);
+            }
         }
     }
 
@@ -7018,8 +7029,19 @@ Return Value:
             Context->SpareGraph = NULL;
             Result = PH_S_USE_NEW_GRAPH_FOR_SOLVING;
         } else {
-            StopGraphSolving = TRUE;
-            Result = PH_S_STOP_GRAPH_SOLVING;
+            //
+            // The legacy invariant is that a spare graph exists whenever we
+            // want to keep solving after capturing the first solved graph.
+            // The current Chm02 CUDA correctness path can legitimately run
+            // without a spare graph under the covered single-graph settings,
+            // in which case we preserve the solved graph by stopping.
+            //
+            if (IsCuGraph(Graph)) {
+                StopGraphSolving = TRUE;
+                Result = PH_S_STOP_GRAPH_SOLVING;
+            } else {
+                ASSERT(SpareGraph != NULL);
+            }
         }
     }
 

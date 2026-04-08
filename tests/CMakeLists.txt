@@ -293,6 +293,17 @@ if(TARGET PerfectHashCreateExe AND TARGET PerfectHashBulkCreateExe)
         )
 
         add_test(
+            NAME perfecthash.cuda.chm02.hologram.nondebug
+            COMMAND ${CMAKE_COMMAND}
+                -DTEST_EXE=$<TARGET_FILE:PerfectHashCreateExe>
+                -DTEST_KEYS=${TEST_KEYS_FILE}
+                -DTEST_OUTPUT=${TEST_OUTPUT_DIR}/cuda-chm02-hologram-nondebug
+                "-DTEST_FLAGS=--NoFileIo"
+                -DTEST_ENABLE_DEBUG=0
+                -P ${CMAKE_CURRENT_SOURCE_DIR}/run_cli_chm02_cuda_known_seed_test.cmake
+        )
+
+        add_test(
             NAME perfecthash.cuda.chm02.generated33000.nofileio
             COMMAND ${CMAKE_COMMAND}
                 -DTEST_EXE=$<TARGET_FILE:PerfectHashCreateExe>
@@ -314,6 +325,7 @@ if(TARGET PerfectHashCreateExe AND TARGET PerfectHashBulkCreateExe)
         set_tests_properties(
             perfecthash.cuda.chm02.hologram.nofileio
             perfecthash.cuda.chm02.hologram.fileio
+            perfecthash.cuda.chm02.hologram.nondebug
             perfecthash.cuda.chm02.generated33000.nofileio
             perfecthash.cuda.chm02.perf-surface
             PROPERTIES

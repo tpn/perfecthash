@@ -117,6 +117,10 @@ This surface is explicitly considered temporary bring-up instrumentation, not a
 For this branch, however, the three `PH_CHM02_CUDA_*_OK` tokens are treated as
  a supported test contract for the focused known-seed regression harness.
 
+In addition to the debug-token path, this branch also requires one non-debug
+ known-seed regression to pass, in order to prove that the release-like path
+ succeeds without depending on `PH_DEBUG_CUDA_CHM02`.
+
 ## Staged Task List
 
 1. Fix correctness blockers in the legacy CUDA `Chm02` path.
@@ -126,6 +130,7 @@ For this branch, however, the three `PH_CHM02_CUDA_*_OK` tokens are treated as
 5. Expose explicit per-phase CUDA timing fields for measurement.
 6. Add focused CUDA regression coverage:
    - known-seed path
+   - non-debug known-seed path
    - non-`Assigned16` generated path
    - timing-field presence
 7. Verify release-like behavior without relying on a silent CPU fallback:
@@ -139,6 +144,7 @@ For this branch, however, the three `PH_CHM02_CUDA_*_OK` tokens are treated as
 - Known-seed Linux coverage passes for:
   - HologramWorld known-seed, no-file-io
   - HologramWorld known-seed, file-io
+  - HologramWorld known-seed, non-debug no-file-io
 - Generated non-`Assigned16` coverage passes for:
   - generated `33000`-key case
 - Timing fields are present and non-negative in CSV output.
