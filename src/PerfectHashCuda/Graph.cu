@@ -1249,6 +1249,7 @@ GraphCuVerify(
     )
 {
     HRESULT Result = S_OK;
+    CU_RESULT CuResult = cudaSuccess;
     uint32_t Failures = 0;
     uint32_t *DeviceFailures = nullptr;
     PGRAPH DeviceGraph;
@@ -1278,8 +1279,25 @@ GraphCuVerify(
         goto End;
     }
 
-    CUDA_CALL(cudaMalloc((void **)&DeviceFailures, sizeof(*DeviceFailures)));
-    CUDA_CALL(cudaMemsetAsync(DeviceFailures, 0, sizeof(*DeviceFailures), Stream));
+    CuResult = cudaMalloc((void **)&DeviceFailures, sizeof(*DeviceFailures));
+    if (CuResult != cudaSuccess) {
+        printf("Error %s at %s:%d\n",
+               cudaGetErrorString(cudaGetLastError()),
+               __FILE__,
+               __LINE__-1);
+        Result = PH_E_CUDA_ERROR;
+        goto End;
+    }
+
+    CuResult = cudaMemsetAsync(DeviceFailures, 0, sizeof(*DeviceFailures), Stream);
+    if (CuResult != cudaSuccess) {
+        printf("Error %s at %s:%d\n",
+               cudaGetErrorString(cudaGetLastError()),
+               __FILE__,
+               __LINE__-1);
+        Result = PH_E_CUDA_ERROR;
+        goto End;
+    }
 
     if (IsUsingAssigned16(Graph)) {
         GraphCuVerifyKernel<GRAPH16><<<BlocksPerGrid,
@@ -1295,12 +1313,29 @@ GraphCuVerify(
                                                  DeviceFailures);
     }
 
-    CUDA_CALL(cudaMemcpyAsync(&Failures,
-                              DeviceFailures,
-                              sizeof(Failures),
-                              cudaMemcpyDeviceToHost,
-                              Stream));
-    CUDA_CALL(cudaStreamSynchronize(Stream));
+    CuResult = cudaMemcpyAsync(&Failures,
+                               DeviceFailures,
+                               sizeof(Failures),
+                               cudaMemcpyDeviceToHost,
+                               Stream);
+    if (CuResult != cudaSuccess) {
+        printf("Error %s at %s:%d\n",
+               cudaGetErrorString(cudaGetLastError()),
+               __FILE__,
+               __LINE__-1);
+        Result = PH_E_CUDA_ERROR;
+        goto End;
+    }
+
+    CuResult = cudaStreamSynchronize(Stream);
+    if (CuResult != cudaSuccess) {
+        printf("Error %s at %s:%d\n",
+               cudaGetErrorString(cudaGetLastError()),
+               __FILE__,
+               __LINE__-1);
+        Result = PH_E_CUDA_ERROR;
+        goto End;
+    }
 
     if (Failures > 0) {
         Result = PH_E_TABLE_VERIFICATION_FAILED;
@@ -1309,6 +1344,7 @@ GraphCuVerify(
 End:
     if (DeviceFailures) {
         cudaFree(DeviceFailures);
+        DeviceFailures = nullptr;
     }
 
     return Result;
