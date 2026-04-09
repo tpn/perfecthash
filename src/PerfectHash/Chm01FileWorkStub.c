@@ -16,7 +16,6 @@ Abstract:
 
 #ifdef PH_ONLINE_ONLY
 
-#ifdef PH_WINDOWS
 PERFECT_HASH_FILE_WORK_ITEM_CALLBACK FileWorkItemCallbackChm01;
 
 PERFECT_HASH_FILE_WORK_CALLBACK FileWorkCallbackChm01;
@@ -41,7 +40,6 @@ FileWorkCallbackChm01(
 
     FileWorkItemCallbackChm01(Item);
 }
-#endif
 
 _Use_decl_annotations_
 VOID

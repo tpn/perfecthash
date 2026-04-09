@@ -544,6 +544,7 @@ Return Value:
     PPERFECT_HASH_CONTEXT Context;
     PASSIGNED_MEMORY_COVERAGE Coverage;
     PASSIGNED16_MEMORY_COVERAGE Coverage16;
+    BOOLEAN DebugCudaSolve;
 
     //
     // Initialize aliases.
@@ -554,12 +555,19 @@ Return Value:
     Table = Context->Table;
     NumberOfKeys = Table->Keys->NumberOfKeys.LowPart;
     Edges = Keys = (PKEY)Table->Keys->KeyArrayBaseAddress;
+    DebugCudaSolve = (IsCuGraph(Graph) ? IsCudaDebugGraph(Graph) : FALSE);
 
     //
     // Attempt to add all the keys to the graph.
     //
 
     Result = Graph->Vtbl->AddKeys(Graph, NumberOfKeys, Keys);
+
+    if (DebugCudaSolve && IsCuGraph(Graph)) {
+        fprintf(stderr,
+                "[GraphSolve] AddKeys result=0x%08x\n",
+                (unsigned)Result);
+    }
 
     if (FAILED(Result)) {
 
@@ -594,6 +602,14 @@ Return Value:
     //
 
     Result = Graph->Vtbl->IsAcyclic(Graph);
+    if (DebugCudaSolve && IsCuGraph(Graph)) {
+        fprintf(stderr,
+                "[GraphSolve] IsAcyclic result=0x%08x DeletedEdgeCount=%u "
+                "OrderIndex=%ld\n",
+                (unsigned)Result,
+                (unsigned)Graph->DeletedEdgeCount,
+                (long)Graph->OrderIndex);
+    }
     if (FAILED(Result)) {
 
         //
@@ -642,6 +658,12 @@ Return Value:
     //
 
     Result = Graph->Vtbl->Assign(Graph);
+
+    if (DebugCudaSolve && IsCuGraph(Graph)) {
+        fprintf(stderr,
+                "[GraphSolve] Assign result=0x%08x\n",
+                (unsigned)Result);
+    }
 
     //
     // Assign() should always succeed.
@@ -3836,15 +3858,31 @@ Return Value:
         ASSERT(Context->NewBestGraphCount == 0);
         ASSERT(Context->FirstAttemptSolved == 0);
         SpareGraph = Context->SpareGraph;
-        ASSERT(SpareGraph != NULL);
-        ASSERT(IsSpareGraph(SpareGraph));
-        SpareGraph->Flags.IsSpare = FALSE;
-        Context->SpareGraph = NULL;
         Context->BestGraph = Graph;
         FoundBestGraph = TRUE;
         Coverage->BestGraphNumber = ++Context->NewBestGraphCount;
         Context->FirstAttemptSolved = Graph->Attempt;
-        Result = PH_S_USE_NEW_GRAPH_FOR_SOLVING;
+
+        if (SpareGraph != NULL) {
+            ASSERT(IsSpareGraph(SpareGraph));
+            SpareGraph->Flags.IsSpare = FALSE;
+            Context->SpareGraph = NULL;
+            Result = PH_S_USE_NEW_GRAPH_FOR_SOLVING;
+        } else {
+            //
+            // The legacy invariant is that a spare graph exists whenever we
+            // want to keep solving after capturing the first solved graph.
+            // The current Chm02 CUDA correctness path can legitimately run
+            // without a spare graph under the covered single-graph settings,
+            // in which case we preserve the solved graph by stopping.
+            //
+            if (IsCuGraph(Graph)) {
+                StopGraphSolving = TRUE;
+                Result = PH_S_STOP_GRAPH_SOLVING;
+            } else {
+                ASSERT(SpareGraph != NULL);
+            }
+        }
     }
 
     //
@@ -3974,6 +4012,7 @@ Return Value:
 {
     PGRAPH NewGraph;
     HRESULT Result = S_OK;
+    BOOLEAN DebugCudaSolve;
 
     //
     // Validate arguments.
@@ -3982,6 +4021,9 @@ Return Value:
     if (!ARGUMENT_PRESENT(Graph)) {
         return E_POINTER;
     }
+
+    DebugCudaSolve = (IsCuGraph(Graph) ? IsPerfectHashCudaDebugEnabled() : FALSE);
+    Graph->Flags.DebugCudaChm02 = DebugCudaSolve;
 
     //
     // Acquire the exclusive graph lock for the duration of the routine.  The
@@ -4000,6 +4042,12 @@ Return Value:
     //
 
     Result = Graph->Vtbl->LoadInfo(Graph);
+
+    if (DebugCudaSolve && IsCuGraph(Graph)) {
+        fprintf(stderr,
+                "[GraphEnterSolvingLoop] LoadInfo result=0x%08x\n",
+                (unsigned)Result);
+    }
 
     if (FAILED(Result)) {
 
@@ -4040,6 +4088,11 @@ Return Value:
     while (GraphShouldWeContinueTryingToSolve(Graph)) {
 
         Result = Graph->Vtbl->Reset(Graph);
+        if (DebugCudaSolve && IsCuGraph(Graph)) {
+            fprintf(stderr,
+                    "[GraphEnterSolvingLoop] Reset result=0x%08x\n",
+                    (unsigned)Result);
+        }
         if (FAILED(Result)) {
             PH_ERROR(GraphReset, Result);
             break;
@@ -4048,6 +4101,16 @@ Return Value:
         }
 
         Result = Graph->Vtbl->LoadNewSeeds(Graph);
+        if (DebugCudaSolve && IsCuGraph(Graph)) {
+            fprintf(stderr,
+                    "[GraphEnterSolvingLoop] LoadNewSeeds result=0x%08x "
+                    "Seed1=%u Seed2=%u Seed3=%u Seed4=%u\n",
+                    (unsigned)Result,
+                    (unsigned)Graph->Seed1,
+                    (unsigned)Graph->Seed2,
+                    (unsigned)Graph->Seed3,
+                    (unsigned)Graph->Seed4);
+        }
         if (FAILED(Result)) {
 
             //
@@ -4061,6 +4124,11 @@ Return Value:
 
         NewGraph = NULL;
         Result = Graph->Vtbl->Solve(Graph, &NewGraph);
+        if (DebugCudaSolve && IsCuGraph(Graph)) {
+            fprintf(stderr,
+                    "[GraphEnterSolvingLoop] Solve result=0x%08x\n",
+                    (unsigned)Result);
+        }
         if (FAILED(Result)) {
             PH_ERROR(GraphSolve, Result);
             break;
@@ -6897,6 +6965,7 @@ Return Value:
     PPERFECT_HASH_CONTEXT Context;
     PASSIGNED16_MEMORY_COVERAGE Coverage;
     PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE_ID CoverageType;
+    BOOLEAN DebugCudaSolve;
 
     //
     // Initialize aliases.
@@ -6907,6 +6976,16 @@ Return Value:
     CoverageType = Context->BestCoverageType;
     Attempt = Coverage->Attempt;
     ElapsedMilliseconds = GetTickCount64() - Context->StartMilliseconds;
+    DebugCudaSolve = (IsCuGraph(Graph) ? IsCudaDebugGraph(Graph) : FALSE);
+
+    if (DebugCudaSolve && IsCuGraph(Graph)) {
+        fprintf(stderr,
+                "[GraphRegisterSolved16NoBestCoverage] Enter "
+                "BestGraph=%p SpareGraph=%p SolutionNumber=%llu\n",
+                Context->BestGraph,
+                Context->SpareGraph,
+                (unsigned long long)Graph->SolutionNumber);
+    }
 
     //
     // Indicate continue graph solving by default.
@@ -6940,15 +7019,30 @@ Return Value:
         ASSERT(Context->NewBestGraphCount == 0);
         ASSERT(Context->FirstAttemptSolved == 0);
         SpareGraph = Context->SpareGraph;
-        ASSERT(SpareGraph != NULL);
-        ASSERT(IsSpareGraph(SpareGraph));
-        SpareGraph->Flags.IsSpare = FALSE;
-        Context->SpareGraph = NULL;
         Context->BestGraph = Graph;
         FoundBestGraph = TRUE;
         Coverage->BestGraphNumber = ++Context->NewBestGraphCount;
         Context->FirstAttemptSolved = Graph->Attempt;
-        Result = PH_S_USE_NEW_GRAPH_FOR_SOLVING;
+        if (SpareGraph != NULL) {
+            ASSERT(IsSpareGraph(SpareGraph));
+            SpareGraph->Flags.IsSpare = FALSE;
+            Context->SpareGraph = NULL;
+            Result = PH_S_USE_NEW_GRAPH_FOR_SOLVING;
+        } else {
+            //
+            // The legacy invariant is that a spare graph exists whenever we
+            // want to keep solving after capturing the first solved graph.
+            // The current Chm02 CUDA correctness path can legitimately run
+            // without a spare graph under the covered single-graph settings,
+            // in which case we preserve the solved graph by stopping.
+            //
+            if (IsCuGraph(Graph)) {
+                StopGraphSolving = TRUE;
+                Result = PH_S_STOP_GRAPH_SOLVING;
+            } else {
+                ASSERT(SpareGraph != NULL);
+            }
+        }
     }
 
     //
@@ -6956,6 +7050,16 @@ Return Value:
     //
 
     LeaveCriticalSection(&Context->BestGraphCriticalSection);
+
+    if (DebugCudaSolve && IsCuGraph(Graph)) {
+        fprintf(stderr,
+                "[GraphRegisterSolved16NoBestCoverage] AfterCS "
+                "FoundBestGraph=%u Result=0x%08x SpareGraph=%p BestGraph=%p\n",
+                (unsigned)FoundBestGraph,
+                (unsigned)Result,
+                SpareGraph,
+                Context->BestGraph);
+    }
 
 End:
 
@@ -6984,6 +7088,15 @@ End:
         ASSERT(Result == PH_S_USE_NEW_GRAPH_FOR_SOLVING);
         ASSERT(SpareGraph != NULL);
         *NewGraphPointer = SpareGraph;
+    }
+
+    if (DebugCudaSolve && IsCuGraph(Graph)) {
+        fprintf(stderr,
+                "[GraphRegisterSolved16NoBestCoverage] Exit Result=0x%08x "
+                "NewGraph=%p Stop=%u\n",
+                (unsigned)Result,
+                *NewGraphPointer,
+                (unsigned)StopGraphSolving);
     }
 
     EVENT_WRITE_GRAPH_FOUND(Found);

@@ -205,7 +205,6 @@ GraphCuAddEdge1(
             PrevVertex3 = *Vertex;
 
             NextDegree = PrevVertex3.Degree + 1;
-            NextDegree += 1;
 
             NextEdges = PrevVertex3.Edges;
             NextEdges ^= Edge;
@@ -808,9 +807,8 @@ GraphCuRemoveVertex(
     //DegreeType Degree;
     Edge3Type Edge3;
     Edge3Type *Edges3 = (decltype(Edges3))Graph->Edges3;
-    //OrderType *Order = (decltype(Order))Graph->Order;
-    //OrderType *OrderAddress;
-    //OrderIndexType OrderIndex;
+    OrderType *Order = (decltype(Order))Graph->Order;
+    OrderIndexType OrderIndex;
     OrderIndexType *GraphOrderIndex =
         (decltype(GraphOrderIndex))&Graph->OrderIndex;
 
@@ -848,19 +846,11 @@ GraphCuRemoveVertex(
 
     if (Removed1 || Removed2) {
         AtomicAggIncCGV(&Graph->DeletedEdgeCount);
-        AtomicAggSubCGV(GraphOrderIndex);
-#if 0
-        OrderIndex = AtomicAggSubCG(GraphOrderIndex);
-        OrderAddress = &Order[OrderIndex];
+        OrderIndex = atomicSub(GraphOrderIndex, 1) - 1;
 
         if (OrderIndex >= 0) {
-            ASSERT(*OrderAddress == 0);
-            ASSERT(Order[OrderIndex] == 0);
-            Order[OrderIndex] = Edge;
-            ASSERT(Order[OrderIndex] == Edge);
-            ASSERT(*OrderAddress == Edge);
+            Order[OrderIndex] = (OrderType)Edge;
         }
-#endif
     }
 
 End:
@@ -897,6 +887,208 @@ GraphCuIsAcyclicPhase1Kernel(
     return;
 }
 
+template<typename GraphType>
+GLOBAL
+VOID
+GraphCuIsAcyclicSerialKernel(
+    GraphType* Graph
+    )
+{
+    using EdgeType = typename GraphType::EdgeType;
+    using Edge3Type = typename GraphType::Edge3Type;
+    using OrderType = typename GraphType::OrderType;
+    using VertexType = typename GraphType::VertexType;
+    using Vertex3Type = typename GraphType::Vertex3Type;
+
+    if (blockIdx.x != 0 || threadIdx.x != 0) {
+        return;
+    }
+
+    auto *Vertices3 = (Vertex3Type *)Graph->Vertices3;
+    auto *Edges3 = (Edge3Type *)Graph->Edges3;
+    auto *Order = (OrderType *)Graph->Order;
+
+    Graph->Flags.Shrinking = TRUE;
+
+    while (TRUE) {
+        bool Progress = false;
+
+        for (uint32_t Index = 0; Index < Graph->NumberOfVertices; Index++) {
+            VertexType VertexIndex = (VertexType)Index;
+            Vertex3Type *Vertex = &Vertices3[VertexIndex];
+
+            if (Vertex->Degree != 1) {
+                continue;
+            }
+
+            EdgeType Edge = Vertex->Edges;
+            Edge3Type *Edge3 = &Edges3[Edge];
+            VertexType Vertex1 = Edge3->Vertex1;
+            VertexType Vertex2 = Edge3->Vertex2;
+
+            if (Vertices3[Vertex1].Degree > 0) {
+                --Vertices3[Vertex1].Degree;
+                Vertices3[Vertex1].Edges ^= Edge;
+            }
+
+            if (Vertices3[Vertex2].Degree > 0) {
+                --Vertices3[Vertex2].Degree;
+                Vertices3[Vertex2].Edges ^= Edge;
+            }
+
+            ++Graph->DeletedEdgeCount;
+            Graph->OrderIndex -= 1;
+            Order[Graph->OrderIndex] = (OrderType)Edge;
+            Progress = true;
+        }
+
+        if (!Progress) {
+            break;
+        }
+    }
+
+    if (Graph->DeletedEdgeCount == Graph->NumberOfKeys) {
+        Graph->Flags.IsAcyclic = TRUE;
+    }
+}
+
+template<typename GraphType>
+DEVICE
+bool
+GraphCuIsVisitedVertex(
+    _In_ GraphType *Graph,
+    _In_ typename GraphType::VertexType Vertex
+    )
+{
+    auto *Bitmap = (uint64_t *)Graph->VisitedVerticesBitmap.Buffer;
+    const uint64_t Mask = (1ull << ((uint64_t)Vertex & 63ull));
+    return ((Bitmap[(uint64_t)Vertex >> 6] & Mask) != 0);
+}
+
+template<typename GraphType>
+DEVICE
+void
+GraphCuRegisterVertexVisit(
+    _In_ GraphType *Graph,
+    _In_ typename GraphType::VertexType Vertex
+    )
+{
+    auto *Bitmap = (uint64_t *)Graph->VisitedVerticesBitmap.Buffer;
+    const uint64_t Mask = (1ull << ((uint64_t)Vertex & 63ull));
+    Bitmap[(uint64_t)Vertex >> 6] |= Mask;
+}
+
+template<typename GraphType>
+GLOBAL
+VOID
+GraphCuAssignSerialKernel(
+    _In_ GraphType *Graph
+    )
+{
+    using AssignedType = typename GraphType::AssignedType;
+    using Edge3Type = typename GraphType::Edge3Type;
+    using EdgeType = typename GraphType::EdgeType;
+    using OrderType = typename GraphType::OrderType;
+    using VertexType = typename GraphType::VertexType;
+
+    if (blockIdx.x != 0 || threadIdx.x != 0) {
+        return;
+    }
+
+    auto *Assigned = (AssignedType *)Graph->Assigned;
+    auto *Edges3 = (Edge3Type *)Graph->Edges3;
+    auto *Order = (OrderType *)Graph->Order;
+    const EdgeType NumberOfEdges = (EdgeType)Graph->NumberOfEdges;
+
+    ASSERT(Graph->Flags.IsAcyclic);
+
+    for (uint32_t Index = (uint32_t)Graph->OrderIndex;
+         Index < Graph->NumberOfKeys;
+         Index++)
+    {
+        const EdgeType Edge = (EdgeType)Order[Index];
+        const Edge3Type *Edge3 = &Edges3[Edge];
+        VertexType Vertex1;
+        VertexType Vertex2;
+        uint32_t Value;
+
+        if (!GraphCuIsVisitedVertex(Graph, Edge3->Vertex1)) {
+            Vertex1 = Edge3->Vertex1;
+            Vertex2 = Edge3->Vertex2;
+        } else {
+            Vertex1 = Edge3->Vertex2;
+            Vertex2 = Edge3->Vertex1;
+        }
+
+        Value = ((uint32_t)Edge +
+                 (uint32_t)NumberOfEdges -
+                 (uint32_t)Assigned[Vertex2]);
+        if (Value >= (uint32_t)NumberOfEdges) {
+            Value -= (uint32_t)NumberOfEdges;
+        }
+
+        //
+        // Assigned[] is expected to be reset to INITIAL_ASSIGNMENT_VALUE before
+        // this kernel runs.  Avoid trapping the device here; surface any
+        // actual behavioral regressions through the normal verify path.
+        //
+        Assigned[Vertex1] = (AssignedType)Value;
+
+        GraphCuRegisterVertexVisit(Graph, Vertex1);
+        GraphCuRegisterVertexVisit(Graph, Vertex2);
+    }
+}
+
+template<typename GraphType>
+GLOBAL
+VOID
+GraphCuVerifyKernel(
+    _In_ GraphType *Graph,
+    _Inout_ uint32_t *Failures
+    )
+{
+    using AssignedType = typename GraphType::AssignedType;
+    using IndexType = typename GraphType::IndexType;
+    using KeyType = typename GraphType::KeyType;
+    using VertexPairType = typename GraphType::VertexPairType;
+
+    uint32_t Index;
+    KeyType Key;
+    KeyType *Keys;
+    VertexPairType Hash;
+    const uint32_t NumberOfKeys = Graph->NumberOfKeys;
+    const int32_t Stride = gridDim.x * blockDim.x;
+    const typename GraphType::HashVertexType HashMask =
+        (typename GraphType::HashVertexType)(Graph->NumberOfVertices - 1);
+    const IndexType IndexMask = (IndexType)(Graph->NumberOfEdges - 1);
+    auto HashFunction = GraphGetHashFunction(Graph);
+    auto *Assigned = (AssignedType *)Graph->Assigned;
+
+    Keys = (KeyType *)Graph->DeviceKeys;
+    Index = GlobalThreadIndex();
+
+    while (Index < NumberOfKeys) {
+        Key = Keys[Index];
+        Hash = HashFunction(Key, HashMask);
+
+        if (Hash.Vertex1 == Hash.Vertex2) {
+            atomicAdd(Failures, 1u);
+            Index += Stride;
+            continue;
+        }
+
+        IndexType Result = (IndexType)(
+            (Assigned[Hash.Vertex1] + Assigned[Hash.Vertex2]) & IndexMask
+        );
+
+        if ((uint32_t)Result != Index) {
+            atomicAdd(Failures, 1u);
+        }
+
+        Index += Stride;
+    }
+}
+
 EXTERN_C
 HOST
 HRESULT
@@ -908,38 +1100,13 @@ GraphCuIsAcyclic(
     )
 {
     BOOLEAN IsAcyclic = FALSE;
-    ULONG Attempts = 0;
-    LONG OrderIndexDelta = 0;
-    LONG PreviousOrderIndex = 0;
     LONG DeviceOrderIndex = 0;
+    ULONG DeviceDeletedEdges = 0;
 
-    HRESULT Result;
     PGRAPH DeviceGraph;
     CUstream_st* Stream;
     PPH_CU_SOLVE_CONTEXT SolveContext;
     ULONG SharedMemory = SharedMemoryInBytes;
-
-    //
-    // Get suitable launch parameters for the IsAcyclicPhase1() kernel.
-    //
-
-    if (IsUsingAssigned16(Graph)) {
-        Result = GetKernelConfig(Graph,
-                                 (PVOID)GraphCuIsAcyclicPhase1Kernel<GRAPH16>,
-                                 BlocksPerGrid,
-                                 ThreadsPerBlock,
-                                 SharedMemory);
-    } else {
-        Result = GetKernelConfig(Graph,
-                                 (PVOID)GraphCuIsAcyclicPhase1Kernel<GRAPH32>,
-                                 BlocksPerGrid,
-                                 ThreadsPerBlock,
-                                 SharedMemory);
-    }
-
-    if (FAILED(Result)) {
-        goto End;
-    }
 
     //
     // Initialize aliases.
@@ -949,91 +1116,43 @@ GraphCuIsAcyclic(
     DeviceGraph = SolveContext->DeviceGraph;
     Stream = (CUstream_st *)SolveContext->Stream;
 
-    //
-    // Enter the kernel launch loop.
-    //
+    BlocksPerGrid = 1;
+    ThreadsPerBlock = 1;
+    SharedMemory = 0;
 
-    while (TRUE) {
-
-        ++Attempts;
-
-        //
-        // Dispatch the appropriate kernel and wait for completion.
-        //
-
-        if (IsUsingAssigned16(Graph)) {
-            GraphCuIsAcyclicPhase1Kernel<<<BlocksPerGrid,
-                                           ThreadsPerBlock,
-                                           SharedMemory,
-                                           Stream>>>((PGRAPH16)DeviceGraph);
-        } else {
-            GraphCuIsAcyclicPhase1Kernel<<<BlocksPerGrid,
-                                           ThreadsPerBlock,
-                                           SharedMemory,
-                                           Stream>>>((PGRAPH32)DeviceGraph);
-        }
-
-        CUDA_CALL(cudaMemcpyAsync((PVOID)&DeviceOrderIndex,
-                                  (PVOID)&DeviceGraph->OrderIndex,
-                                  sizeof(DeviceOrderIndex),
-                                  cudaMemcpyDeviceToHost,
-                                  Stream));
-
-        CUDA_CALL(cudaStreamSynchronize(Stream));
-
-        //
-        // Check to see if our OrderIndex has reached 0, this is indicative
-        // of an acyclic graph.  (We use <= 0 because we may see -1 or 0 in
-        // some cases.)
-        //
-
-        if (DeviceOrderIndex <= 0) {
-
-            //
-            // We were able to delete all vertices with degree 1, therefore,
-            // our graph is acyclic.
-            //
-
-            IsAcyclic = TRUE;
-            break;
-        }
-
-        //
-        // If this is our first pass, capture the OrderIndex as previous and
-        // continue.
-        //
-
-        if (Attempts == 1) {
-            PreviousOrderIndex = DeviceOrderIndex;
-            continue;
-        }
-
-        //
-        // Calculate the delta between the current OrderIndex and what we saw
-        // on the last pass.  If they haven't changed, it means we weren't able
-        // to find any more vertices with degree 1 to delete, which means the
-        // graph isn't acyclic.
-        //
-
-        OrderIndexDelta = PreviousOrderIndex - DeviceOrderIndex;
-        ASSERT(OrderIndexDelta >= 0);
-        if (OrderIndexDelta == 0) {
-            break;
-        }
-
-        //
-        // Update previous value and continue for another pass.
-        //
-
-        PreviousOrderIndex = DeviceOrderIndex;
+    if (IsUsingAssigned16(Graph)) {
+        GraphCuIsAcyclicSerialKernel<<<BlocksPerGrid,
+                                       ThreadsPerBlock,
+                                       SharedMemory,
+                                       Stream>>>((PGRAPH16)DeviceGraph);
+    } else {
+        GraphCuIsAcyclicSerialKernel<<<BlocksPerGrid,
+                                       ThreadsPerBlock,
+                                       SharedMemory,
+                                       Stream>>>((PGRAPH32)DeviceGraph);
     }
 
-    //
-    // Capture how many attempts were made to determine if the graph was
-    // acyclic.
-    //
+    CUDA_CALL(cudaMemcpyAsync((PVOID)&DeviceOrderIndex,
+                              (PVOID)&DeviceGraph->OrderIndex,
+                              sizeof(DeviceOrderIndex),
+                              cudaMemcpyDeviceToHost,
+                              Stream));
 
-    Graph->CuIsAcyclicPhase1Attempts = Attempts;
+    CUDA_CALL(cudaMemcpyAsync((PVOID)&DeviceDeletedEdges,
+                              (PVOID)&DeviceGraph->DeletedEdgeCount,
+                              sizeof(DeviceDeletedEdges),
+                              cudaMemcpyDeviceToHost,
+                              Stream));
+
+    CUDA_CALL(cudaStreamSynchronize(Stream));
+
+    Graph->CuIsAcyclicPhase1Attempts = 1;
+    Graph->DeletedEdgeCount = DeviceDeletedEdges;
+    Graph->OrderIndex = DeviceOrderIndex;
+
+    if (DeviceOrderIndex <= 0) {
+        IsAcyclic = TRUE;
+    }
 
     //
     // Make a note that we're acyclic if applicable in the graph's flags.
@@ -1078,8 +1197,157 @@ GraphCuIsAcyclic(
         }
     }
 
-End:
     return (IsAcyclic ? S_OK : PH_E_GRAPH_CYCLIC_FAILURE);
+}
+
+EXTERN_C
+HOST
+HRESULT
+GraphCuAssign(
+    _In_ PGRAPH Graph,
+    _In_ ULONG BlocksPerGrid,
+    _In_ ULONG ThreadsPerBlock,
+    _In_ ULONG SharedMemoryInBytes
+    )
+{
+    HRESULT Result = S_OK;
+    PGRAPH DeviceGraph;
+    CUstream_st *Stream;
+    PPH_CU_SOLVE_CONTEXT SolveContext;
+
+    (void)BlocksPerGrid;
+    (void)ThreadsPerBlock;
+    (void)SharedMemoryInBytes;
+
+    SolveContext = Graph->CuSolveContext;
+    DeviceGraph = SolveContext->DeviceGraph;
+    Stream = (CUstream_st *)SolveContext->Stream;
+
+    if (IsUsingAssigned16(Graph)) {
+        GraphCuAssignSerialKernel<GRAPH16><<<1, 1, 0, Stream>>>(
+            (PGRAPH16)DeviceGraph
+        );
+    } else {
+        GraphCuAssignSerialKernel<GRAPH32><<<1, 1, 0, Stream>>>(
+            (PGRAPH32)DeviceGraph
+        );
+    }
+
+    CUDA_CALL(cudaStreamSynchronize(Stream));
+
+    return Result;
+}
+
+EXTERN_C
+HOST
+HRESULT
+GraphCuVerify(
+    _In_ PGRAPH Graph,
+    _In_ ULONG BlocksPerGrid,
+    _In_ ULONG ThreadsPerBlock,
+    _In_ ULONG SharedMemoryInBytes
+    )
+{
+    HRESULT Result = S_OK;
+    CU_RESULT CuResult = cudaSuccess;
+    uint32_t Failures = 0;
+    uint32_t *DeviceFailures = nullptr;
+    PGRAPH DeviceGraph;
+    CUstream_st *Stream;
+    PPH_CU_SOLVE_CONTEXT SolveContext;
+    ULONG SharedMemory = SharedMemoryInBytes;
+
+    SolveContext = Graph->CuSolveContext;
+    DeviceGraph = SolveContext->DeviceGraph;
+    Stream = (CUstream_st *)SolveContext->Stream;
+
+    if (IsUsingAssigned16(Graph)) {
+        Result = GetKernelConfig(Graph,
+                                 (PVOID)GraphCuVerifyKernel<GRAPH16>,
+                                 BlocksPerGrid,
+                                 ThreadsPerBlock,
+                                 SharedMemory);
+    } else {
+        Result = GetKernelConfig(Graph,
+                                 (PVOID)GraphCuVerifyKernel<GRAPH32>,
+                                 BlocksPerGrid,
+                                 ThreadsPerBlock,
+                                 SharedMemory);
+    }
+
+    if (FAILED(Result)) {
+        goto End;
+    }
+
+    CuResult = cudaMalloc((void **)&DeviceFailures, sizeof(*DeviceFailures));
+    if (CuResult != cudaSuccess) {
+        printf("Error %s at %s:%d\n",
+               cudaGetErrorString(cudaGetLastError()),
+               __FILE__,
+               __LINE__-1);
+        Result = PH_E_CUDA_ERROR;
+        goto End;
+    }
+
+    CuResult = cudaMemsetAsync(DeviceFailures, 0, sizeof(*DeviceFailures), Stream);
+    if (CuResult != cudaSuccess) {
+        printf("Error %s at %s:%d\n",
+               cudaGetErrorString(cudaGetLastError()),
+               __FILE__,
+               __LINE__-1);
+        Result = PH_E_CUDA_ERROR;
+        goto End;
+    }
+
+    if (IsUsingAssigned16(Graph)) {
+        GraphCuVerifyKernel<GRAPH16><<<BlocksPerGrid,
+                                       ThreadsPerBlock,
+                                       SharedMemory,
+                                       Stream>>>((PGRAPH16)DeviceGraph,
+                                                 DeviceFailures);
+    } else {
+        GraphCuVerifyKernel<GRAPH32><<<BlocksPerGrid,
+                                       ThreadsPerBlock,
+                                       SharedMemory,
+                                       Stream>>>((PGRAPH32)DeviceGraph,
+                                                 DeviceFailures);
+    }
+
+    CuResult = cudaMemcpyAsync(&Failures,
+                               DeviceFailures,
+                               sizeof(Failures),
+                               cudaMemcpyDeviceToHost,
+                               Stream);
+    if (CuResult != cudaSuccess) {
+        printf("Error %s at %s:%d\n",
+               cudaGetErrorString(cudaGetLastError()),
+               __FILE__,
+               __LINE__-1);
+        Result = PH_E_CUDA_ERROR;
+        goto End;
+    }
+
+    CuResult = cudaStreamSynchronize(Stream);
+    if (CuResult != cudaSuccess) {
+        printf("Error %s at %s:%d\n",
+               cudaGetErrorString(cudaGetLastError()),
+               __FILE__,
+               __LINE__-1);
+        Result = PH_E_CUDA_ERROR;
+        goto End;
+    }
+
+    if (Failures > 0) {
+        Result = PH_E_TABLE_VERIFICATION_FAILED;
+    }
+
+End:
+    if (DeviceFailures) {
+        cudaFree(DeviceFailures);
+        DeviceFailures = nullptr;
+    }
+
+    return Result;
 }
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab filetype=cuda formatoptions=croql   :

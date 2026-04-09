@@ -295,6 +295,19 @@ Return Value:
     FREE_MANAGED_ARRAY(CuVertexLocks);
     FREE_MANAGED_ARRAY(CuEdgeLocks);
 
+#define FREE_MANAGED_BITMAP_BUFFER(Name)                                   \
+    if (Graph->Name.Buffer != NULL) {                                      \
+        CuResult = Cu->MemFree((CU_DEVICE_POINTER)Graph->Name.Buffer);     \
+        if (CU_FAILED(CuResult)) {                                         \
+            CU_ERROR(GraphCuRundown_MemFree_##Name##_ManagedBitmapBuffer,  \
+                     CuResult);                                             \
+        } else {                                                           \
+            Graph->Name.Buffer = NULL;                                     \
+        }                                                                  \
+    }
+
+    FREE_MANAGED_BITMAP_BUFFER(VisitedVerticesBitmap);
+
     //
     // Free applicable assigned arrays.
     //
@@ -704,9 +717,35 @@ Return Value:
     }
 
     ALLOC_HOST_BITMAP_BUFFER(DeletedEdgesBitmap);
-    ALLOC_HOST_BITMAP_BUFFER(VisitedVerticesBitmap);
     ALLOC_HOST_BITMAP_BUFFER(AssignedBitmap);
     ALLOC_HOST_BITMAP_BUFFER(IndexBitmap);
+
+#define ALLOC_MANAGED_BITMAP_BUFFER(Name)                                 \
+    if (Info->Name##BufferSizeInBytes > 0) {                              \
+        if (Graph->Name.Buffer != NULL) {                                 \
+            CuResult = Cu->MemFree((CU_DEVICE_POINTER)Graph->Name.Buffer); \
+            if (CU_FAILED(CuResult)) {                                    \
+                CU_ERROR(GraphCuLoadInfo_MemFree_##Name##_ManagedBitmap,   \
+                         CuResult);                                        \
+                Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;                \
+                goto Error;                                               \
+            }                                                             \
+            Graph->Name.Buffer = NULL;                                    \
+        }                                                                 \
+        CuResult = Cu->MemAllocManaged(                                   \
+            (PCU_DEVICE_POINTER)&Graph->Name.Buffer,                      \
+            (SIZE_T)Info->Name##BufferSizeInBytes,                        \
+            CU_MEM_ATTACH_GLOBAL                                          \
+        );                                                                \
+        if (CU_FAILED(CuResult)) {                                        \
+            CU_ERROR(GraphCuLoadInfo_MemAllocManaged_##Name##_Bitmap,     \
+                     CuResult);                                            \
+            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;                    \
+            goto Error;                                                   \
+        }                                                                 \
+    }
+
+    ALLOC_MANAGED_BITMAP_BUFFER(VisitedVerticesBitmap);
 
     //
     // Check to see if we're in "first graph wins" mode, and have also been
@@ -990,9 +1029,26 @@ Return Value:
     }
 
     ZERO_BITMAP_BUFFER(DeletedEdgesBitmap);
-    ZERO_BITMAP_BUFFER(VisitedVerticesBitmap);
     ZERO_BITMAP_BUFFER(AssignedBitmap);
     ZERO_BITMAP_BUFFER(IndexBitmap);
+
+#define ZERO_MANAGED_BITMAP_BUFFER(Name)                                 \
+    if (Info->Name##BufferSizeInBytes > 0) {                             \
+        CuResult = Cu->MemsetD8Async(                                    \
+            (PVOID)Graph->Name.Buffer,                                   \
+            0,                                                           \
+            Info->Name##BufferSizeInBytes,                               \
+            SolveContext->Stream                                         \
+        );                                                               \
+        if (CU_FAILED(CuResult)) {                                       \
+            CU_ERROR(GraphCuReset_MemsetD8Async_##Name##_Bitmap,         \
+                     CuResult);                                           \
+            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;                   \
+            goto Error;                                                  \
+        }                                                                \
+    }
+
+    ZERO_MANAGED_BITMAP_BUFFER(VisitedVerticesBitmap);
 
     //
     // "Empty" all of the nodes.
@@ -1081,6 +1137,10 @@ Return Value:
     Graph->TraversalDepth = 0;
     Graph->TotalTraversals = 0;
     Graph->MaximumTraversalDepth = 0;
+    Graph->CuAddKeysElapsedMicroseconds.QuadPart = 0;
+    Graph->CuIsAcyclicElapsedMicroseconds.QuadPart = 0;
+    Graph->CuAssignElapsedMicroseconds.QuadPart = 0;
+    Graph->CuVerifyElapsedMicroseconds.QuadPart = 0;
 
     Graph->SolvedTime.AsULongLong = 0;
 
@@ -1317,6 +1377,217 @@ End:
     return Result;
 }
 
+FORCEINLINE
+VOID
+CaptureCuElapsedMicroseconds(
+    _In_ PGRAPH Graph,
+    _In_ LARGE_INTEGER Start,
+    _In_ LARGE_INTEGER End,
+    _Out_ PLARGE_INTEGER ElapsedMicroseconds
+    )
+{
+    LONGLONG Cycles;
+
+    Cycles = End.QuadPart - Start.QuadPart;
+    ElapsedMicroseconds->QuadPart = (
+        (Cycles * 1000000) / Graph->Context->Frequency.QuadPart
+    );
+}
+
+#define DEFINE_VALIDATE_GPU_ORDER(Name,                               \
+                                  OrderType,                          \
+                                  EdgeType,                           \
+                                  Vertex3Type,                        \
+                                  Edge3Type,                          \
+                                  OrderField,                         \
+                                  VerticesField,                      \
+                                  EdgesField)                         \
+static                                                           \
+HRESULT                                                          \
+Name(                                                            \
+    _In_ PGRAPH Graph,                                           \
+    _Out_opt_ PULONG InvalidIndexPointer,                        \
+    _Out_opt_ PLONG InvalidEdgePointer,                          \
+    _Out_opt_ PULONG Degree1Pointer,                             \
+    _Out_opt_ PULONG Degree2Pointer,                             \
+    _Out_opt_ PCSTR *ReasonPointer                               \
+    )                                                            \
+{                                                                \
+    LONG SignedEdge;                                             \
+    ULONG Index;                                                 \
+    ULONG NumberOfKeys;                                          \
+    ULONG NumberOfVertices;                                      \
+    PGRAPH CpuGraph;                                             \
+    PBYTE Seen = NULL;                                           \
+    HRESULT Result = S_OK;                                       \
+    OrderType *Order;                                            \
+    EdgeType Edge;                                               \
+    Edge3Type *Edge3 = NULL;                                     \
+    Edge3Type *Edges;                                            \
+    Vertex3Type *Vertex1 = NULL;                                 \
+    Vertex3Type *Vertex2 = NULL;                                 \
+    Vertex3Type *ScratchVertices = NULL;                         \
+                                                                 \
+    CpuGraph = Graph->CpuGraph;                                  \
+    NumberOfKeys = CpuGraph->NumberOfKeys;                       \
+    NumberOfVertices = CpuGraph->NumberOfVertices;               \
+    Order = (OrderType *)Graph->OrderField;                      \
+    Edges = (Edge3Type *)CpuGraph->EdgesField;                   \
+                                                                 \
+    if (InvalidIndexPointer) {                                   \
+        *InvalidIndexPointer = (ULONG)-1;                        \
+    }                                                            \
+    if (InvalidEdgePointer) {                                    \
+        *InvalidEdgePointer = -1;                                \
+    }                                                            \
+    if (Degree1Pointer) {                                        \
+        *Degree1Pointer = 0;                                     \
+    }                                                            \
+    if (Degree2Pointer) {                                        \
+        *Degree2Pointer = 0;                                     \
+    }                                                            \
+    if (ReasonPointer) {                                         \
+        *ReasonPointer = "unknown";                              \
+    }                                                            \
+                                                                 \
+    ScratchVertices = (Vertex3Type *)(                           \
+        calloc(NumberOfVertices, sizeof(*ScratchVertices))        \
+    );                                                           \
+    Seen = (PBYTE)calloc(NumberOfKeys, sizeof(*Seen));           \
+                                                                 \
+    if (!ScratchVertices || !Seen) {                             \
+        Result = E_OUTOFMEMORY;                                  \
+        if (ReasonPointer) {                                     \
+            *ReasonPointer = "oom";                              \
+        }                                                        \
+        goto End;                                                \
+    }                                                            \
+                                                                 \
+    CopyMemory(ScratchVertices,                                  \
+               CpuGraph->VerticesField,                          \
+               NumberOfVertices * sizeof(*ScratchVertices));      \
+                                                                 \
+    for (Index = NumberOfKeys; Index > 0; Index--) {             \
+        ULONG OrderIndex;                                        \
+                                                                 \
+        Vertex1 = NULL;                                          \
+        Vertex2 = NULL;                                          \
+                                                                 \
+        OrderIndex = Index - 1;                                  \
+                                                                 \
+        SignedEdge = (LONG)Order[OrderIndex];                    \
+                                                                 \
+        if (SignedEdge < 0 || (ULONG)SignedEdge >= NumberOfKeys) { \
+            Result = PH_E_INVARIANT_CHECK_FAILED;                \
+            if (ReasonPointer) {                                 \
+                *ReasonPointer = "out_of_range";                 \
+            }                                                    \
+            goto Invalid;                                        \
+        }                                                        \
+                                                                 \
+        Edge = (EdgeType)SignedEdge;                             \
+                                                                 \
+        if (Seen[Edge]) {                                        \
+            Result = PH_E_INVARIANT_CHECK_FAILED;                \
+            if (ReasonPointer) {                                 \
+                *ReasonPointer = "duplicate_edge";               \
+            }                                                    \
+            goto Invalid;                                        \
+        }                                                        \
+                                                                 \
+        Seen[Edge] = TRUE;                                       \
+        Edge3 = &Edges[Edge];                                    \
+        Vertex1 = &ScratchVertices[Edge3->Vertex1];              \
+        Vertex2 = &ScratchVertices[Edge3->Vertex2];              \
+                                                                 \
+        if (Vertex1->Degree == 0 || Vertex2->Degree == 0) {      \
+            Result = PH_E_INVARIANT_CHECK_FAILED;                \
+            if (ReasonPointer) {                                 \
+                *ReasonPointer = "edge_already_removed";         \
+            }                                                    \
+            goto Invalid;                                        \
+        }                                                        \
+                                                                 \
+        if (Vertex1->Degree != 1 && Vertex2->Degree != 1) {      \
+            Result = PH_E_INVARIANT_CHECK_FAILED;                \
+            if (ReasonPointer) {                                 \
+                *ReasonPointer = "no_degree1_endpoint";          \
+            }                                                    \
+            goto Invalid;                                        \
+        }                                                        \
+                                                                 \
+        Vertex1->Degree -= 1;                                    \
+        Vertex1->Edges ^= Edge;                                  \
+        Vertex2->Degree -= 1;                                    \
+        Vertex2->Edges ^= Edge;                                  \
+    }                                                            \
+                                                                 \
+    for (Index = 0; Index < NumberOfVertices; Index++) {         \
+        if (ScratchVertices[Index].Degree != 0) {                \
+            Result = PH_E_INVARIANT_CHECK_FAILED;                \
+            if (ReasonPointer) {                                 \
+                *ReasonPointer = "residual_degree";              \
+            }                                                    \
+            if (InvalidIndexPointer) {                           \
+                *InvalidIndexPointer = Index;                    \
+            }                                                    \
+            if (Degree1Pointer) {                                \
+                *Degree1Pointer = ScratchVertices[Index].Degree; \
+            }                                                    \
+            if (InvalidEdgePointer) {                            \
+                *InvalidEdgePointer = -1;                        \
+            }                                                    \
+            goto End;                                            \
+        }                                                        \
+    }                                                            \
+                                                                 \
+    if (ReasonPointer) {                                         \
+        *ReasonPointer = "ok";                                   \
+    }                                                            \
+    goto End;                                                    \
+                                                                 \
+Invalid:                                                         \
+    if (InvalidIndexPointer) {                                   \
+        *InvalidIndexPointer = (Index > 0 ? Index - 1 : 0);      \
+    }                                                            \
+    if (InvalidEdgePointer) {                                    \
+        *InvalidEdgePointer = SignedEdge;                        \
+    }                                                            \
+    if (Degree1Pointer) {                                        \
+        *Degree1Pointer = Vertex1 ? (ULONG)Vertex1->Degree : 0;  \
+    }                                                            \
+    if (Degree2Pointer) {                                        \
+        *Degree2Pointer = Vertex2 ? (ULONG)Vertex2->Degree : 0;  \
+    }                                                            \
+                                                                 \
+End:                                                             \
+    if (Seen) {                                                  \
+        free(Seen);                                              \
+    }                                                            \
+    if (ScratchVertices) {                                       \
+        free(ScratchVertices);                                   \
+    }                                                            \
+    return Result;                                               \
+}
+
+DEFINE_VALIDATE_GPU_ORDER(ValidateGpuOrder16,
+                          ORDER16,
+                          EDGE16,
+                          VERTEX163,
+                          EDGE163,
+                          Order16,
+                          Vertices163,
+                          Edges163);
+
+DEFINE_VALIDATE_GPU_ORDER(ValidateGpuOrder32,
+                          ORDER,
+                          EDGE,
+                          VERTEX3,
+                          EDGE3,
+                          Order,
+                          Vertices3,
+                          Edges3);
+
 HRESULT
 GraphCuAddKeys(
     _In_ PGRAPH Graph,
@@ -1324,7 +1595,10 @@ GraphCuAddKeys(
     _In_reads_(NumberOfKeys) PKEY Keys
     )
 {
+    LARGE_INTEGER Start;
+    LARGE_INTEGER End;
     PCU Cu;
+    HRESULT Result;
 
     //
     // Keys have already been prepared on the GPU, so we don't need to use
@@ -1336,10 +1610,30 @@ GraphCuAddKeys(
 
     Cu = Graph->CuSolveContext->DeviceContext->Cu;
 
-    return Cu->AddKeys(Graph,
-                       Graph->CuBlocksPerGrid,
-                       Graph->CuThreadsPerBlock,
-                       Graph->CuSharedMemory);
+    QueryPerformanceCounter(&Start);
+
+    Result = Cu->AddKeys(Graph,
+                         Graph->CuBlocksPerGrid,
+                         Graph->CuThreadsPerBlock,
+                         Graph->CuSharedMemory);
+
+    QueryPerformanceCounter(&End);
+    CaptureCuElapsedMicroseconds(Graph,
+                                 Start,
+                                 End,
+                                 &Graph->CuAddKeysElapsedMicroseconds);
+
+    if (IsCudaDebugGraph(Graph)) {
+        fprintf(stderr,
+                "[GraphCuAddKeys] Result=0x%08x HashKeysResult=0x%08x "
+                "VertexFailures=%u WarpFailures=%u\n",
+                (unsigned)Result,
+                (unsigned)Graph->CuHashKeysResult,
+                (unsigned)Graph->CuVertexCollisionFailures,
+                (unsigned)Graph->CuWarpVertexCollisionFailures);
+    }
+
+    return Result;
 }
 
 HRESULT
@@ -1347,6 +1641,8 @@ GraphCuIsAcyclic(
     _In_ PGRAPH Graph
     )
 {
+    LARGE_INTEGER Start;
+    LARGE_INTEGER End;
     PCU Cu;
     PRTL Rtl;
     PKEY Keys;
@@ -1367,10 +1663,22 @@ GraphCuIsAcyclic(
     SolveContext = Graph->CuSolveContext;
     Cu = SolveContext->DeviceContext->Cu;
 
+    QueryPerformanceCounter(&Start);
+
     Result = Cu->IsAcyclic(Graph,
                            Graph->CuBlocksPerGrid,
                            Graph->CuThreadsPerBlock,
                            Graph->CuSharedMemory);
+
+    if (IsCudaDebugGraph(Graph)) {
+        fprintf(stderr,
+                "[GraphCuIsAcyclic] GpuResult=0x%08x Attempts=%u "
+                "DeletedEdges=%u OrderIndex=%ld\n",
+                (unsigned)Result,
+                (unsigned)Graph->CuIsAcyclicPhase1Attempts,
+                (unsigned)Graph->DeletedEdgeCount,
+                (long)Graph->OrderIndex);
+    }
 
     //
     // If we weren't acyclic, return.
@@ -1438,56 +1746,156 @@ GraphCuIsAcyclic(
     ASSERT(Graph->CpuGraph != NULL);
     ASSERT(Graph->Impl == 3);
 
-    if (IsUsingAssigned16(Graph)) {
-        Result = Graph->CpuGraph->Vtbl->AddKeys(Graph->CpuGraph,
-                                                NumberOfKeys,
-                                                Keys);
-        if (FAILED(Result)) {
-            InterlockedIncrement64(
-                &Context->GpuAddKeysSuccessButCpuAddKeysFailures);
-            return Result;
-        } else {
-            InterlockedIncrement64(&Context->GpuAndCpuAddKeysSuccess);
-        }
-
-        Result = Graph->CpuGraph->Vtbl->IsAcyclic(Graph->CpuGraph);
-        if (FAILED(Result)) {
-            InterlockedIncrement64(
-                &Context->GpuIsAcyclicButCpuIsCyclicFailures);
-            return Result;
-        } else {
-            InterlockedIncrement64(&Context->GpuAndCpuIsAcyclicSuccess);
-        }
+    Result = Graph->CpuGraph->Vtbl->AddKeys(Graph->CpuGraph,
+                                            NumberOfKeys,
+                                            Keys);
+    if (FAILED(Result)) {
+        InterlockedIncrement64(
+            &Context->GpuAddKeysSuccessButCpuAddKeysFailures);
+        return Result;
     } else {
+        InterlockedIncrement64(&Context->GpuAndCpuAddKeysSuccess);
+    }
+
+        if (IsCudaDebugGraph(Graph)) {
+        HRESULT CpuAcyclicResult;
+        HRESULT GpuOrderValidationResult;
+        LONG InvalidEdge;
+        ULONG Degree1;
+        ULONG Degree2;
+        ULONG MismatchIndex;
+        ULONG CpuOrder;
+        ULONG GpuOrder;
+        PCSTR Reason;
+
+        CpuAcyclicResult = Graph->CpuGraph->Vtbl->IsAcyclic(Graph->CpuGraph);
+        fprintf(stderr,
+                "[GraphCuIsAcyclic] CpuAcyclicOracleResult=0x%08x\n",
+                (unsigned)CpuAcyclicResult);
+
+        if (SUCCEEDED(CpuAcyclicResult)) {
+            MismatchIndex = (ULONG)-1;
+
+            if (IsUsingAssigned16(Graph)) {
+                for (ULONG Index = 0; Index < NumberOfKeys; Index++) {
+                    CpuOrder = ((PUSHORT)Graph->CpuGraph->Order16)[Index];
+                    GpuOrder = ((PUSHORT)Graph->Order16)[Index];
+                    if (CpuOrder != GpuOrder) {
+                        MismatchIndex = Index;
+                        fprintf(stderr,
+                                "[GraphCuIsAcyclic] OrderMismatch16 index=%u "
+                                "gpu=%u cpu=%u\n",
+                                (unsigned)Index,
+                                (unsigned)GpuOrder,
+                                (unsigned)CpuOrder);
+                        break;
+                    }
+                }
+            } else {
+                for (ULONG Index = 0; Index < NumberOfKeys; Index++) {
+                    CpuOrder = ((PULONG)Graph->CpuGraph->Order)[Index];
+                    GpuOrder = ((PULONG)Graph->Order)[Index];
+                    if (CpuOrder != GpuOrder) {
+                        MismatchIndex = Index;
+                        fprintf(stderr,
+                                "[GraphCuIsAcyclic] OrderMismatch index=%u "
+                                "gpu=%u cpu=%u\n",
+                                (unsigned)Index,
+                                (unsigned)GpuOrder,
+                                (unsigned)CpuOrder);
+                        break;
+                    }
+                }
+            }
+
+            if (MismatchIndex == (ULONG)-1) {
+                fprintf(stderr,
+                        "[GraphCuIsAcyclic] Order arrays match CPU oracle.\n");
+            }
+        }
+
+        Result = Graph->CpuGraph->Vtbl->Reset(Graph->CpuGraph);
+        if (FAILED(Result)) {
+            return Result;
+        }
+
         Result = Graph->CpuGraph->Vtbl->AddKeys(Graph->CpuGraph,
                                                 NumberOfKeys,
                                                 Keys);
         if (FAILED(Result)) {
-            InterlockedIncrement64(
-                &Context->GpuAddKeysSuccessButCpuAddKeysFailures);
             return Result;
-        } else {
-            InterlockedIncrement64(&Context->GpuAndCpuAddKeysSuccess);
         }
 
-        Result = Graph->CpuGraph->Vtbl->IsAcyclic(Graph->CpuGraph);
-        if (FAILED(Result)) {
-            InterlockedIncrement64(
-                &Context->GpuIsAcyclicButCpuIsCyclicFailures);
-            return Result;
+        MismatchIndex = (ULONG)-1;
+        InvalidEdge = -1;
+        Degree1 = 0;
+        Degree2 = 0;
+        Reason = "unknown";
+
+        if (IsUsingAssigned16(Graph)) {
+            GpuOrderValidationResult = ValidateGpuOrder16(Graph,
+                                                          &MismatchIndex,
+                                                          &InvalidEdge,
+                                                          &Degree1,
+                                                          &Degree2,
+                                                          &Reason);
         } else {
-            InterlockedIncrement64(&Context->GpuAndCpuIsAcyclicSuccess);
+            GpuOrderValidationResult = ValidateGpuOrder32(Graph,
+                                                          &MismatchIndex,
+                                                          &InvalidEdge,
+                                                          &Degree1,
+                                                          &Degree2,
+                                                          &Reason);
+        }
+
+        if (SUCCEEDED(GpuOrderValidationResult)) {
+            fprintf(stderr,
+                    "[GraphCuIsAcyclic] GpuOrderValidationResult=0x%08x\n",
+                    (unsigned)GpuOrderValidationResult);
+            fprintf(stderr, "PH_CHM02_CUDA_ORDER_OK\n");
+        } else {
+            fprintf(stderr,
+                    "[GraphCuIsAcyclic] GpuOrderValidationResult=0x%08x "
+                    "reason=%s index=%u edge=%ld degree1=%u degree2=%u\n",
+                    (unsigned)GpuOrderValidationResult,
+                    Reason,
+                    (unsigned)MismatchIndex,
+                    (long)InvalidEdge,
+                    (unsigned)Degree1,
+                    (unsigned)Degree2);
         }
     }
 
     //
-    // Copy the Order[] array from the CPU graph.
+    // The GPU path now owns the peel order.  Feed the captured Order[] into the
+    // CPU graph so Assign()/Verify() can act as an oracle during bring-up
+    // without recomputing IsAcyclic() on the CPU.
     //
 
-    ASSERT(SUCCEEDED(Result));
-    CopyMemory(Graph->Order,
-               Graph->CpuGraph->Order,
+    CopyMemory(Graph->CpuGraph->Order,
+               Graph->Order,
                Info->OrderSizeInBytes);
+
+    Graph->Flags.IsAcyclic = TRUE;
+    Graph->DeletedEdgeCount = NumberOfKeys;
+    Graph->OrderIndex = 0;
+
+    Graph->CpuGraph->Flags.IsAcyclic = TRUE;
+    Graph->CpuGraph->DeletedEdgeCount = NumberOfKeys;
+
+    if (IsUsingAssigned16(Graph)) {
+        Graph->CpuGraph->Order16Index = 0;
+    } else {
+        Graph->CpuGraph->OrderIndex = 0;
+    }
+
+    InterlockedIncrement64(&Context->GpuAndCpuIsAcyclicSuccess);
+
+    QueryPerformanceCounter(&End);
+    CaptureCuElapsedMicroseconds(Graph,
+                                 Start,
+                                 End,
+                                 &Graph->CuIsAcyclicElapsedMicroseconds);
 
     return Result;
 }
@@ -1497,18 +1905,52 @@ GraphCuAssign(
     _In_ PGRAPH Graph
     )
 {
-    PRTL Rtl;
+    LARGE_INTEGER Start;
+    LARGE_INTEGER End;
+    PCU Cu;
     HRESULT Result;
 
-    Result = Graph->CpuGraph->Vtbl->Assign(Graph->CpuGraph);
+    if (IsCudaDebugGraph(Graph)) {
+        fprintf(stderr,
+                "[GraphCuAssign] Enter IsAcyclic=%u OrderIndex=%ld CpuOrderIndex=%ld\n",
+                (unsigned)Graph->Flags.IsAcyclic,
+                (long)Graph->OrderIndex,
+                (long)Graph->CpuGraph->OrderIndex);
+    }
+
+    Cu = Graph->CuSolveContext->DeviceContext->Cu;
+
+    QueryPerformanceCounter(&Start);
+
+    Result = Cu->Assign(Graph,
+                        Graph->CuBlocksPerGrid,
+                        Graph->CuThreadsPerBlock,
+                        Graph->CuSharedMemory);
+
+    if (IsCudaDebugGraph(Graph)) {
+        fprintf(stderr, "[GraphCuAssign] GpuAssignResult=0x%08x\n", (unsigned)Result);
+        if (SUCCEEDED(Result)) {
+            fprintf(stderr, "PH_CHM02_CUDA_ASSIGN_OK\n");
+        }
+    }
     if (FAILED(Result)) {
         return Result;
     }
 
-    Rtl = Graph->Context->Rtl;
-    CopyMemory(Graph->Assigned,
-               Graph->CpuGraph->Assigned,
+    //
+    // The Cu graph load-info path allocates Assigned as managed memory and
+    // Cu->Assign() synchronizes the stream before returning, so the host copy
+    // below is reading coherent data.
+    //
+    CopyMemory(Graph->CpuGraph->Assigned,
+               Graph->Assigned,
                Graph->Info->AssignedSizeInBytes);
+
+    QueryPerformanceCounter(&End);
+    CaptureCuElapsedMicroseconds(Graph,
+                                 Start,
+                                 End,
+                                 &Graph->CuAssignElapsedMicroseconds);
 
     return Result;
 }
@@ -1518,9 +1960,37 @@ GraphCuVerify(
     _In_ PGRAPH Graph
     )
 {
+    LARGE_INTEGER Start;
+    LARGE_INTEGER End;
+    PCU Cu;
     HRESULT Result;
 
-    Result = Graph->CpuGraph->Vtbl->Verify(Graph->CpuGraph);
+    if (IsCudaDebugGraph(Graph)) {
+        fprintf(stderr, "[GraphCuVerify] Enter\n");
+    }
+
+    Cu = Graph->CuSolveContext->DeviceContext->Cu;
+
+    QueryPerformanceCounter(&Start);
+
+    Result = Cu->Verify(Graph,
+                        Graph->CuBlocksPerGrid,
+                        Graph->CuThreadsPerBlock,
+                        Graph->CuSharedMemory);
+
+    QueryPerformanceCounter(&End);
+    CaptureCuElapsedMicroseconds(Graph,
+                                 Start,
+                                 End,
+                                 &Graph->CuVerifyElapsedMicroseconds);
+
+    if (IsCudaDebugGraph(Graph)) {
+        fprintf(stderr, "[GraphCuVerify] GpuVerifyResult=0x%08x\n", (unsigned)Result);
+        if (SUCCEEDED(Result)) {
+            fprintf(stderr, "PH_CHM02_CUDA_VERIFY_OK\n");
+        }
+    }
+
     return Result;
 }
 

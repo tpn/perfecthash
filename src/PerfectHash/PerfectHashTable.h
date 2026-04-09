@@ -870,6 +870,11 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
 
     DECL_GRAPH_COUNTERS_WITHIN_STRUCT();
 
+    LARGE_INTEGER CuAddKeysElapsedMicroseconds;
+    LARGE_INTEGER CuIsAcyclicElapsedMicroseconds;
+    LARGE_INTEGER CuAssignElapsedMicroseconds;
+    LARGE_INTEGER CuVerifyElapsedMicroseconds;
+
     //
     // Rng details from the winning graph.
     //

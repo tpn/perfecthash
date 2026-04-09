@@ -48,6 +48,19 @@ extern MODULEINFO PerfectHashModuleInfo;
 
 extern volatile ULONG CtrlCPressed;
 
+FORCEINLINE
+BOOLEAN
+IsPerfectHashCudaDebugEnabled(
+    VOID
+    )
+{
+#ifdef PH_WINDOWS
+    return (GetEnvironmentVariableA("PH_DEBUG_CUDA_CHM02", NULL, 0) > 0);
+#else
+    return (getenv("PH_DEBUG_CUDA_CHM02") != NULL);
+#endif
+}
+
 //
 // Define a helper macro for validating flags passed as parameters to routines.
 //

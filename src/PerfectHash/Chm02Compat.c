@@ -375,6 +375,7 @@ Return Value:
     ASSERT(!NoFileIo(Table));                         \
     ZeroStructInline(Verb##Name);                     \
     Verb##Name.FileWorkId = FileWork##Verb##Name##Id; \
+    Verb##Name.Context = Context;                     \
     ThreadpoolAddWork(FileWorkThreadpool,             \
                       FileWorkItemCallbackChm01,      \
                       &Verb##Name);
@@ -699,6 +700,17 @@ FinishedSolution:
 
     COPY_GRAPH_COUNTERS_FROM_GRAPH_TO_TABLE();
 
+#ifdef PH_USE_CUDA
+    Table->CuAddKeysElapsedMicroseconds.QuadPart =
+        Graph->CuAddKeysElapsedMicroseconds.QuadPart;
+    Table->CuIsAcyclicElapsedMicroseconds.QuadPart =
+        Graph->CuIsAcyclicElapsedMicroseconds.QuadPart;
+    Table->CuAssignElapsedMicroseconds.QuadPart =
+        Graph->CuAssignElapsedMicroseconds.QuadPart;
+    Table->CuVerifyElapsedMicroseconds.QuadPart =
+        Graph->CuVerifyElapsedMicroseconds.QuadPart;
+#endif
+
     //
     // Capture RNG details from the winning graph if the RNG used was not the
     // System one.
@@ -1010,6 +1022,7 @@ End:
     ASSERT(!NoFileIo(Table));                           \
     ZeroStructInline(Verb##Name);                       \
     Verb##Name.FileWorkId = FileWork##Verb##Name##Id;   \
+    Verb##Name.Context = Context;                       \
     Verb##Name.EndOfFile = EndOfFile;                   \
     ThreadpoolAddWork(FileWorkThreadpool,               \
                       FileWorkItemCallbackChm01,        \

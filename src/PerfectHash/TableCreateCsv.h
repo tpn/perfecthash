@@ -280,7 +280,7 @@ Abstract:
           OUTPUT_INT)                                                                        \
                                                                                              \
     ENTRY(GpuIsAcyclicButCpuIsCyclicFailures,                                                \
-          Context->GpuIsAcyclicButCpuIsCyclicFailures,                                       \
+          0,                                                                                 \
           OUTPUT_INT)                                                                        \
                                                                                              \
     ENTRY(GpuAndCpuAddKeysSuccess,                                                           \
@@ -288,7 +288,7 @@ Abstract:
           OUTPUT_INT)                                                                        \
                                                                                              \
     ENTRY(GpuAndCpuIsAcyclicSuccess,                                                         \
-          Context->GpuAndCpuAddKeysSuccess,                                                  \
+          Context->GpuAndCpuIsAcyclicSuccess,                                                \
           OUTPUT_INT)                                                                        \
                                                                                              \
     ENTRY(BestCoverageAttempts,                                                              \
@@ -430,6 +430,22 @@ Abstract:
                                                                                              \
     ENTRY(VerifyMicroseconds,                                                                \
           Context->VerifyElapsedMicroseconds.QuadPart,                                       \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
+    ENTRY(CuAddKeysMicroseconds,                                                             \
+          Table->CuAddKeysElapsedMicroseconds.QuadPart,                                      \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
+    ENTRY(CuIsAcyclicMicroseconds,                                                           \
+          Table->CuIsAcyclicElapsedMicroseconds.QuadPart,                                    \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
+    ENTRY(CuAssignMicroseconds,                                                              \
+          Table->CuAssignElapsedMicroseconds.QuadPart,                                       \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
+    ENTRY(CuVerifyMicroseconds,                                                              \
+          Table->CuVerifyElapsedMicroseconds.QuadPart,                                       \
           OUTPUT_INT)                                                                        \
                                                                                              \
     ENTRY(BenchmarkWarmups,                                                                  \

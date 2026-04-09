@@ -54,7 +54,6 @@ PERFECT_HASH_FILE_WORK_ITEM_CALLBACK FileWorkItemCallbackChm01;
 // Begin method implementations.
 //
 
-#ifdef PH_WINDOWS
 PERFECT_HASH_FILE_WORK_CALLBACK FileWorkCallbackChm01;
 
 _Use_decl_annotations_
@@ -88,13 +87,17 @@ Return Value:
 {
     PFILE_WORK_ITEM Item;
 
+    if (!ARGUMENT_PRESENT(ListEntry)) {
+        return;
+    }
+
     Item = CONTAINING_RECORD(ListEntry, FILE_WORK_ITEM, ListEntry);
+
     Item->Instance = Instance;
     Item->Context = Context;
 
     FileWorkItemCallbackChm01(Item);
 }
-#endif
 
 _Use_decl_annotations_
 VOID

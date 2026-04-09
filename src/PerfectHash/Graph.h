@@ -907,10 +907,17 @@ typedef union _GRAPH_FLAGS {
         ULONG HasUserSeeds:1;
 
         //
+        // When set, enables PH_DEBUG_CUDA_CHM02 bring-up logging for this
+        // graph without re-reading the environment variable in hot paths.
+        //
+
+        ULONG DebugCudaChm02:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:10;
+        ULONG Unused:9;
     };
     LONG AsLong;
     ULONG AsULong;
@@ -935,6 +942,7 @@ C_ASSERT(sizeof(GRAPH_FLAGS) == sizeof(ULONG));
     ((Graph)->Flags.WantsCuRandomHostSeeds != FALSE)
 #define IsGraphParanoid(Graph) ((Graph)->Flags.Paranoid != FALSE)
 #define IsUsingAssigned16(Graph) ((Graph)->Flags.UsingAssigned16 != FALSE)
+#define IsCudaDebugGraph(Graph) ((Graph)->Flags.DebugCudaChm02 != FALSE)
 
 #define SetSpareGraph(Graph) (Graph->Flags.IsSpareGraph = TRUE)
 #define SetSpareCuGraph(Graph) (Graph->Flags.IsSpareCuGraph = TRUE)
@@ -1875,6 +1883,15 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     ULONG CuIsAcyclicPhase1Attempts;
 
     //
+    // Explicit CUDA phase timings for performance benchmarking.
+    //
+
+    LARGE_INTEGER CuAddKeysElapsedMicroseconds;
+    LARGE_INTEGER CuIsAcyclicElapsedMicroseconds;
+    LARGE_INTEGER CuAssignElapsedMicroseconds;
+    LARGE_INTEGER CuVerifyElapsedMicroseconds;
+
+    //
     // CUDA RNG details.
     //
 
@@ -2157,6 +2174,7 @@ extern GRAPH_REGISTER_SOLVED GraphRegisterSolved;
 #ifdef _M_X64
 extern GRAPH_REGISTER_SOLVED GraphRegisterSolvedTsx;
 #endif
+
 extern GRAPH_SHOULD_WE_CONTINUE_TRYING_TO_SOLVE
     GraphShouldWeContinueTryingToSolve;
 extern GRAPH_ADD_KEYS GraphAddKeys;
