@@ -1,0 +1,45 @@
+agent = "codex"
+display_name = "perfecthash"
+review_reasoning = "standard"
+review_agent = "claude-code"
+review_backup_agent = "codex"
+fix_agent = "codex"
+fix_reasoning = "standard"
+refine_agent = "codex"
+refine_reasoning = "standard"
+fix_min_severity = "medium"
+refine_min_severity = "medium"
+post_commit_review = "commit"
+reuse_review_session_lookback = 12
+
+review_guidelines = """
+PerfectHash mixes native code, generated-file plumbing, Python bindings,
+packaging, and platform-specific build profiles.
+
+Focus on concrete correctness issues, regressions, ABI/API drift, generated-file
+invariant breaks, missing targeted tests, and docs drift in the touched scope.
+Prefer user-visible issues over style nits.
+
+High-priority areas:
+- `src/PerfectHash/**`, `include/PerfectHash.h`, and CLI behavior in `src/*Exe/**`
+- generated-file pipeline changes in `src/PerfectHash/PerfectHashFileWork.h`,
+  `src/PerfectHash/Chm01FileWork*.c`, and `src/PerfectHash/Chm01FileWork.h`
+- Python package/tests in `python/perfecthash/**` and `python/tests/**`
+- build, presets, release, and packaging logic in `CMakeLists.txt`,
+  `CMakePresets.json`, `ci/**`, `conda/**`, and `scripts/**`
+
+When generated-file code is touched, verify file-work ordering invariants stay
+intact, streams remain adjacent to their owning files, VC project entries stay
+contiguous, and context file entries stay contiguous.
+
+When hash selection changes are touched, verify the curated good-hash set in
+`include/PerfectHash.h` and any downstream outputs remain aligned.
+
+Avoid broad repo-wide cleanup asks unless the diff itself requires them.
+"""
+
+[ci]
+agents = ["codex", "claude-code"]
+review_types = ["default"]
+reasoning = "thorough"
+min_severity = "medium"

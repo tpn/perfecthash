@@ -22,3 +22,10 @@
 ## Release Engineering
 - Use `skills/perfecthash-release-engineering/SKILL.md` for tag-first release cutting, release workflow validation, release-notes/doc synchronization, and release automation audits.
 - Release versioning rule: reserve patch (`X.Y.Z`) bumps for release-oriented non-functional fixes only. Use a minor or major bump for functional changes, new features, or user-visible behavior changes.
+
+## Roborev Workflow
+- Repo-local Roborev defaults live in `.roborev.toml`; review scope and operating notes live in `ROBOREV-CONTEXT.md`, `ROBOREV-LOCAL.md`, and `ROBOREV-PLAYBOOK.md`.
+- For new machines or fresh clones, use `ROBOREV-BOOTSTRAP.md` and `scripts/bootstrap-roborev-local.sh` instead of `roborev init`; this repo already tracks its Roborev config and hook scripts.
+- After every local commit in this repo, wait for the automatic Roborev review to finish with `roborev wait`, inspect it with `roborev show HEAD`, and address actionable findings before considering the work complete.
+- Use `scripts/roborev-matrix-review.sh HEAD^..HEAD` for an explicit two-agent commit-level gate, and `scripts/roborev-matrix-review.sh` for a branch-level gate before push or PR updates.
+- Read `.roborev/last-review.md` after the matrix script finishes and fix any concrete correctness, regression, build, packaging, or docs issues it identifies in the touched scope.

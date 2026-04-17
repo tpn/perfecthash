@@ -54,6 +54,7 @@ conda/out-*/
 .mypy_cache/
 .pytest_cache/
 .ruff_cache/
+.roborev/
 dist/
 htmlcov/
 *.egg-info/
