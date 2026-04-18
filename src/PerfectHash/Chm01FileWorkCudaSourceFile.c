@@ -300,7 +300,10 @@ SaveCudaSourceFileChm01(
     OUTPUT_RAW("number_of_table_elements] = {\n");
 
     if (UsingAssigned16) {
-        Source16 = Graph->Assigned16;
+        Source16 = (Graph && Graph->Assigned16) ? Graph->Assigned16 : Table->Assigned16;
+        if (!ARGUMENT_PRESENT(Source16)) {
+            return E_POINTER;
+        }
 
         for (Index = 0, Count = 0;
              Index < TotalNumberOfElements;
@@ -323,7 +326,10 @@ SaveCudaSourceFileChm01(
         }
 
     } else {
-        Source = Graph->Assigned;
+        Source = (Graph && Graph->Assigned) ? Graph->Assigned : Table->Assigned;
+        if (!ARGUMENT_PRESENT(Source)) {
+            return E_POINTER;
+        }
 
         for (Index = 0, Count = 0;
              Index < TotalNumberOfElements;

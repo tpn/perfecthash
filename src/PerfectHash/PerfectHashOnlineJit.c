@@ -1216,8 +1216,6 @@ PhOnlineJitGetCudaTableData(
     size_t CopySize;
     PVOID Buffer;
     PVOID Source;
-    PUCHAR DestBytes;
-    PUCHAR SourceBytes;
 
     if (!ARGUMENT_PRESENT(Table) ||
         !ARGUMENT_PRESENT(Table->Table) ||
