@@ -7,3 +7,10 @@ EXPORTS
     PerfectHashPrintError
     PerfectHashPrintCuError
     PerfectHashPrintMessage
+    PhOnlineJitGetCudaSource
+    PhOnlineJitGetCudaSourceEx
+    PhOnlineJitFreeCudaSource
+    PhOnlineJitGetCudaTableData
+    PhOnlineJitFreeCudaTableData
+    PhOnlineJitGetTableInfo
+    PhOnlineJitIndex32x2

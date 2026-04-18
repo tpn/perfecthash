@@ -127,6 +127,42 @@ PhMapOnlineJitHashFunction(
 
 static
 HRESULT
+PhMapPerfectHashHashFunctionToOnlineJit(
+    _In_ PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
+    _Out_ PH_ONLINE_JIT_HASH_FUNCTION *HashFunction
+    )
+{
+    if (!ARGUMENT_PRESENT(HashFunction)) {
+        return E_POINTER;
+    }
+
+    if (HashFunctionId == PerfectHashHashMultiplyShiftRFunctionId) {
+        *HashFunction = PhOnlineJitHashMultiplyShiftR;
+    } else if (HashFunctionId == PerfectHashHashMultiplyShiftLRFunctionId) {
+        *HashFunction = PhOnlineJitHashMultiplyShiftLR;
+    } else if (HashFunctionId == PerfectHashHashMultiplyShiftRMultiplyFunctionId) {
+        *HashFunction = PhOnlineJitHashMultiplyShiftRMultiply;
+    } else if (HashFunctionId == PerfectHashHashMultiplyShiftR2FunctionId) {
+        *HashFunction = PhOnlineJitHashMultiplyShiftR2;
+    } else if (HashFunctionId == PerfectHashHashMultiplyShiftRXFunctionId) {
+        *HashFunction = PhOnlineJitHashMultiplyShiftRX;
+    } else if (HashFunctionId == PerfectHashHashMulshrolate1RXFunctionId) {
+        *HashFunction = PhOnlineJitHashMulshrolate1RX;
+    } else if (HashFunctionId == PerfectHashHashMulshrolate2RXFunctionId) {
+        *HashFunction = PhOnlineJitHashMulshrolate2RX;
+    } else if (HashFunctionId == PerfectHashHashMulshrolate3RXFunctionId) {
+        *HashFunction = PhOnlineJitHashMulshrolate3RX;
+    } else if (HashFunctionId == PerfectHashHashMulshrolate4RXFunctionId) {
+        *HashFunction = PhOnlineJitHashMulshrolate4RX;
+    } else {
+        return E_INVALIDARG;
+    }
+
+    return S_OK;
+}
+
+static
+HRESULT
 PhApplyOnlineJitVectorWidth(
     _In_ ULONG VectorWidth,
     _Inout_ PPERFECT_HASH_TABLE_COMPILE_FLAGS CompileFlags
@@ -214,6 +250,447 @@ PhCompileOnlineJitBackend(
     return Context->Online->Vtbl->CompileTable(Context->Online,
                                                Table->Table,
                                                &CompileFlags);
+}
+
+static
+HRESULT
+PhEstimateCudaSourceBytes(
+    _In_ PPERFECT_HASH_TABLE Table,
+    _In_ ULONG Flags,
+    _Out_ PULONGLONG AllocationSizePointer
+    )
+{
+    PTABLE_INFO_ON_DISK TableInfo;
+    ULONGLONG NumberOfTableElements;
+    ULONGLONG TableElementBytes;
+    ULONGLONG ValuesPerLine;
+    ULONGLONG CharsPerValue;
+    ULONGLONG NumberOfLines;
+    ULONGLONG BaseSize;
+    ULONGLONG RequiredSize;
+
+    if (!ARGUMENT_PRESENT(Table) ||
+        !ARGUMENT_PRESENT(Table->TableInfoOnDisk) ||
+        !ARGUMENT_PRESENT(AllocationSizePointer)) {
+        return E_POINTER;
+    }
+
+    TableInfo = Table->TableInfoOnDisk;
+
+    NumberOfTableElements = TableInfo->NumberOfTableElements.QuadPart;
+
+    BaseSize = (Table->Context && Table->Context->SystemAllocationGranularity)
+        ? Table->Context->SystemAllocationGranularity
+        : 65536;
+    if ((Flags & PH_ONLINE_JIT_CUDA_SOURCE_FLAG_OMIT_TABLE_DATA) != 0) {
+        TableElementBytes = 0;
+    } else {
+        if (TableInfo->AssignedElementSizeInBytes == sizeof(USHORT)) {
+            ValuesPerLine = 4;
+            CharsPerValue = 12;
+        } else {
+            ValuesPerLine = 4;
+            CharsPerValue = 12;
+        }
+        NumberOfLines = (NumberOfTableElements + ValuesPerLine - 1) / ValuesPerLine;
+        TableElementBytes =
+            (NumberOfTableElements * CharsPerValue) +
+            (NumberOfLines * 4) +
+            32;
+    }
+
+    RequiredSize = (
+        BaseSize +
+        TableElementBytes +
+        (256 * 1024)
+    );
+
+    *AllocationSizePointer = ALIGN_UP(RequiredSize, BaseSize);
+
+    return S_OK;
+}
+
+#define PH_ONLINE_CUDA_INDENT() do {      \
+    *Output++ = ' ';                      \
+    *Output++ = ' ';                      \
+    *Output++ = ' ';                      \
+    *Output++ = ' ';                      \
+} while (0)
+
+static
+HRESULT
+PhEmitOnlineCudaSource(
+    _In_ PPERFECT_HASH_TABLE Table,
+    _In_ PCSTRING Name,
+    _In_ ULONG Flags,
+    _Out_ PCHAR Base,
+    _Out_ PULONGLONG NumberOfBytesWrittenPointer
+    )
+{
+    PCHAR Output;
+    ULONG Count;
+    ULONGLONG Index;
+    ULONG Seed1;
+    ULONG Seed2;
+    ULONG Seed3;
+    ULONG Seed4;
+    ULONG Seed5;
+    ULONG Seed3Byte1;
+    ULONG Seed3Byte2;
+    ULONG Seed3Byte3;
+    ULONG Seed3Byte4;
+    PULONG Source;
+    PUSHORT Source16;
+    BOOLEAN UsingAssigned16;
+    STRING DecimalString;
+    CHAR NumberOfKeysBuffer[32];
+    CHAR NumberOfTableElementsBuffer[32];
+    HRESULT Result = S_OK;
+    PTABLE_INFO_ON_DISK TableInfo;
+
+    if (!ARGUMENT_PRESENT(Table) ||
+        !ARGUMENT_PRESENT(Table->TableInfoOnDisk) ||
+        !ARGUMENT_PRESENT(Name) ||
+        !ARGUMENT_PRESENT(Name->Buffer) ||
+        !ARGUMENT_PRESENT(Base) ||
+        !ARGUMENT_PRESENT(NumberOfBytesWrittenPointer)) {
+        return E_POINTER;
+    }
+
+    TableInfo = Table->TableInfoOnDisk;
+    UsingAssigned16 = (TableInfo->AssignedElementSizeInBytes == sizeof(USHORT));
+    Seed1 = (TableInfo->NumberOfSeeds >= 1) ? TableInfo->Seed1 : 0;
+    Seed2 = (TableInfo->NumberOfSeeds >= 2) ? TableInfo->Seed2 : 0;
+    Seed3 = (TableInfo->NumberOfSeeds >= 3) ? TableInfo->Seed3 : 0;
+    Seed4 = (TableInfo->NumberOfSeeds >= 4) ? TableInfo->Seed4 : 0;
+    Seed5 = (TableInfo->NumberOfSeeds >= 5) ? TableInfo->Seed5 : 0;
+    Seed3Byte1 = (Seed3 & 0xff);
+    Seed3Byte2 = ((Seed3 >> 8) & 0xff);
+    Seed3Byte3 = ((Seed3 >> 16) & 0xff);
+    Seed3Byte4 = ((Seed3 >> 24) & 0xff);
+
+    Output = Base;
+    DecimalString.Buffer = NULL;
+    DecimalString.Length = 0;
+    DecimalString.MaximumLength = sizeof(NumberOfKeysBuffer);
+
+    OUTPUT_RAW("// Auto-generated by Perfect Hash online JIT.\n");
+    OUTPUT_RAW("#ifndef PERFECTHASH_ONLINE_JIT_INDEX_KERNEL_NAME\n");
+    OUTPUT_RAW("#define PERFECTHASH_ONLINE_JIT_INDEX_KERNEL_NAME index_kernel\n");
+    OUTPUT_RAW("#endif\n\n");
+    OUTPUT_RAW("#include <stddef.h>\n");
+    OUTPUT_RAW("#include <stdint.h>\n\n");
+
+    OUTPUT_RAW("namespace perfecthash::generated::");
+    OUTPUT_STRING(Name);
+    OUTPUT_RAW(" {\n\n");
+
+    OUTPUT_RAW("inline constexpr uint32_t algorithm_id = ");
+    OUTPUT_INT(Table->AlgorithmId);
+    OUTPUT_RAW("u;\n");
+    OUTPUT_RAW("inline constexpr uint32_t hash_function_id = ");
+    OUTPUT_INT(Table->HashFunctionId);
+    OUTPUT_RAW("u;\n");
+    OUTPUT_RAW("inline constexpr uint32_t mask_function_id = ");
+    OUTPUT_INT(Table->MaskFunctionId);
+    OUTPUT_RAW("u;\n\n");
+
+    OUTPUT_RAW("inline constexpr uint32_t key_size_bytes = ");
+    OUTPUT_INT(TableInfo->KeySizeInBytes);
+    OUTPUT_RAW("u;\n");
+    OUTPUT_RAW("inline constexpr uint32_t original_key_size_bytes = ");
+    OUTPUT_INT(TableInfo->OriginalKeySizeInBytes);
+    OUTPUT_RAW("u;\n");
+    OUTPUT_RAW("inline constexpr size_t number_of_keys = ");
+    DecimalString.Buffer = NumberOfKeysBuffer;
+    DecimalString.MaximumLength = sizeof(NumberOfKeysBuffer);
+    DecimalString.Length = 0;
+    AppendLongLongIntegerToString(&DecimalString,
+                                  TableInfo->NumberOfKeys.QuadPart,
+                                  CountNumberOfLongLongDigitsInline(
+                                      TableInfo->NumberOfKeys.QuadPart
+                                  ),
+                                  '\0');
+    OUTPUT_STRING(&DecimalString);
+    OUTPUT_RAW(";\n");
+    OUTPUT_RAW("inline constexpr size_t number_of_table_elements = ");
+    DecimalString.Buffer = NumberOfTableElementsBuffer;
+    DecimalString.MaximumLength = sizeof(NumberOfTableElementsBuffer);
+    DecimalString.Length = 0;
+    AppendLongLongIntegerToString(&DecimalString,
+                                  TableInfo->NumberOfTableElements.QuadPart,
+                                  CountNumberOfLongLongDigitsInline(
+                                      TableInfo->NumberOfTableElements.QuadPart
+                                  ),
+                                  '\0');
+    OUTPUT_STRING(&DecimalString);
+    OUTPUT_RAW(";\n\n");
+
+    OUTPUT_RAW("inline constexpr uint32_t hash_mask = ");
+    OUTPUT_HEX(TableInfo->HashMask);
+    OUTPUT_RAW("u;\n");
+    OUTPUT_RAW("inline constexpr uint32_t index_mask = ");
+    OUTPUT_HEX(TableInfo->IndexMask);
+    OUTPUT_RAW("u;\n");
+    OUTPUT_RAW("inline constexpr uint64_t downsize_bitmap = ");
+    OUTPUT_HEX64(Table->DownsizeBitmap);
+    OUTPUT_RAW("ULL;\n\n");
+
+    if (TableInfo->KeySizeInBytes <= 4) {
+        OUTPUT_RAW("using key_type = uint32_t;\n");
+    } else {
+        OUTPUT_RAW("using key_type = uint64_t;\n");
+    }
+
+    if (TableInfo->OriginalKeySizeInBytes <= 4) {
+        OUTPUT_RAW("using original_key_type = uint32_t;\n");
+    } else {
+        OUTPUT_RAW("using original_key_type = uint64_t;\n");
+    }
+
+    if (UsingAssigned16) {
+        OUTPUT_RAW("using table_data_type = uint16_t;\n\n");
+    } else {
+        OUTPUT_RAW("using table_data_type = uint32_t;\n\n");
+    }
+
+    if ((Flags & PH_ONLINE_JIT_CUDA_SOURCE_FLAG_OMIT_TABLE_DATA) != 0) {
+        OUTPUT_RAW("inline constexpr bool has_embedded_table_data = false;\n\n");
+    } else {
+        OUTPUT_RAW("inline constexpr bool has_embedded_table_data = true;\n\n");
+    }
+
+    OUTPUT_RAW("inline constexpr uint32_t seed1 = ");
+    OUTPUT_HEX(Seed1);
+    OUTPUT_RAW("u;\n");
+    OUTPUT_RAW("inline constexpr uint32_t seed2 = ");
+    OUTPUT_HEX(Seed2);
+    OUTPUT_RAW("u;\n");
+    OUTPUT_RAW("inline constexpr uint32_t seed3 = ");
+    OUTPUT_HEX(Seed3);
+    OUTPUT_RAW("u;\n");
+    OUTPUT_RAW("inline constexpr uint32_t seed4 = ");
+    OUTPUT_HEX(Seed4);
+    OUTPUT_RAW("u;\n");
+    OUTPUT_RAW("inline constexpr uint32_t seed5 = ");
+    OUTPUT_HEX(Seed5);
+    OUTPUT_RAW("u;\n");
+    OUTPUT_RAW("inline constexpr uint32_t seed3_byte1 = ");
+    OUTPUT_INT(Seed3Byte1);
+    OUTPUT_RAW("u;\n");
+    OUTPUT_RAW("inline constexpr uint32_t seed3_byte2 = ");
+    OUTPUT_INT(Seed3Byte2);
+    OUTPUT_RAW("u;\n");
+    OUTPUT_RAW("inline constexpr uint32_t seed3_byte3 = ");
+    OUTPUT_INT(Seed3Byte3);
+    OUTPUT_RAW("u;\n");
+    OUTPUT_RAW("inline constexpr uint32_t seed3_byte4 = ");
+    OUTPUT_INT(Seed3Byte4);
+    OUTPUT_RAW("u;\n\n");
+
+    if ((Flags & PH_ONLINE_JIT_CUDA_SOURCE_FLAG_OMIT_TABLE_DATA) == 0) {
+        OUTPUT_RAW("inline constexpr table_data_type table_data[number_of_table_elements] = {\n");
+        if (UsingAssigned16) {
+            Source16 = Table->Assigned16;
+            for (Index = 0, Count = 0; Index < TableInfo->NumberOfTableElements.QuadPart; Index++) {
+                if (Count == 0) {
+                    PH_ONLINE_CUDA_INDENT();
+                }
+                OUTPUT_HEX(*Source16++);
+                *Output++ = ',';
+                if (++Count == 8) {
+                    Count = 0;
+                    *Output++ = '\n';
+                } else {
+                    *Output++ = ' ';
+                }
+            }
+        } else {
+            Source = Table->Assigned;
+            for (Index = 0, Count = 0; Index < TableInfo->NumberOfTableElements.QuadPart; Index++) {
+                if (Count == 0) {
+                    PH_ONLINE_CUDA_INDENT();
+                }
+                OUTPUT_HEX(*Source++);
+                *Output++ = ',';
+                if (++Count == 4) {
+                    Count = 0;
+                    *Output++ = '\n';
+                } else {
+                    *Output++ = ' ';
+                }
+            }
+        }
+        if (*(Output - 1) == ' ') {
+            *(Output - 1) = '\n';
+        }
+        OUTPUT_RAW("};\n\n");
+    } else {
+        OUTPUT_RAW("// table_data is supplied by the consumer at runtime.\n\n");
+    }
+
+    OUTPUT_RAW("__host__ __device__ __forceinline__ uint64_t extract_bits64("
+               "uint64_t value, uint64_t bitmap) noexcept {\n");
+    OUTPUT_RAW("    uint64_t result = 0;\n");
+    OUTPUT_RAW("    uint64_t out_bit = 0;\n");
+    OUTPUT_RAW("    while (bitmap) {\n");
+    OUTPUT_RAW("        const uint64_t lsb = bitmap & (~bitmap + 1);\n");
+    OUTPUT_RAW("        if (value & lsb) {\n");
+    OUTPUT_RAW("            result |= (1ULL << out_bit);\n");
+    OUTPUT_RAW("        }\n");
+    OUTPUT_RAW("        bitmap ^= lsb;\n");
+    OUTPUT_RAW("        ++out_bit;\n");
+    OUTPUT_RAW("    }\n");
+    OUTPUT_RAW("    return result;\n");
+    OUTPUT_RAW("}\n\n");
+
+    OUTPUT_RAW("__host__ __device__ __forceinline__ constexpr uint64_t mask_from_bits(uint32_t bits) noexcept {\n");
+    OUTPUT_RAW("    return (bits >= 64u) ? ~0ULL : ((1ULL << bits) - 1ULL);\n");
+    OUTPUT_RAW("}\n");
+    OUTPUT_RAW("inline constexpr uint64_t key_mask = mask_from_bits(key_size_bytes * 8u);\n");
+    OUTPUT_RAW("inline constexpr uint64_t original_key_mask = mask_from_bits(original_key_size_bytes * 8u);\n\n");
+
+    OUTPUT_RAW("__host__ __device__ __forceinline__ key_type downsize_key("
+               "uint64_t key) noexcept {\n");
+    OUTPUT_RAW("    key &= original_key_mask;\n");
+    OUTPUT_RAW("    if (downsize_bitmap) {\n");
+    OUTPUT_RAW("        return static_cast<key_type>(extract_bits64(key, downsize_bitmap) & key_mask);\n");
+    OUTPUT_RAW("    }\n");
+    OUTPUT_RAW("    return static_cast<key_type>(key & key_mask);\n");
+    OUTPUT_RAW("}\n\n");
+
+    OUTPUT_RAW("__host__ __device__ __forceinline__ uint32_t rotr32("
+               "uint32_t value, uint32_t shift) noexcept {\n");
+    OUTPUT_RAW("    shift &= 31u;\n");
+    OUTPUT_RAW("    if (shift == 0u) { return value; }\n");
+    OUTPUT_RAW("    return (value >> shift) | (value << (32u - shift));\n");
+    OUTPUT_RAW("}\n\n");
+
+    OUTPUT_RAW("struct slot_pair_type {\n");
+    OUTPUT_RAW("    uint32_t first;\n");
+    OUTPUT_RAW("    uint32_t second;\n");
+    OUTPUT_RAW("};\n\n");
+
+    OUTPUT_RAW("__host__ __device__ __forceinline__ slot_pair_type slot_pair_from_key("
+               "original_key_type key) noexcept {\n");
+    OUTPUT_RAW("    const key_type downsized = downsize_key(static_cast<uint64_t>(key));\n");
+    if (Table->HashFunctionId == PerfectHashHashMultiplyShiftRFunctionId) {
+        OUTPUT_RAW("    key_type vertex1 = static_cast<key_type>(downsized * static_cast<key_type>(seed1));\n");
+        OUTPUT_RAW("    vertex1 >>= seed3_byte1;\n");
+        OUTPUT_RAW("    key_type vertex2 = static_cast<key_type>(downsized * static_cast<key_type>(seed2));\n");
+        OUTPUT_RAW("    vertex2 >>= seed3_byte2;\n");
+        OUTPUT_RAW("    return slot_pair_type{static_cast<uint32_t>(vertex1 & hash_mask), static_cast<uint32_t>(vertex2 & hash_mask)};\n");
+    } else if (Table->HashFunctionId == PerfectHashHashMultiplyShiftLRFunctionId) {
+        OUTPUT_RAW("    key_type vertex1 = static_cast<key_type>(downsized * static_cast<key_type>(seed1));\n");
+        OUTPUT_RAW("    vertex1 = static_cast<key_type>(vertex1 << seed3_byte1);\n");
+        OUTPUT_RAW("    key_type vertex2 = static_cast<key_type>(downsized * static_cast<key_type>(seed2));\n");
+        OUTPUT_RAW("    vertex2 >>= seed3_byte2;\n");
+        OUTPUT_RAW("    return slot_pair_type{static_cast<uint32_t>(vertex1 & hash_mask), static_cast<uint32_t>(vertex2 & hash_mask)};\n");
+    } else if (Table->HashFunctionId == PerfectHashHashMultiplyShiftRMultiplyFunctionId) {
+        OUTPUT_RAW("    key_type vertex1 = static_cast<key_type>(downsized * static_cast<key_type>(seed1));\n");
+        OUTPUT_RAW("    vertex1 >>= seed3_byte1;\n");
+        OUTPUT_RAW("    vertex1 = static_cast<key_type>(vertex1 * static_cast<key_type>(seed2));\n");
+        OUTPUT_RAW("    key_type vertex2 = static_cast<key_type>(downsized * static_cast<key_type>(seed4));\n");
+        OUTPUT_RAW("    vertex2 >>= seed3_byte2;\n");
+        OUTPUT_RAW("    vertex2 = static_cast<key_type>(vertex2 * static_cast<key_type>(seed5));\n");
+        OUTPUT_RAW("    return slot_pair_type{static_cast<uint32_t>(vertex1 & hash_mask), static_cast<uint32_t>(vertex2 & hash_mask)};\n");
+    } else if (Table->HashFunctionId == PerfectHashHashMultiplyShiftR2FunctionId) {
+        OUTPUT_RAW("    key_type vertex1 = static_cast<key_type>(downsized * static_cast<key_type>(seed1));\n");
+        OUTPUT_RAW("    vertex1 >>= seed3_byte1;\n");
+        OUTPUT_RAW("    vertex1 = static_cast<key_type>(vertex1 * static_cast<key_type>(seed2));\n");
+        OUTPUT_RAW("    vertex1 >>= seed3_byte2;\n");
+        OUTPUT_RAW("    key_type vertex2 = static_cast<key_type>(downsized * static_cast<key_type>(seed4));\n");
+        OUTPUT_RAW("    vertex2 >>= seed3_byte3;\n");
+        OUTPUT_RAW("    vertex2 = static_cast<key_type>(vertex2 * static_cast<key_type>(seed5));\n");
+        OUTPUT_RAW("    vertex2 >>= seed3_byte4;\n");
+        OUTPUT_RAW("    return slot_pair_type{static_cast<uint32_t>(vertex1 & hash_mask), static_cast<uint32_t>(vertex2 & hash_mask)};\n");
+    } else if (Table->HashFunctionId == PerfectHashHashMultiplyShiftRXFunctionId) {
+        OUTPUT_RAW("    key_type vertex1 = static_cast<key_type>(downsized * static_cast<key_type>(seed1));\n");
+        OUTPUT_RAW("    vertex1 >>= seed3_byte1;\n");
+        OUTPUT_RAW("    key_type vertex2 = static_cast<key_type>(downsized * static_cast<key_type>(seed2));\n");
+        OUTPUT_RAW("    vertex2 >>= seed3_byte1;\n");
+        OUTPUT_RAW("    return slot_pair_type{static_cast<uint32_t>(vertex1), static_cast<uint32_t>(vertex2)};\n");
+    } else if (Table->HashFunctionId == PerfectHashHashMulshrolate1RXFunctionId) {
+        OUTPUT_RAW("    const uint32_t downsized32 = static_cast<uint32_t>(downsized);\n");
+        OUTPUT_RAW("    uint32_t vertex1 = downsized32 * seed1;\n");
+        OUTPUT_RAW("    vertex1 = rotr32(vertex1, seed3_byte2);\n");
+        OUTPUT_RAW("    vertex1 >>= seed3_byte1;\n");
+        OUTPUT_RAW("    uint32_t vertex2 = downsized32 * seed2;\n");
+        OUTPUT_RAW("    vertex2 >>= seed3_byte1;\n");
+        OUTPUT_RAW("    return slot_pair_type{vertex1, vertex2};\n");
+    } else if (Table->HashFunctionId == PerfectHashHashMulshrolate2RXFunctionId) {
+        OUTPUT_RAW("    const uint32_t downsized32 = static_cast<uint32_t>(downsized);\n");
+        OUTPUT_RAW("    uint32_t vertex1 = downsized32 * seed1;\n");
+        OUTPUT_RAW("    vertex1 = rotr32(vertex1, seed3_byte2);\n");
+        OUTPUT_RAW("    vertex1 >>= seed3_byte1;\n");
+        OUTPUT_RAW("    uint32_t vertex2 = downsized32 * seed2;\n");
+        OUTPUT_RAW("    vertex2 = rotr32(vertex2, seed3_byte3);\n");
+        OUTPUT_RAW("    vertex2 >>= seed3_byte1;\n");
+        OUTPUT_RAW("    return slot_pair_type{vertex1, vertex2};\n");
+    } else if (Table->HashFunctionId == PerfectHashHashMulshrolate3RXFunctionId) {
+        OUTPUT_RAW("    const uint32_t downsized32 = static_cast<uint32_t>(downsized);\n");
+        OUTPUT_RAW("    uint32_t vertex1 = downsized32 * seed1;\n");
+        OUTPUT_RAW("    vertex1 = rotr32(vertex1, seed3_byte2);\n");
+        OUTPUT_RAW("    vertex1 = vertex1 * seed4;\n");
+        OUTPUT_RAW("    vertex1 >>= seed3_byte1;\n");
+        OUTPUT_RAW("    uint32_t vertex2 = downsized32 * seed2;\n");
+        OUTPUT_RAW("    vertex2 = rotr32(vertex2, seed3_byte3);\n");
+        OUTPUT_RAW("    vertex2 >>= seed3_byte1;\n");
+        OUTPUT_RAW("    return slot_pair_type{vertex1, vertex2};\n");
+    } else if (Table->HashFunctionId == PerfectHashHashMulshrolate4RXFunctionId) {
+        OUTPUT_RAW("    const uint32_t downsized32 = static_cast<uint32_t>(downsized);\n");
+        OUTPUT_RAW("    uint32_t vertex1 = downsized32 * seed1;\n");
+        OUTPUT_RAW("    vertex1 = rotr32(vertex1, seed3_byte2);\n");
+        OUTPUT_RAW("    vertex1 = vertex1 * seed4;\n");
+        OUTPUT_RAW("    vertex1 >>= seed3_byte1;\n");
+        OUTPUT_RAW("    uint32_t vertex2 = downsized32 * seed2;\n");
+        OUTPUT_RAW("    vertex2 = rotr32(vertex2, seed3_byte3);\n");
+        OUTPUT_RAW("    vertex2 = vertex2 * seed5;\n");
+        OUTPUT_RAW("    vertex2 >>= seed3_byte1;\n");
+        OUTPUT_RAW("    return slot_pair_type{vertex1, vertex2};\n");
+    } else {
+        return PH_E_NOT_IMPLEMENTED;
+    }
+    OUTPUT_RAW("}\n\n");
+
+    OUTPUT_RAW("__host__ __device__ __forceinline__ uint32_t index_from_key("
+               "original_key_type key, const table_data_type* table) noexcept {\n");
+    OUTPUT_RAW("    const slot_pair_type slots = slot_pair_from_key(key);\n");
+    OUTPUT_RAW("    const uint32_t value_low = static_cast<uint32_t>(table[slots.first]);\n");
+    OUTPUT_RAW("    const uint32_t value_high = static_cast<uint32_t>(table[slots.second]);\n");
+    OUTPUT_RAW("    return static_cast<uint32_t>((value_low + value_high) & index_mask);\n");
+    OUTPUT_RAW("}\n\n");
+
+    if ((Flags & PH_ONLINE_JIT_CUDA_SOURCE_FLAG_OMIT_KERNELS) == 0) {
+        if ((Flags & PH_ONLINE_JIT_CUDA_SOURCE_FLAG_OMIT_TABLE_DATA) != 0) {
+            OUTPUT_RAW("__global__ void PERFECTHASH_ONLINE_JIT_INDEX_KERNEL_NAME("
+                       "const original_key_type* query_keys, "
+                       "const table_data_type* table_data, "
+                       "uint32_t* out, size_t count) {\n");
+        } else {
+            OUTPUT_RAW("__global__ void PERFECTHASH_ONLINE_JIT_INDEX_KERNEL_NAME("
+                       "const original_key_type* query_keys, "
+                       "uint32_t* out, size_t count) {\n");
+        }
+        OUTPUT_RAW("    const size_t i = (blockIdx.x * blockDim.x) + threadIdx.x;\n");
+        OUTPUT_RAW("    if (i < count) {\n");
+        if ((Flags & PH_ONLINE_JIT_CUDA_SOURCE_FLAG_OMIT_TABLE_DATA) != 0) {
+            OUTPUT_RAW("        out[i] = index_from_key(query_keys[i], table_data);\n");
+        } else {
+            OUTPUT_RAW("        out[i] = index_from_key(query_keys[i], perfecthash::generated::");
+            OUTPUT_STRING(Name);
+            OUTPUT_RAW("::table_data);\n");
+        }
+        OUTPUT_RAW("    }\n");
+        OUTPUT_RAW("}\n\n");
+    }
+
+    OUTPUT_RAW("} // namespace perfecthash::generated::");
+    OUTPUT_STRING(Name);
+    OUTPUT_RAW("\n");
+
+    *NumberOfBytesWrittenPointer = RtlPointerToOffset(Base, Output);
+    return Result;
 }
 
 PH_ONLINE_JIT_API
@@ -482,7 +959,7 @@ PhOnlineJitCompileTableEx(
 {
     HRESULT Result;
     HRESULT LastResult;
-    ULONG CandidateWidths[4] = {0};
+    ULONG CandidateWidths[8] = {0};
     ULONG CandidateCount = 0;
     ULONG Index;
     BOOLEAN StrictVectorWidth;
@@ -607,27 +1084,296 @@ PhOnlineJitCompileTableEx(
         return LastResult;
     }
 
-    Result = PhCompileOnlineJitBackend(Context,
-                                       Table,
-                                       PhOnlineJitBackendLlvmJit,
-                                       VectorWidth,
-                                       JitMaxIsa);
-    if (SUCCEEDED(Result)) {
-        if (ARGUMENT_PRESENT(EffectiveBackend)) {
-            *EffectiveBackend = PhOnlineJitBackendLlvmJit;
+    for (Index = 0; Index < CandidateCount; Index++) {
+        Result = PhCompileOnlineJitBackend(Context,
+                                           Table,
+                                           PhOnlineJitBackendLlvmJit,
+                                           CandidateWidths[Index],
+                                           JitMaxIsa);
+        if (SUCCEEDED(Result)) {
+            if (ARGUMENT_PRESENT(EffectiveBackend)) {
+                *EffectiveBackend = PhOnlineJitBackendLlvmJit;
+            }
+            if (ARGUMENT_PRESENT(EffectiveVectorWidth)) {
+                *EffectiveVectorWidth = CandidateWidths[Index];
+            }
+            return S_OK;
         }
-        if (ARGUMENT_PRESENT(EffectiveVectorWidth)) {
-            *EffectiveVectorWidth = VectorWidth;
-        }
-        return S_OK;
-    }
 
-    if (Result != PH_E_LLVM_BACKEND_NOT_FOUND &&
-        Result != PH_E_NOT_IMPLEMENTED) {
-        return Result;
+        if (Result != PH_E_LLVM_BACKEND_NOT_FOUND &&
+            Result != PH_E_NOT_IMPLEMENTED &&
+            Result != PH_E_INVARIANT_CHECK_FAILED) {
+            return Result;
+        }
+
+        LastResult = Result;
     }
 
     return LastResult;
+}
+
+PH_ONLINE_JIT_API
+int32_t
+PhOnlineJitGetCudaSource(
+    PH_ONLINE_JIT_TABLE *Table,
+    char **SourceText,
+    size_t *SourceSize
+    )
+{
+    return PhOnlineJitGetCudaSourceEx(Table, 0, SourceText, SourceSize);
+}
+
+PH_ONLINE_JIT_API
+int32_t
+PhOnlineJitGetCudaSourceEx(
+    PH_ONLINE_JIT_TABLE *Table,
+    uint32_t Flags,
+    char **SourceText,
+    size_t *SourceSize
+    )
+{
+    HRESULT Result;
+    ULONGLONG AllocationSize;
+    PCHAR Buffer = NULL;
+    ULONGLONG NumberOfBytesWritten = 0;
+    STRING Name = {0};
+    CHAR NameBuffer[] = "online_jit_table";
+
+    if (!ARGUMENT_PRESENT(Table) ||
+        !ARGUMENT_PRESENT(Table->Table) ||
+        !ARGUMENT_PRESENT(SourceText)) {
+        return E_INVALIDARG;
+    }
+    if ((Flags & ~(PH_ONLINE_JIT_CUDA_SOURCE_FLAG_OMIT_KERNELS |
+                   PH_ONLINE_JIT_CUDA_SOURCE_FLAG_OMIT_TABLE_DATA)) != 0) {
+        return E_INVALIDARG;
+    }
+
+    *SourceText = NULL;
+    if (ARGUMENT_PRESENT(SourceSize)) {
+        *SourceSize = 0;
+    }
+
+    Result = PhEstimateCudaSourceBytes(Table->Table, Flags, &AllocationSize);
+    if (FAILED(Result)) {
+        return Result;
+    }
+    if (AllocationSize > ((ULONGLONG)~((size_t)0)) - 1) {
+        return E_OUTOFMEMORY;
+    }
+
+    Buffer = (PCHAR)calloc(1, (size_t)AllocationSize + 1);
+    if (!Buffer) {
+        return E_OUTOFMEMORY;
+    }
+
+    Name.Buffer = NameBuffer;
+    Name.Length = sizeof(NameBuffer) - sizeof(CHAR);
+    Name.MaximumLength = sizeof(NameBuffer);
+
+    Result = PhEmitOnlineCudaSource(Table->Table,
+                                    &Name,
+                                    Flags,
+                                    Buffer,
+                                    &NumberOfBytesWritten);
+    if (FAILED(Result)) {
+        free(Buffer);
+        return Result;
+    }
+
+    Buffer[NumberOfBytesWritten] = '\0';
+
+    *SourceText = Buffer;
+    if (ARGUMENT_PRESENT(SourceSize)) {
+        *SourceSize = (size_t)NumberOfBytesWritten;
+    }
+
+    return S_OK;
+}
+
+PH_ONLINE_JIT_API
+void
+PhOnlineJitFreeCudaSource(
+    char *SourceText
+    )
+{
+    free(SourceText);
+}
+
+PH_ONLINE_JIT_API
+int32_t
+PhOnlineJitGetCudaTableData(
+    PH_ONLINE_JIT_TABLE *Table,
+    void **TableData,
+    size_t *TableDataSize,
+    uint32_t *TableDataElementSize,
+    size_t *NumberOfTableElements
+    )
+{
+    PTABLE_INFO_ON_DISK TableInfo;
+    ULONGLONG NumberOfTableElements64;
+    ULONG ElementSizeInBytes;
+    size_t CopySize;
+    PVOID Buffer;
+    PVOID Source;
+
+    if (!ARGUMENT_PRESENT(Table) ||
+        !ARGUMENT_PRESENT(Table->Table) ||
+        !ARGUMENT_PRESENT(TableData) ||
+        !ARGUMENT_PRESENT(Table->Table->TableInfoOnDisk)) {
+        return E_INVALIDARG;
+    }
+
+    *TableData = NULL;
+    if (ARGUMENT_PRESENT(TableDataSize)) {
+        *TableDataSize = 0;
+    }
+    if (ARGUMENT_PRESENT(TableDataElementSize)) {
+        *TableDataElementSize = 0;
+    }
+    if (ARGUMENT_PRESENT(NumberOfTableElements)) {
+        *NumberOfTableElements = 0;
+    }
+
+    TableInfo = Table->Table->TableInfoOnDisk;
+    NumberOfTableElements64 = TableInfo->NumberOfTableElements.QuadPart;
+    ElementSizeInBytes = TableInfo->AssignedElementSizeInBytes;
+    if (ElementSizeInBytes == 0) {
+        return E_INVALIDARG;
+    }
+    if (NumberOfTableElements64 >
+        (((ULONGLONG)~((size_t)0)) / (ULONGLONG)ElementSizeInBytes)) {
+        return E_OUTOFMEMORY;
+    }
+    CopySize = (size_t)(NumberOfTableElements64 * (ULONGLONG)ElementSizeInBytes);
+
+    if (ElementSizeInBytes == sizeof(USHORT)) {
+        Source = Table->Table->Assigned16;
+    } else if (ElementSizeInBytes == sizeof(ULONG)) {
+        Source = Table->Table->Assigned;
+    } else {
+        return PH_E_NOT_IMPLEMENTED;
+    }
+
+    if (Source == NULL) {
+        return E_POINTER;
+    }
+
+    Buffer = malloc(CopySize);
+    if (Buffer == NULL) {
+        return E_OUTOFMEMORY;
+    }
+
+    memmove(Buffer, Source, CopySize);
+
+    *TableData = Buffer;
+    if (ARGUMENT_PRESENT(TableDataSize)) {
+        *TableDataSize = CopySize;
+    }
+    if (ARGUMENT_PRESENT(TableDataElementSize)) {
+        *TableDataElementSize = ElementSizeInBytes;
+    }
+    if (ARGUMENT_PRESENT(NumberOfTableElements)) {
+        *NumberOfTableElements = (size_t)NumberOfTableElements64;
+    }
+
+    return S_OK;
+}
+
+PH_ONLINE_JIT_API
+void
+PhOnlineJitFreeCudaTableData(
+    void *TableData
+    )
+{
+    free(TableData);
+}
+
+PH_ONLINE_JIT_API
+int32_t
+PhOnlineJitGetTableInfo(
+    PH_ONLINE_JIT_TABLE *Table,
+    PH_ONLINE_JIT_TABLE_INFO *TableInfo
+    )
+{
+    HRESULT Result;
+    PTABLE_INFO_ON_DISK Info;
+
+    if (!ARGUMENT_PRESENT(Table) ||
+        !ARGUMENT_PRESENT(Table->Table) ||
+        !ARGUMENT_PRESENT(TableInfo) ||
+        !ARGUMENT_PRESENT(Table->Table->TableInfoOnDisk)) {
+        return E_INVALIDARG;
+    }
+
+    Info = Table->Table->TableInfoOnDisk;
+    {
+        PUCHAR TableInfoBytes = (PUCHAR)TableInfo;
+        for (size_t Offset = 0; Offset < sizeof(*TableInfo); Offset++) {
+            TableInfoBytes[Offset] = 0;
+        }
+    }
+
+    TableInfo->KeySizeInBytes = Info->KeySizeInBytes;
+    TableInfo->OriginalKeySizeInBytes = Info->OriginalKeySizeInBytes;
+    TableInfo->AssignedElementSizeInBytes = Info->AssignedElementSizeInBytes;
+    {
+        PH_ONLINE_JIT_HASH_FUNCTION PublicHashFunction;
+
+        Result = PhMapPerfectHashHashFunctionToOnlineJit(
+            Table->Table->HashFunctionId,
+            &PublicHashFunction
+        );
+        if (FAILED(Result)) {
+            return Result;
+        }
+        TableInfo->HashFunctionId = (uint32_t)PublicHashFunction;
+    }
+    TableInfo->MaskFunctionId = Table->Table->MaskFunctionId;
+    TableInfo->HashMask = Info->HashMask;
+    TableInfo->IndexMask = Info->IndexMask;
+    TableInfo->Seed1 = Info->Seed1;
+    TableInfo->Seed2 = Info->Seed2;
+    TableInfo->Seed3 = Info->Seed3;
+    TableInfo->Seed4 = Info->Seed4;
+    TableInfo->Seed5 = Info->Seed5;
+    TableInfo->NumberOfKeys = Info->NumberOfKeys.QuadPart;
+    TableInfo->NumberOfTableElements = Info->NumberOfTableElements.QuadPart;
+    TableInfo->DownsizeBitmap = Table->Table->DownsizeBitmap;
+
+    return S_OK;
+}
+
+PH_ONLINE_JIT_API
+int32_t
+PhOnlineJitIndex32x2(
+    PH_ONLINE_JIT_TABLE *Table,
+    const uint32_t *Keys,
+    uint32_t *Indexes
+    )
+{
+    HRESULT Result;
+    PPERFECT_HASH_TABLE_JIT_INTERFACE Jit;
+
+    if (!ARGUMENT_PRESENT(Table) ||
+        !ARGUMENT_PRESENT(Keys) ||
+        !ARGUMENT_PRESENT(Indexes)) {
+        return E_INVALIDARG;
+    }
+
+    Result = PhEnsureOnlineJitInterface(Table);
+    if (FAILED(Result)) {
+        return Result;
+    }
+
+    Jit = Table->JitInterface;
+    return Jit->Vtbl->Index32x2(
+        Jit,
+        (ULONG)Keys[0],
+        (ULONG)Keys[1],
+        (PULONG)&Indexes[0],
+        (PULONG)&Indexes[1]
+    );
 }
 
 PH_ONLINE_JIT_API

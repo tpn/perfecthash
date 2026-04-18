@@ -29,10 +29,13 @@ list(REMOVE_DUPLICATES _ph_search_hints)
 
 find_path(
     PERFECTHASH_ONLINE_RAWDOG_INCLUDE_DIR
-    NAMES PerfectHashOnlineRawdog.h
+    NAMES
+        PerfectHash/PerfectHashOnlineRawdog.h
+        PerfectHashOnlineRawdog.h
     HINTS ${_ph_search_hints}
     PATH_SUFFIXES
         include
+        .
 )
 
 set(_ph_lib_suffixes)
