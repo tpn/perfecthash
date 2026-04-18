@@ -70,13 +70,19 @@ def main():
     with summary_path.open() as f:
         summary = json.load(f)
 
-    build_keys = set(read_u64_file(Path(summary["build_keys"]["path"])))
+    def resolve_summary_path(path_text: str) -> Path:
+        path = Path(path_text)
+        if path.is_absolute():
+            return path
+        return candidate_dir / path
+
+    build_keys = set(read_u64_file(resolve_summary_path(summary["build_keys"]["path"])))
     probe_count = summary["probe_stream"]["count"]
-    probe_path = Path(summary["probe_stream"]["path"])
+    probe_path = resolve_summary_path(summary["probe_stream"]["path"])
 
     for subset_name in ["top1pct_distinct_keys", "top10pct_distinct_keys"]:
         subset_info = summary[subset_name]
-        probe_hot_distinct = read_u64_file(Path(subset_info["path"]))
+        probe_hot_distinct = read_u64_file(resolve_summary_path(subset_info["path"]))
         build_hot_distinct = sorted(set(probe_hot_distinct).intersection(build_keys))
 
         tag = "top10pct" if subset_name.startswith("top10") else "top1pct"

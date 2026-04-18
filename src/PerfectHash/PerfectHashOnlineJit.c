@@ -286,8 +286,8 @@ PhEstimateCudaSourceBytes(
         TableElementBytes = 0;
     } else {
         if (TableInfo->AssignedElementSizeInBytes == sizeof(USHORT)) {
-            ValuesPerLine = 8;
-            CharsPerValue = 8;
+            ValuesPerLine = 4;
+            CharsPerValue = 12;
         } else {
             ValuesPerLine = 4;
             CharsPerValue = 12;
@@ -1158,6 +1158,9 @@ PhOnlineJitGetCudaSourceEx(
     if (FAILED(Result)) {
         return Result;
     }
+    if (AllocationSize > ((ULONGLONG)~((size_t)0)) - 1) {
+        return E_OUTOFMEMORY;
+    }
 
     Buffer = (PCHAR)calloc(1, (size_t)AllocationSize + 1);
     if (!Buffer) {
@@ -1263,11 +1266,7 @@ PhOnlineJitGetCudaTableData(
         return E_OUTOFMEMORY;
     }
 
-    DestBytes = (PUCHAR)Buffer;
-    SourceBytes = (PUCHAR)Source;
-    for (size_t Offset = 0; Offset < CopySize; Offset++) {
-        DestBytes[Offset] = SourceBytes[Offset];
-    }
+    memmove(Buffer, Source, CopySize);
 
     *TableData = Buffer;
     if (ARGUMENT_PRESENT(TableDataSize)) {
