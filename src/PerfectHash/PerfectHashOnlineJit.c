@@ -1213,6 +1213,8 @@ PhOnlineJitGetCudaTableData(
     size_t CopySize;
     PVOID Buffer;
     PVOID Source;
+    PUCHAR DestBytes;
+    PUCHAR SourceBytes;
 
     if (!ARGUMENT_PRESENT(Table) ||
         !ARGUMENT_PRESENT(Table->Table) ||
@@ -1261,7 +1263,11 @@ PhOnlineJitGetCudaTableData(
         return E_OUTOFMEMORY;
     }
 
-    memcpy(Buffer, Source, CopySize);
+    DestBytes = (PUCHAR)Buffer;
+    SourceBytes = (PUCHAR)Source;
+    for (size_t Offset = 0; Offset < CopySize; Offset++) {
+        DestBytes[Offset] = SourceBytes[Offset];
+    }
 
     *TableData = Buffer;
     if (ARGUMENT_PRESENT(TableDataSize)) {
@@ -1304,7 +1310,12 @@ PhOnlineJitGetTableInfo(
     }
 
     Info = Table->Table->TableInfoOnDisk;
-    memset(TableInfo, 0, sizeof(*TableInfo));
+    {
+        PUCHAR TableInfoBytes = (PUCHAR)TableInfo;
+        for (size_t Offset = 0; Offset < sizeof(*TableInfo); Offset++) {
+            TableInfoBytes[Offset] = 0;
+        }
+    }
 
     TableInfo->KeySizeInBytes = Info->KeySizeInBytes;
     TableInfo->OriginalKeySizeInBytes = Info->OriginalKeySizeInBytes;

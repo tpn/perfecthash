@@ -119,6 +119,7 @@ SaveCudaSourceFileChm01(
     PPERFECT_HASH_PATH Path;
     PPERFECT_HASH_FILE File;
     PPERFECT_HASH_TABLE Table;
+    PGRAPH Graph;
     PTABLE_INFO_ON_DISK TableInfo;
     ULONGLONG TotalNumberOfElements;
     const ULONG Indent = 0x20202020;
@@ -134,6 +135,7 @@ SaveCudaSourceFileChm01(
     Path = GetActivePath(File);
     Name = &Path->TableNameA;
     TableInfo = Table->TableInfoOnDisk;
+    Graph = (PGRAPH)Context->SolvedContext;
     TotalNumberOfElements = TableInfo->NumberOfTableElements.QuadPart;
     NumberOfSeeds = TableInfo->NumberOfSeeds;
     NumberOfKeys = Keys->NumberOfKeys.QuadPart;
@@ -298,7 +300,7 @@ SaveCudaSourceFileChm01(
     OUTPUT_RAW("number_of_table_elements] = {\n");
 
     if (UsingAssigned16) {
-        Source16 = Table->Assigned16;
+        Source16 = Graph->Assigned16;
 
         for (Index = 0, Count = 0;
              Index < TotalNumberOfElements;
@@ -321,7 +323,7 @@ SaveCudaSourceFileChm01(
         }
 
     } else {
-        Source = Table->Assigned;
+        Source = Graph->Assigned;
 
         for (Index = 0, Count = 0;
              Index < TotalNumberOfElements;
