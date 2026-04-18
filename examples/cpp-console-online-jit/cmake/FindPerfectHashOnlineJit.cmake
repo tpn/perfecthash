@@ -108,6 +108,7 @@ endif()
 find_library(
     PERFECTHASH_ONLINE_JIT_LIBRARY
     NAMES
+        PerfectHashOnlineCore
         PerfectHashOnline
     HINTS ${_ph_search_hints}
     PATH_SUFFIXES ${_ph_lib_suffixes}
@@ -143,6 +144,7 @@ if(WIN32)
     find_file(
         PERFECTHASH_ONLINE_JIT_RUNTIME_DLL
         NAMES
+            PerfectHashOnlineCore.dll
             PerfectHashOnline.dll
         HINTS
             ${_ph_search_hints}
