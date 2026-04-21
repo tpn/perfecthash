@@ -478,6 +478,43 @@ CopyCoverage(
 //  artifact of the reduced memory footprint of each solver graph.)
 //
 
+typedef UCHAR EDGE8;
+typedef UCHAR ASSIGNED8;
+typedef ASSIGNED8 *PASSIGNED8;
+
+typedef UCHAR KEY8;
+typedef CHAR ORDER8;
+typedef UCHAR VERTEX8;
+typedef UCHAR DEGREE8;
+
+typedef EDGE8 *PEDGE8;
+typedef VERTEX8 *PVERTEX8;
+typedef DEGREE8 *PDEGREE8;
+
+typedef union _VERTEX8_PAIR {
+    struct {
+        VERTEX8 Vertex1;
+        VERTEX8 Vertex2;
+    };
+    USHORT AsUShort;
+} VERTEX8_PAIR, *PVERTEX8_PAIR;
+C_ASSERT(sizeof(VERTEX8_PAIR) == sizeof(USHORT));
+
+typedef union _EDGE83 {
+    struct {
+        VERTEX8 Vertex1;
+        VERTEX8 Vertex2;
+    };
+    VERTEX8_PAIR AsVertex8Pair;
+    USHORT AsUShort;
+} EDGE83, *PEDGE83;
+
+typedef struct _VERTEX83 {
+    DEGREE8 Degree;
+    EDGE8 Edges;
+} VERTEX83, *PVERTEX83;
+C_ASSERT(sizeof(VERTEX83) == sizeof(USHORT));
+
 typedef USHORT EDGE16;
 typedef USHORT ASSIGNED16;
 typedef ASSIGNED16 *PASSIGNED16;
@@ -869,6 +906,7 @@ typedef union _GRAPH_FLAGS {
         // active.
         //
 
+        ULONG UsingAssigned8:1;
         ULONG UsingAssigned16:1;
 
         //
@@ -917,7 +955,7 @@ typedef union _GRAPH_FLAGS {
         // Unused bits.
         //
 
-        ULONG Unused:9;
+        ULONG Unused:8;
     };
     LONG AsLong;
     ULONG AsULong;
@@ -941,6 +979,7 @@ C_ASSERT(sizeof(GRAPH_FLAGS) == sizeof(ULONG));
 #define WantsCuRandomHostSeeds(Graph) \
     ((Graph)->Flags.WantsCuRandomHostSeeds != FALSE)
 #define IsGraphParanoid(Graph) ((Graph)->Flags.Paranoid != FALSE)
+#define IsUsingAssigned8(Graph) ((Graph)->Flags.UsingAssigned8 != FALSE)
 #define IsUsingAssigned16(Graph) ((Graph)->Flags.UsingAssigned16 != FALSE)
 #define IsCudaDebugGraph(Graph) ((Graph)->Flags.DebugCudaChm02 != FALSE)
 
@@ -1605,6 +1644,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
 
     union {
         volatile LONG OrderIndex;
+        volatile CHAR Order8Index;
         volatile SHORT Order16Index;
     };
 
@@ -1672,6 +1712,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     _Writable_elements_(NumberOfKeys)
     union {
         PLONG Order;
+        PCHAR Order8;
         PSHORT Order16;
     };
 
@@ -1702,6 +1743,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     _Writable_elements_(NumberOfVertices)
     union {
         PASSIGNED Assigned;
+        PASSIGNED8 Assigned8;
         PASSIGNED16 Assigned16;
     };
 
@@ -1712,6 +1754,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     _Writable_elements_(NumberOfVertices)
     union {
         PVERTEX3 Vertices3;
+        PVERTEX83 Vertices83;
         PVERTEX163 Vertices163;
     };
 
@@ -1741,6 +1784,11 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
         union {
             PVERTEX16_PAIR Vertex16Pairs;
             PEDGE163 Edges163;
+        };
+
+        union {
+            PVERTEX8_PAIR Vertex8Pairs;
+            PEDGE83 Edges83;
         };
     };
 

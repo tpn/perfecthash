@@ -561,7 +561,8 @@ Return Value:
         //      just PH_RAISE() instead.
         //
 
-        if (Table->State.UsingAssigned16 == FALSE) {
+        if (Table->State.UsingAssigned16 == FALSE &&
+            Table->State.UsingAssigned8 == FALSE) {
             PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
         }
 

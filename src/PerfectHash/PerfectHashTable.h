@@ -60,6 +60,13 @@ typedef union _PERFECT_HASH_TABLE_STATE {
         ULONG AutoResize:1;
 
         //
+        // When set, indicates the 8-bit graph/assigned infrastructure is
+        // active.
+        //
+
+        ULONG UsingAssigned8:1;
+
+        //
         // When set, indicates the 16-bit hash/assigned infrastructure is
         // active.
         //
@@ -76,7 +83,7 @@ typedef union _PERFECT_HASH_TABLE_STATE {
         // Unused bits.
         //
 
-        ULONG Unused:26;
+        ULONG Unused:25;
     };
     LONG AsLong;
     ULONG AsULong;
@@ -559,7 +566,13 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     ULONGLONG DownsizeShiftedMask;
     BYTE DownsizeTrailingZeros;
     BYTE DownsizeContiguous;
-    BYTE DownsizePadding[6];
+    BYTE DownsizePadding[2];
+    ULONG GraphImpl4EffectiveKeySizeInBytes;
+    ULONG GraphImpl4KeyDownsizeBitmap;
+    ULONG GraphImpl4KeyDownsizeShiftedMask;
+    BYTE GraphImpl4KeyDownsizeTrailingZeros;
+    BYTE GraphImpl4KeyDownsizeContiguous;
+    BYTE GraphImpl4Padding[2];
 
     //
     // If we're in "find best coverage" mode, a pointer to an assigned memory
@@ -598,6 +611,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     //
 
     union {
+        PBYTE Assigned8;
         PULONG Assigned;
         PUSHORT Assigned16;
         PULONG TableData;

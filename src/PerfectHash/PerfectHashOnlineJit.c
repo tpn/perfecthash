@@ -682,6 +682,21 @@ PhOnlineJitIndex64(
         return PH_E_NOT_IMPLEMENTED;
     }
     DownsizedKey = (ULONG)ExtractBits64((ULONGLONG)Key, Table->Table->DownsizeBitmap);
+    if (Table->Table->GraphImpl == 4 &&
+        Table->Table->GraphImpl4EffectiveKeySizeInBytes < sizeof(ULONG) &&
+        Table->Table->GraphImpl4KeyDownsizeBitmap != 0) {
+        if (Table->Table->GraphImpl4KeyDownsizeContiguous) {
+            DownsizedKey = (ULONG)(
+                (DownsizedKey >> Table->Table->GraphImpl4KeyDownsizeTrailingZeros) &
+                Table->Table->GraphImpl4KeyDownsizeShiftedMask
+            );
+        } else {
+            DownsizedKey = (ULONG)ExtractBits64(
+                (ULONGLONG)DownsizedKey,
+                Table->Table->GraphImpl4KeyDownsizeBitmap
+            );
+        }
+    }
     return Table->Table->Vtbl->Index(Table->Table, DownsizedKey, (PULONG)Index);
 }
 

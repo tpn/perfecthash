@@ -15,6 +15,88 @@ Abstract:
 #include "stdafx.h"
 #include "Chm01.h"
 #include "Chm01Private.h"
+#include "GraphImpl4.h"
+
+static
+ULONGLONG
+ComposeGraphImpl4DownsizeBitmap(
+    _In_ ULONGLONG OuterBitmap,
+    _In_ ULONG InnerBitmap
+    )
+{
+    ULONG DenseIndex;
+    ULONGLONG Result;
+    ULONGLONG Bit;
+
+    DenseIndex = 0;
+    Result = 0;
+
+    while (OuterBitmap != 0) {
+        Bit = OuterBitmap & (~OuterBitmap + 1ULL);
+        if ((InnerBitmap & (1UL << DenseIndex)) != 0) {
+            Result |= Bit;
+        }
+        OuterBitmap ^= Bit;
+        DenseIndex++;
+    }
+
+    return Result;
+}
+
+static
+VOID
+InitializeGraphImpl4KeyMetadata(
+    _In_ PPERFECT_HASH_TABLE Table
+    )
+{
+    ULONG Bitmap;
+    BYTE Trailing;
+    ULONGLONG FinalBitmap;
+    PPERFECT_HASH_KEYS Keys;
+    PPERFECT_HASH_KEYS_BITMAP KeysBitmap;
+
+    Keys = Table->Keys;
+    KeysBitmap = &Keys->Stats.KeysBitmap;
+    Bitmap = (ULONG)KeysBitmap->Bitmap;
+
+    Table->GraphImpl4EffectiveKeySizeInBytes = sizeof(ULONG);
+    Table->GraphImpl4KeyDownsizeBitmap = 0;
+    Table->GraphImpl4KeyDownsizeShiftedMask = 0;
+    Table->GraphImpl4KeyDownsizeTrailingZeros = 0;
+    Table->GraphImpl4KeyDownsizeContiguous = FALSE;
+
+    if (KeysBitmap->NumberOfSetBits <= 8) {
+        Table->GraphImpl4EffectiveKeySizeInBytes = sizeof(BYTE);
+    } else if (KeysBitmap->NumberOfSetBits <= 16) {
+        Table->GraphImpl4EffectiveKeySizeInBytes = sizeof(USHORT);
+    }
+
+    if (Table->GraphImpl4EffectiveKeySizeInBytes >= sizeof(ULONG)) {
+        return;
+    }
+
+    Table->GraphImpl4KeyDownsizeBitmap = Bitmap;
+    Table->GraphImpl4KeyDownsizeContiguous = KeysBitmap->Flags.Contiguous;
+    Table->GraphImpl4KeyDownsizeShiftedMask = (ULONG)KeysBitmap->ShiftedMask;
+    Table->GraphImpl4KeyDownsizeTrailingZeros = KeysBitmap->TrailingZeros;
+
+    if (KeysWereDownsized(Keys)) {
+        FinalBitmap = ComposeGraphImpl4DownsizeBitmap(Keys->DownsizeBitmap,
+                                                      Bitmap);
+
+        Table->State.DownsizeMetadataValid = TRUE;
+        Table->DownsizeBitmap = FinalBitmap;
+        Trailing = (BYTE)Table->Rtl->TrailingZeros64(FinalBitmap);
+        Table->DownsizeTrailingZeros = Trailing;
+        if (KeysBitmap->Flags.Contiguous) {
+            Table->DownsizeShiftedMask = KeysBitmap->ShiftedMask;
+            Table->DownsizeContiguous = TRUE;
+        } else {
+            Table->DownsizeShiftedMask = 0;
+            Table->DownsizeContiguous = FALSE;
+        }
+    }
+}
 
 PREPARE_GRAPH_INFO PrepareGraphInfoChm01;
 
@@ -72,6 +154,7 @@ Return Value:
     BYTE AssignedShift;
     ULONG GraphImpl;
     ULONG NumberOfKeys;
+    BOOLEAN UseAssigned8;
     BOOLEAN UseAssigned16;
     USHORT NumberOfBitmaps;
     PGRAPH_DIMENSIONS Dim;
@@ -170,6 +253,16 @@ Return Value:
     //
 
     NumberOfEdges.QuadPart = NumberOfKeys;
+
+    UseAssigned8 = FALSE;
+    UseAssigned16 = FALSE;
+    Table->State.UsingAssigned8 = FALSE;
+    Table->State.UsingAssigned16 = FALSE;
+    Table->GraphImpl4EffectiveKeySizeInBytes = 0;
+    Table->GraphImpl4KeyDownsizeBitmap = 0;
+    Table->GraphImpl4KeyDownsizeShiftedMask = 0;
+    Table->GraphImpl4KeyDownsizeTrailingZeros = 0;
+    Table->GraphImpl4KeyDownsizeContiguous = FALSE;
 
     //
     // Make sure we have at least 8 edges; this ensures the assigned array
@@ -373,7 +466,55 @@ Return Value:
     //  3) Order16Index is a signed SHORT, so NumberOfKeys <= 32767
     //
 
-    if ((GraphImpl == 3) &&
+    if ((GraphImpl == 4) &&
+        FindBestMemoryCoverage(Context)) {
+        Result = PH_E_NOT_IMPLEMENTED;
+        goto Error;
+    }
+
+    if ((GraphImpl == 4) &&
+        !IsGoodPerfectHashHashFunctionId(Table->HashFunctionId)) {
+        Result = PH_E_NOT_IMPLEMENTED;
+        goto Error;
+    }
+
+    if ((GraphImpl == 4) &&
+        (Table->Keys->KeySizeInBytes > sizeof(ULONG))) {
+        Result = PH_E_NOT_IMPLEMENTED;
+        goto Error;
+    }
+
+    if (GraphImpl == 4) {
+        InitializeGraphImpl4KeyMetadata(Table);
+
+        if ((TableCreateFlags.DoNotTryUseHash16Impl == FALSE) &&
+            ((NumberOfVertices.LowPart - 1) <= 0x000000ff) &&
+            (NumberOfEdges.LowPart <= 0x00000080) &&
+            (NumberOfKeys <= 0x0000007f)) {
+
+            UseAssigned8 = TRUE;
+            AssignedShift = 0;
+            Table->State.UsingAssigned8 = TRUE;
+
+        } else if ((TableCreateFlags.DoNotTryUseHash16Impl == FALSE) &&
+                   ((NumberOfVertices.LowPart - 1) <= 0x0000ffff) &&
+                   (NumberOfEdges.LowPart <= 0x00008000) &&
+                   (NumberOfKeys <= 0x00007fff)) {
+
+            UseAssigned16 = TRUE;
+            AssignedShift = ASSIGNED16_SHIFT;
+            Table->State.UsingAssigned16 = TRUE;
+
+        } else {
+
+            AssignedShift = ASSIGNED_SHIFT;
+        }
+
+        Table->Vtbl->Index = PerfectHashTableIndexImpl4Chm01;
+        Table->Vtbl->FastIndex = NULL;
+        Table->Vtbl->SlowIndex = NULL;
+
+    } else if ((GraphImpl == 3) &&
         ((NumberOfVertices.LowPart - 1) <= 0x0000ffff) &&
         (NumberOfEdges.LowPart <= 0x00008000) &&
         (NumberOfKeys <= 0x00007fff) &&
@@ -445,7 +586,7 @@ Return Value:
     // Calculate the sizes required for each of the arrays.
     //
 
-    if (GraphImpl == 1 || GraphImpl == 2) {
+        if (GraphImpl == 1 || GraphImpl == 2) {
 
         EdgesSizeInBytes = ALIGN_UP_YMMWORD(
             RTL_ELEMENT_SIZE(GRAPH, Edges) * TotalNumberOfEdges.QuadPart
@@ -471,25 +612,25 @@ Return Value:
 
     } else {
 
-        ASSERT(GraphImpl == 3);
+        ASSERT(GraphImpl == 3 || GraphImpl == 4);
 
         EdgesSizeInBytes = 0;
         NextSizeInBytes = 0;
         FirstSizeInBytes = 0;
 
-        if (!UseAssigned16) {
+        if (UseAssigned8) {
 
             VertexPairsSizeInBytes = ALIGN_UP_YMMWORD(
-                RTL_ELEMENT_SIZE(GRAPH, VertexPairs) *
+                RTL_ELEMENT_SIZE(GRAPH, Vertex8Pairs) *
                 (ULONGLONG)NumberOfKeys
             );
 
             Vertices3SizeInBytes = ALIGN_UP_YMMWORD(
-                RTL_ELEMENT_SIZE(GRAPH, Vertices3) *
+                RTL_ELEMENT_SIZE(GRAPH, Vertices83) *
                 NumberOfVertices.QuadPart
             );
 
-        } else {
+        } else if (UseAssigned16) {
 
             VertexPairsSizeInBytes = ALIGN_UP_YMMWORD(
                 RTL_ELEMENT_SIZE(GRAPH, Vertex16Pairs) *
@@ -501,22 +642,33 @@ Return Value:
                 NumberOfVertices.QuadPart
             );
 
+        } else {
+
+            VertexPairsSizeInBytes = ALIGN_UP_YMMWORD(
+                RTL_ELEMENT_SIZE(GRAPH, VertexPairs) *
+                (ULONGLONG)NumberOfKeys
+            );
+
+            Vertices3SizeInBytes = ALIGN_UP_YMMWORD(
+                RTL_ELEMENT_SIZE(GRAPH, Vertices3) *
+                NumberOfVertices.QuadPart
+            );
         }
 
         DeletedEdgesBitmapBufferSizeInBytes.QuadPart = 0;
     }
 
-    if (!UseAssigned16) {
+    if (UseAssigned8) {
 
         OrderSizeInBytes = ALIGN_UP_YMMWORD(
-            RTL_ELEMENT_SIZE(GRAPH, Order) * NumberOfEdges.QuadPart
+            RTL_ELEMENT_SIZE(GRAPH, Order8) * NumberOfEdges.QuadPart
         );
 
         AssignedSizeInBytes = ALIGN_UP_YMMWORD(
-            RTL_ELEMENT_SIZE(GRAPH, Assigned) * NumberOfVertices.QuadPart
+            RTL_ELEMENT_SIZE(GRAPH, Assigned8) * NumberOfVertices.QuadPart
         );
 
-    } else {
+    } else if (UseAssigned16) {
 
         OrderSizeInBytes = ALIGN_UP_YMMWORD(
             RTL_ELEMENT_SIZE(GRAPH, Order16) * NumberOfEdges.QuadPart
@@ -526,6 +678,15 @@ Return Value:
             RTL_ELEMENT_SIZE(GRAPH, Assigned16) * NumberOfVertices.QuadPart
         );
 
+    } else {
+
+        OrderSizeInBytes = ALIGN_UP_YMMWORD(
+            RTL_ELEMENT_SIZE(GRAPH, Order) * NumberOfEdges.QuadPart
+        );
+
+        AssignedSizeInBytes = ALIGN_UP_YMMWORD(
+            RTL_ELEMENT_SIZE(GRAPH, Assigned) * NumberOfVertices.QuadPart
+        );
     }
 
     //
@@ -571,7 +732,13 @@ Return Value:
     // line.
     //
 
-    if (!UseAssigned16) {
+    if (GraphImpl == 4) {
+
+        Info->NumberOfAssignedPerPageSizeInBytes = 0;
+        Info->NumberOfAssignedPerLargePageSizeInBytes = 0;
+        Info->NumberOfAssignedPerCacheLineSizeInBytes = 0;
+
+    } else if (!UseAssigned16) {
 
         Info->NumberOfAssignedPerPageSizeInBytes = (
             Info->AssignedArrayNumberOfPages *
@@ -877,7 +1044,13 @@ Return Value:
     TableInfoOnDisk->NumberOfSeeds = (
         HashRoutineNumberOfSeeds[Table->HashFunctionId]
     );
-    TableInfoOnDisk->AssignedElementSizeInBytes = UseAssigned16 ? 2 : 4;
+    if (UseAssigned8) {
+        TableInfoOnDisk->AssignedElementSizeInBytes = 1;
+    } else if (UseAssigned16) {
+        TableInfoOnDisk->AssignedElementSizeInBytes = 2;
+    } else {
+        TableInfoOnDisk->AssignedElementSizeInBytes = 4;
+    }
 
     //
     // This will change based on masking type and whether or not the caller

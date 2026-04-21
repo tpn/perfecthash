@@ -342,14 +342,41 @@ protected:
   PPERFECT_HASH_TABLE CreateTableFromKeys64(
       const std::vector<ULONGLONG> &keys,
       PERFECT_HASH_HASH_FUNCTION_ID hashFunctionId,
-      bool allowAssigned16 = false) {
+      bool allowAssigned16 = false,
+      ULONG graphImpl = 0,
+      ULONG maxSolveTimeInSeconds = 0) {
     PERFECT_HASH_KEYS_LOAD_FLAGS keysFlags = {0};
     PERFECT_HASH_TABLE_CREATE_FLAGS tableFlags = {0};
+    std::vector<PERFECT_HASH_TABLE_CREATE_PARAMETER> table_params;
+    PERFECT_HASH_TABLE_CREATE_PARAMETERS tableCreateParams = {};
+    PPERFECT_HASH_TABLE_CREATE_PARAMETERS tableCreateParamsPtr = nullptr;
     PPERFECT_HASH_TABLE table = nullptr;
 
     tableFlags.NoFileIo = TRUE;
     tableFlags.Quiet = TRUE;
     tableFlags.DoNotTryUseHash16Impl = allowAssigned16 ? FALSE : TRUE;
+
+    if (graphImpl != 0) {
+      PERFECT_HASH_TABLE_CREATE_PARAMETER param = {};
+      param.Id = TableCreateParameterGraphImplId;
+      param.AsULong = graphImpl;
+      table_params.push_back(param);
+    }
+
+    if (maxSolveTimeInSeconds > 0) {
+      PERFECT_HASH_TABLE_CREATE_PARAMETER param = {};
+      param.Id = TableCreateParameterMaxSolveTimeInSecondsId;
+      param.AsULong = maxSolveTimeInSeconds;
+      table_params.push_back(param);
+    }
+
+    if (!table_params.empty()) {
+      tableCreateParams.SizeOfStruct = sizeof(tableCreateParams);
+      tableCreateParams.NumberOfElements =
+          static_cast<ULONG>(table_params.size());
+      tableCreateParams.Params = table_params.data();
+      tableCreateParamsPtr = &tableCreateParams;
+    }
 
     HRESULT result = online_->Vtbl->CreateTableFromKeys(
         online_,
@@ -361,7 +388,7 @@ protected:
         const_cast<ULONGLONG *>(keys.data()),
         &keysFlags,
         &tableFlags,
-        nullptr,
+        tableCreateParamsPtr,
         &table);
     EXPECT_GE(result, 0);
     return table;
@@ -539,6 +566,123 @@ TEST_F(PerfectHashOnlineTests, Assigned16RequiresGraphImpl3AndOptIn) {
   EXPECT_EQ(flagsGraphImpl2.AssignedElementSizeInBits << 3, 32u);
   EXPECT_NE(shimGraphImpl2->Vtbl->SlowIndex, nullptr);
   shimGraphImpl2->Vtbl->Release(tableGraphImpl2);
+}
+
+TEST_F(PerfectHashOnlineTests, GraphImpl4Assigned8RequiresOptIn) {
+  const auto keys = MakePseudoRandomKeys(8, 0x2468ACE0u);
+
+  PPERFECT_HASH_TABLE tableGraphImpl4 = CreateTableFromKeys(
+      keys,
+      PerfectHashHashMultiplyShiftRFunctionId,
+      true,
+      4,
+      nullptr,
+      5);
+  ASSERT_NE(tableGraphImpl4, nullptr);
+
+  auto *shimGraphImpl4 = reinterpret_cast<PerfectHashTableShim *>(tableGraphImpl4);
+  PERFECT_HASH_TABLE_FLAGS flagsGraphImpl4 = {0};
+  ASSERT_GE(
+      shimGraphImpl4->Vtbl->GetFlags(
+          tableGraphImpl4,
+          sizeof(flagsGraphImpl4),
+          &flagsGraphImpl4),
+      0);
+  EXPECT_EQ(flagsGraphImpl4.AssignedElementSizeInBits << 3, 8u);
+  EXPECT_EQ(shimGraphImpl4->Vtbl->SlowIndex, nullptr);
+
+  std::unordered_set<ULONG> seen;
+  seen.reserve(keys.size());
+  for (ULONG key : keys) {
+    ULONG index = 0;
+    ASSERT_GE(shimGraphImpl4->Vtbl->Index(tableGraphImpl4, key, &index), 0);
+    EXPECT_TRUE(seen.insert(index).second);
+  }
+
+  shimGraphImpl4->Vtbl->Release(tableGraphImpl4);
+
+  PPERFECT_HASH_TABLE tableOptOut = CreateTableFromKeys(
+      keys,
+      PerfectHashHashMultiplyShiftRFunctionId,
+      false,
+      4,
+      nullptr,
+      5);
+  ASSERT_NE(tableOptOut, nullptr);
+
+  auto *shimOptOut = reinterpret_cast<PerfectHashTableShim *>(tableOptOut);
+  PERFECT_HASH_TABLE_FLAGS flagsOptOut = {0};
+  ASSERT_GE(shimOptOut->Vtbl->GetFlags(tableOptOut, sizeof(flagsOptOut), &flagsOptOut), 0);
+  EXPECT_EQ(flagsOptOut.AssignedElementSizeInBits << 3, 32u);
+  shimOptOut->Vtbl->Release(tableOptOut);
+}
+
+TEST_F(PerfectHashOnlineTests, GraphImpl4SupportsDownsized64BitInputs) {
+  const std::vector<ULONGLONG> keys = {
+      1ull, 3ull, 5ull, 7ull, 11ull, 13ull, 17ull, 19ull,
+      23ull, 29ull, 31ull, 37ull, 41ull, 43ull, 47ull, 53ull,
+  };
+
+  PPERFECT_HASH_TABLE table = CreateTableFromKeys64(
+      keys,
+      PerfectHashHashMulshrolate3RXFunctionId,
+      true,
+      4,
+      5);
+  ASSERT_NE(table, nullptr);
+
+  auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
+  PERFECT_HASH_TABLE_FLAGS flags = {0};
+  ASSERT_GE(shim->Vtbl->GetFlags(table, sizeof(flags), &flags), 0);
+  EXPECT_EQ(flags.AssignedElementSizeInBits << 3, 8u);
+
+  const ULONGLONG mask = BuildDownsizeMask(keys);
+  std::unordered_set<ULONG> seen;
+  seen.reserve(keys.size());
+
+  for (auto key : keys) {
+    ULONG downsized = DownsizeKey(key, mask);
+    ULONG index = 0;
+    ASSERT_GE(shim->Vtbl->Index(table, downsized, &index), 0);
+    EXPECT_TRUE(seen.insert(index).second);
+  }
+
+  shim->Vtbl->Release(table);
+}
+
+TEST_F(PerfectHashOnlineTests, GraphImpl4RejectsNonGoodHashes) {
+  const auto keys = MakePseudoRandomKeys(64, 0x13579BDFu);
+  PERFECT_HASH_KEYS_LOAD_FLAGS keysFlags = {0};
+  PERFECT_HASH_TABLE_CREATE_FLAGS tableFlags = {0};
+  PERFECT_HASH_TABLE_CREATE_PARAMETER param = {};
+  PERFECT_HASH_TABLE_CREATE_PARAMETERS params = {};
+  PPERFECT_HASH_TABLE table = nullptr;
+
+  tableFlags.NoFileIo = TRUE;
+  tableFlags.Quiet = TRUE;
+  tableFlags.DoNotTryUseHash16Impl = FALSE;
+
+  param.Id = TableCreateParameterGraphImplId;
+  param.AsULong = 4;
+  params.SizeOfStruct = sizeof(params);
+  params.NumberOfElements = 1;
+  params.Params = &param;
+
+  HRESULT result = online_->Vtbl->CreateTableFromKeys(
+      online_,
+      PerfectHashChm01AlgorithmId,
+      PerfectHashHashJenkinsFunctionId,
+      PerfectHashAndMaskFunctionId,
+      sizeof(ULONG),
+      static_cast<ULONGLONG>(keys.size()),
+      const_cast<ULONG *>(keys.data()),
+      &keysFlags,
+      &tableFlags,
+      &params,
+      &table);
+
+  EXPECT_EQ(result, PH_E_NOT_IMPLEMENTED);
+  EXPECT_EQ(table, nullptr);
 }
 
 #if defined(PH_HAS_RAWDOG_JIT)

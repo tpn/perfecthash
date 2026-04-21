@@ -295,6 +295,11 @@ Return Value:
     Table->DownsizeShiftedMask = 0;
     Table->DownsizeTrailingZeros = 0;
     Table->DownsizeContiguous = FALSE;
+    Table->GraphImpl4EffectiveKeySizeInBytes = 0;
+    Table->GraphImpl4KeyDownsizeBitmap = 0;
+    Table->GraphImpl4KeyDownsizeShiftedMask = 0;
+    Table->GraphImpl4KeyDownsizeTrailingZeros = 0;
+    Table->GraphImpl4KeyDownsizeContiguous = FALSE;
 
     if (KeysWereDownsized(Keys)) {
         Table->DownsizeBitmap = Keys->DownsizeBitmap;
@@ -522,7 +527,9 @@ Return Value:
 
     Table->Flags.Created = TRUE;
     Table->Flags.Loaded = FALSE;
-    if (Table->State.UsingAssigned16) {
+    if (Table->State.UsingAssigned8) {
+        Table->Flags.AssignedElementSizeInBits = 1; // 8 bits
+    } else if (Table->State.UsingAssigned16) {
         Table->Flags.AssignedElementSizeInBits = 2; // 16 bits
     } else {
         Table->Flags.AssignedElementSizeInBits = 4; // 32 bits
@@ -1054,10 +1061,20 @@ Return Value:
     // Validate GraphImpl.
     //
 
-    if (GraphImpl != 1 && GraphImpl != 2 && GraphImpl != 3) {
+    if (GraphImpl != 1 && GraphImpl != 2 && GraphImpl != 3 && GraphImpl != 4) {
         Result = PH_E_INVALID_GRAPH_IMPL;
         goto Error;
     }
+
+    if (GraphImpl == 4) {
+        if (FindBestMemoryCoverage(Context) ||
+            !IsGoodPerfectHashHashFunctionId(Table->HashFunctionId) ||
+            Table->Keys->KeySizeInBytes > sizeof(ULONG)) {
+            Result = PH_E_NOT_IMPLEMENTED;
+            goto Error;
+        }
+    }
+
     Table->GraphImpl = GraphImpl;
 
     //

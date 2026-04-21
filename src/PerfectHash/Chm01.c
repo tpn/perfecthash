@@ -1352,9 +1352,19 @@ FinishedSolution:
             // Copy the table data over to the newly allocated buffer.
             //
 
-            CopyMemory(Table->TableDataBaseAddress,
-                       Graph->Assigned,
-                       SizeInBytes);
+            if (IsUsingAssigned8(Graph)) {
+                CopyMemory(Table->TableDataBaseAddress,
+                           Graph->Assigned8,
+                           SizeInBytes);
+            } else if (IsUsingAssigned16(Graph)) {
+                CopyMemory(Table->TableDataBaseAddress,
+                           Graph->Assigned16,
+                           SizeInBytes);
+            } else {
+                CopyMemory(Table->TableDataBaseAddress,
+                           Graph->Assigned,
+                           SizeInBytes);
+            }
 
         }
 

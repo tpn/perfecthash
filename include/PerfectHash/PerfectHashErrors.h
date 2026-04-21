@@ -732,7 +732,7 @@ Abstract:
 //         solving:
 // 
 //             - Algorithm is Chm01.
-//             - GraphImpl is 3.
+//             - GraphImpl is 3 or 4.
 //             - Number of vertices is <= 65,534 (i.e. MAX_USHORT-1).
 // 
 //         This provides significant performance improvements, which is why it's
@@ -794,7 +794,7 @@ Abstract:
 // 
 // Table Create Parameters:
 // 
-//     --GraphImpl=1|2|3 [default: 3]
+//     --GraphImpl=1|2|3|4 [default: 3]
 // 
 //         Selects the backend version of the graph assignment step.  Version 1
 //         matches the original CHM algorithm, version 2 is faster and was derived
@@ -4365,7 +4365,7 @@ Abstract:
 //
 // MessageText:
 //
-// Invalid value for --GraphImpl.  Valid values: 1, 2, 3.  (Default: 3.)
+// Invalid value for --GraphImpl.  Valid values: 1, 2, 3, 4.  (Default: 3.)
 //
 #define PH_E_INVALID_GRAPH_IMPL          ((HRESULT)0xE00403C1L)
 

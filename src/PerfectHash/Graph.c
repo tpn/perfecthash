@@ -14,6 +14,7 @@ Abstract:
 
 #include "stdafx.h"
 #include "PerfectHashEventsPrivate.h"
+#include "GraphImpl4.h"
 
 //
 // Forward decl.
@@ -165,6 +166,9 @@ Return Value:
     //
     // Override vtbl methods based on table state and table create flags.
     //
+
+    Graph->Flags.UsingAssigned8 = FALSE;
+    Graph->Flags.UsingAssigned16 = FALSE;
 
     if (Table->State.UsingAssigned16 != FALSE) {
 
@@ -342,6 +346,8 @@ Return Value:
         }
     }
 
+    Graph->Flags.UsingAssigned8 = (Table->State.UsingAssigned8 != FALSE);
+
 #if defined(_M_AMD64) || defined(_M_X64)
 
     //
@@ -430,7 +436,6 @@ Return Value:
     //
 
     RELEASE(Graph->Rtl);
-    RELEASE(Graph->Allocator);
     RELEASE(Graph->Rng);
     RELEASE(Graph->Keys);
 
@@ -439,12 +444,17 @@ Return Value:
     //
 
     if (Graph->VertexPairs != NULL) {
-        if (!VirtualFree(Graph->VertexPairs,
-                         VFS(Graph->Info->VertexPairsSizeInBytes),
-                         MEM_RELEASE)) {
+        if (Graph->Impl == 4) {
+            Graph->Allocator->Vtbl->AlignedFreePointer(Graph->Allocator,
+                                                       PPV(&Graph->VertexPairs));
+        } else if (!VirtualFree(Graph->VertexPairs,
+                                VFS(Graph->Info->VertexPairsSizeInBytes),
+                                MEM_RELEASE)) {
             SYS_ERROR(VirtualFree);
         }
     }
+
+    RELEASE(Graph->Allocator);
 
     return;
 }
@@ -4423,6 +4433,18 @@ Return Value:
             }
             break;
 
+        case 4:
+            Graph->Vtbl->HashKeys = GraphHashKeys4;
+            Graph->Vtbl->AddKeys = (
+                (TableCreateFlags.HashAllKeysFirst != FALSE) ?
+                    GraphHashKeysThenAdd4 : GraphAddKeys4
+            );
+            Graph->Vtbl->Verify = GraphVerify4;
+            Graph->Vtbl->IsAcyclic = GraphIsAcyclic4;
+            Graph->Vtbl->Assign = GraphAssign4;
+            Graph->Vtbl->RegisterSolved = GraphRegisterSolvedNoBestCoverage;
+            break;
+
         default:
             PH_RAISE(PH_E_UNREACHABLE_CODE);
             break;
@@ -4462,21 +4484,96 @@ SkipGraphVtblHackery:
         goto Error;                                 \
     }
 
-    ALLOC_ARRAY(Order, PLONG);
-    ALLOC_ARRAY(Assigned, PASSIGNED);
+#define ALLOC_SIZED_ARRAY(Field, Type, Size)              \
+    if (!Graph->Field) {                                  \
+        Graph->Field = (Type)(                            \
+            Allocator->Vtbl->AlignedMalloc(               \
+                Allocator,                                \
+                (ULONG_PTR)(Size),                        \
+                YMMWORD_ALIGNMENT                         \
+            )                                             \
+        );                                                \
+    } else {                                              \
+        Graph->Field = (Type)(                            \
+            Allocator->Vtbl->AlignedReAlloc(              \
+                Allocator,                                \
+                Graph->Field,                             \
+                (ULONG_PTR)(Size),                        \
+                YMMWORD_ALIGNMENT                         \
+            )                                             \
+        );                                                \
+    }                                                     \
+    if (!Graph->Field) {                                  \
+        Result = E_OUTOFMEMORY;                           \
+        goto Error;                                       \
+    }
 
     if (Graph->Impl == 1 || Graph->Impl == 2) {
+        ALLOC_ARRAY(Order, PLONG);
+        ALLOC_ARRAY(Assigned, PASSIGNED);
         ALLOC_ARRAY(Edges, PEDGE);
         ALLOC_ARRAY(Next, PEDGE);
         ALLOC_ARRAY(First, PVERTEX);
-    } else {
+    } else if (Graph->Impl == 3) {
+        ALLOC_ARRAY(Order, PLONG);
+        ALLOC_ARRAY(Assigned, PASSIGNED);
         ASSERT(Graph->Impl == 3);
-        ALLOC_ARRAY(Vertices3, PVERTEX3);
+        if (IsUsingAssigned16(Graph)) {
+            ALLOC_SIZED_ARRAY(Order16, PSHORT, Info->OrderSizeInBytes);
+            ALLOC_SIZED_ARRAY(Assigned16,
+                              PASSIGNED16,
+                              Info->AssignedSizeInBytes);
+            ALLOC_SIZED_ARRAY(Vertices163,
+                              PVERTEX163,
+                              Info->Vertices3SizeInBytes);
+        } else {
+            ALLOC_ARRAY(Vertices3, PVERTEX3);
+        }
 
         //
         // N.B. We don't do `ALLOC_ARRAY(Edges3, PEDGE3);` as it's handled by
         //      the code block below (via VertexPairs allocation).
         //
+    } else {
+        SIZE_T AssignedSize;
+        SIZE_T OrderSize;
+        SIZE_T VertexPairsSize;
+        SIZE_T VerticesSize;
+
+        ASSERT(Graph->Impl == 4);
+
+        AssignedSize = (SIZE_T)Info->AssignedSizeInBytes;
+        OrderSize = (SIZE_T)Info->OrderSizeInBytes;
+        VertexPairsSize = (SIZE_T)Info->VertexPairsSizeInBytes;
+        VerticesSize = (SIZE_T)Info->Vertices3SizeInBytes;
+
+        switch (Table->TableInfoOnDisk->AssignedElementSizeInBytes) {
+            case 1:
+                ALLOC_SIZED_ARRAY(Order8, PCHAR, OrderSize);
+                ALLOC_SIZED_ARRAY(Assigned8, PASSIGNED8, AssignedSize);
+                ALLOC_SIZED_ARRAY(Vertices83, PVERTEX83, VerticesSize);
+                ALLOC_SIZED_ARRAY(Vertex8Pairs, PVERTEX8_PAIR, VertexPairsSize);
+                break;
+
+            case 2:
+                ALLOC_SIZED_ARRAY(Order16, PSHORT, OrderSize);
+                ALLOC_SIZED_ARRAY(Assigned16, PASSIGNED16, AssignedSize);
+                ALLOC_SIZED_ARRAY(Vertices163, PVERTEX163, VerticesSize);
+                ALLOC_SIZED_ARRAY(Vertex16Pairs, PVERTEX16_PAIR, VertexPairsSize);
+                break;
+
+            case 4:
+                ALLOC_SIZED_ARRAY(Order, PLONG, OrderSize);
+                ALLOC_SIZED_ARRAY(Assigned, PASSIGNED, AssignedSize);
+                ALLOC_SIZED_ARRAY(Vertices3, PVERTEX3, VerticesSize);
+                ALLOC_SIZED_ARRAY(VertexPairs, PVERTEX_PAIR, VertexPairsSize);
+                break;
+
+            default:
+                Result = PH_E_NOT_IMPLEMENTED;
+                goto Error;
+        }
+
     }
 
     //
@@ -4487,7 +4584,8 @@ SkipGraphVtblHackery:
     // above, which grow larger upon each resize event).)
     //
 
-    if (TableCreateFlags.HashAllKeysFirst || Graph->Impl == 3) {
+    if (TableCreateFlags.HashAllKeysFirst || Graph->Impl == 3 ||
+        Graph->Impl == 4) {
 
         VertexPairsSizeInBytes = (SIZE_T)Info->VertexPairsSizeInBytes;
         ASSERT(VertexPairsSizeInBytes != 0);
@@ -4588,6 +4686,12 @@ SkipGraphVtblHackery:
     // asked to skip memory coverage information.  If so, we can jump straight
     // to the end and finish up.
     //
+
+    if (Graph->Impl == 4) {
+        Graph->Flags.WantsAssignedMemoryCoverage = FALSE;
+        Graph->Flags.WantsAssignedMemoryCoverageForKeysSubset = FALSE;
+        goto End;
+    }
 
     if (FirstSolvedGraphWinsAndSkipMemoryCoverage(Context)) {
         Graph->Flags.WantsAssignedMemoryCoverage = FALSE;
@@ -4790,6 +4894,7 @@ Return Value:
     ULONG TotalNumberOfPages;
     ULONG TotalNumberOfLargePages;
     ULONG TotalNumberOfCacheLines;
+    PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_CONTEXT Context;
     SIZE_T VertexPairsSizeInBytes;
     PERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags;
@@ -4807,6 +4912,7 @@ Return Value:
     Context = Graph->Context;
     Info = Graph->Info;
     Rtl = Context->Rtl;
+    Table = Context->Table;
     TableCreateFlags.AsULongLong = Context->Table->TableCreateFlags.AsULongLong;
 
     MAYBE_STOP_GRAPH_SOLVING(Graph);
@@ -4904,19 +5010,61 @@ Return Value:
                    Info->Name##SizeInBytes);           \
     }
 
-    ZERO_ARRAY(Order);
-    ZERO_ARRAY(Assigned);
-    ZERO_ARRAY(Vertices3);
+    if (Graph->Impl == 4) {
+        switch (Table->TableInfoOnDisk->AssignedElementSizeInBytes) {
+            case 1:
+                ZeroMemory(Graph->Order8, Info->OrderSizeInBytes);
+                ZeroMemory(Graph->Assigned8, Info->AssignedSizeInBytes);
+                ZeroMemory(Graph->Vertices83, Info->Vertices3SizeInBytes);
+                FillMemory(Graph->Vertex8Pairs,
+                           Info->VertexPairsSizeInBytes,
+                           (BYTE)~0);
+                Graph->Order8Index = (CHAR)Graph->NumberOfKeys;
+                ASSERT(Graph->Order8Index > 0);
+                break;
 
-    if (!IsUsingAssigned16(Graph)) {
+            case 2:
+                ZeroMemory(Graph->Order16, Info->OrderSizeInBytes);
+                ZeroMemory(Graph->Assigned16, Info->AssignedSizeInBytes);
+                ZeroMemory(Graph->Vertices163, Info->Vertices3SizeInBytes);
+                FillMemory(Graph->Vertex16Pairs,
+                           Info->VertexPairsSizeInBytes,
+                           (BYTE)~0);
+                Graph->Order16Index = (SHORT)Graph->NumberOfKeys;
+                ASSERT(Graph->Order16Index > 0);
+                break;
+
+            case 4:
+                ZERO_ARRAY(Order);
+                ZERO_ARRAY(Assigned);
+                ZERO_ARRAY(Vertices3);
+                FillMemory(Graph->VertexPairs,
+                           Info->VertexPairsSizeInBytes,
+                           (BYTE)~0);
+                Graph->OrderIndex = (LONG)Graph->NumberOfKeys;
+                ASSERT(Graph->OrderIndex > 0);
+                break;
+
+            default:
+                Result = PH_E_NOT_IMPLEMENTED;
+                goto Error;
+        }
+    } else {
+        ZERO_ARRAY(Order);
+        ZERO_ARRAY(Assigned);
+        ZERO_ARRAY(Vertices3);
+    }
+
+    if (Graph->Impl != 4 && !IsUsingAssigned16(Graph)) {
         Graph->OrderIndex = (LONG)Graph->NumberOfKeys;
         ASSERT(Graph->OrderIndex > 0);
-    } else {
+    } else if (Graph->Impl != 4) {
         Graph->Order16Index = (SHORT)Graph->NumberOfKeys;
         ASSERT(Graph->Order16Index > 0);
     }
 
-    if (TableCreateFlags.HashAllKeysFirst || Graph->Impl == 3) {
+    if (TableCreateFlags.HashAllKeysFirst || Graph->Impl == 3 ||
+        Graph->Impl == 4) {
 
         ASSERT(Graph->VertexPairs != NULL);
 
@@ -4938,7 +5086,7 @@ Return Value:
         if (Graph->Flags.WantsWriteCombiningForVertexPairsArray &&
             !Graph->Flags.VertexPairsArrayIsWriteCombined) {
 
-            ASSERT(!IsUsingAssigned16(Graph));
+            ASSERT(!IsUsingAssigned16(Graph) || Graph->Impl == 4);
 
             //
             // Restore the write-combine (and read/write) page protection so
@@ -4978,6 +5126,9 @@ Return Value:
         //
 
         if (Graph->Impl == 3) {
+            EMPTY_ARRAY(VertexPairs);
+        } else if (Graph->Impl == 4 &&
+                   Table->TableInfoOnDisk->AssignedElementSizeInBytes == 4) {
             EMPTY_ARRAY(VertexPairs);
         }
     }
@@ -5037,6 +5188,10 @@ Return Value:
     // Avoid the overhead of resetting the memory coverage if we're in "first
     // graph wins" mode and have been requested to skip memory coverage.
     //
+
+    if (Graph->Impl == 4) {
+        goto End;
+    }
 
     if (FirstSolvedGraphWinsAndSkipMemoryCoverage(Context)) {
         goto End;

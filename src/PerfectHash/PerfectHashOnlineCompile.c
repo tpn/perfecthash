@@ -60,6 +60,10 @@ Return Value:
         return E_POINTER;
     }
 
+    if (Table->GraphImpl == 4) {
+        return PH_E_NOT_IMPLEMENTED;
+    }
+
     if (ARGUMENT_PRESENT(CompileFlagsPointer)) {
         Result = IsValidTableCompileFlags(CompileFlagsPointer);
         if (FAILED(Result)) {

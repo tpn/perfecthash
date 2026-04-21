@@ -156,9 +156,17 @@ extern const STRING CTypeNames[];
 extern const STRING NtTypeNames[];
 
 //
-// Hacky forward-decl of the 16-bit assigned index impl for Chm01.
+// Hacky forward-decls of the specialized assigned-width index impls for Chm01.
 //
 
+EXTERN_C
+HRESULT
+NTAPI
+PerfectHashTableIndexImpl4Chm01(
+    _In_ PPERFECT_HASH_TABLE Table,
+    _In_ ULONG Key,
+    _Out_ PULONG Index
+    );
 extern PERFECT_HASH_TABLE_INDEX PerfectHashTableIndex16ImplChm01;
 
 //
@@ -207,7 +215,14 @@ CompletePerfectHashTableInitialization(
     // accordingly.
     //
 
-    if ((Table->State.UsingAssigned16 != FALSE) &&
+    if ((Table->State.UsingAssigned8 != FALSE) &&
+        (AlgorithmId == PerfectHashChm01AlgorithmId)) {
+
+        Vtbl->Index = PerfectHashTableIndexImpl4Chm01;
+        Vtbl->SlowIndex = NULL;
+        Vtbl->FastIndex = NULL;
+
+    } else if ((Table->State.UsingAssigned16 != FALSE) &&
         (AlgorithmId == PerfectHashChm01AlgorithmId)) {
 
         Vtbl->Index = PerfectHashTableIndex16ImplChm01;

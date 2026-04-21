@@ -343,6 +343,9 @@
     <ClCompile Include="GraphImpl3.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="GraphImpl4.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="GraphAvx.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -718,6 +721,9 @@
       <Filter>Private Header Files</Filter>
     </ClInclude>
     <ClInclude Include="GraphImpl3.h">
+      <Filter>Private Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GraphImpl4.h">
       <Filter>Private Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Debugger.h">
