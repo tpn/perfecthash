@@ -349,6 +349,11 @@ Return Value:
     Table->DownsizeShiftedMask = 0;
     Table->DownsizeTrailingZeros = 0;
     Table->DownsizeContiguous = FALSE;
+    Table->GraphImpl4EffectiveKeySizeInBytes = 0;
+    Table->GraphImpl4KeyDownsizeBitmap = 0;
+    Table->GraphImpl4KeyDownsizeShiftedMask = 0;
+    Table->GraphImpl4KeyDownsizeTrailingZeros = 0;
+    Table->GraphImpl4KeyDownsizeContiguous = FALSE;
 
     if (ARGUMENT_PRESENT(Keys) && KeysWereDownsized(Keys)) {
         Table->DownsizeBitmap = Keys->DownsizeBitmap;
@@ -462,14 +467,16 @@ Return Value:
     Table->TableFile = File;
 
     //
-    // We can determine the expected file size by multipling the number of
-    // table elements by the key size; both of which are available in the
-    // :Info header.
+    // We can determine the expected file size by multiplying the number of
+    // table elements by the assigned element size; both of which are available
+    // in the :Info header.
     //
 
     ExpectedEndOfFile.QuadPart = (
         NumberOfTableElements *
-        TableInfoOnDisk->KeySizeInBytes
+        (TableInfoOnDisk->AssignedElementSizeInBytes ?
+            TableInfoOnDisk->AssignedElementSizeInBytes :
+            TableInfoOnDisk->KeySizeInBytes)
     );
 
     //
@@ -520,6 +527,8 @@ Return Value:
     Table->AlgorithmId = AlgorithmId;
     Table->MaskFunctionId = TableInfoOnDisk->MaskFunctionId;
     Table->HashFunctionId = TableInfoOnDisk->HashFunctionId;
+    Table->State.UsingAssigned8 =
+        (TableInfoOnDisk->AssignedElementSizeInBytes == 1);
     Table->State.UsingAssigned16 = TableInfoOnDisk->Flags.UsingAssigned16;
 
     //
@@ -551,6 +560,8 @@ Return Value:
     if (TableInfoOnDisk->AssignedElementSizeInBytes) {
         Table->Flags.AssignedElementSizeInBits =
             TableInfoOnDisk->AssignedElementSizeInBytes;
+    } else if (Table->State.UsingAssigned8) {
+        Table->Flags.AssignedElementSizeInBits = 1; // 8 bits
     } else if (Table->State.UsingAssigned16) {
         Table->Flags.AssignedElementSizeInBits = 2; // 16 bits
     } else {

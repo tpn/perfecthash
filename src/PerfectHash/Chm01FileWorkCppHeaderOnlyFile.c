@@ -41,10 +41,12 @@ SaveCppHeaderOnlyFileChm01(
     ULONG Seed3Byte3;
     ULONG Seed3Byte4;
     PGRAPH Graph;
+    PUCHAR Source8;
     PULONG Source;
     PUSHORT Source16;
     ULONGLONG NumberOfKeys;
     ULONG NumberOfSeeds;
+    BOOLEAN UsingAssigned8;
     BOOLEAN UsingAssigned16;
     BOOLEAN Supported;
     HRESULT Result = S_OK;
@@ -72,6 +74,7 @@ SaveCppHeaderOnlyFileChm01(
     NumberOfSeeds = Graph->NumberOfSeeds;
     Seeds = &Graph->FirstSeed;
     NumberOfKeys = Keys->NumberOfKeys.QuadPart;
+    UsingAssigned8 = IsUsingAssigned8(Graph);
     UsingAssigned16 = IsUsingAssigned16(Graph);
     Supported = (
         Table->MaskFunctionId == PerfectHashAndMaskFunctionId &&
@@ -217,7 +220,9 @@ SaveCppHeaderOnlyFileChm01(
     // Write the table data array.
     //
 
-    if (UsingAssigned16) {
+    if (UsingAssigned8) {
+        OUTPUT_RAW("using table_data_type = std::uint8_t;\n");
+    } else if (UsingAssigned16) {
         OUTPUT_RAW("using table_data_type = std::uint16_t;\n");
     } else {
         OUTPUT_RAW("using table_data_type = std::uint32_t;\n");
@@ -226,7 +231,30 @@ SaveCppHeaderOnlyFileChm01(
     OUTPUT_RAW("inline constexpr std::array<table_data_type, "
                "number_of_table_elements> table_data = {\n");
 
-    if (UsingAssigned16) {
+    Source8 = Graph->Assigned8;
+
+    if (UsingAssigned8) {
+        for (Index = 0, Count = 0;
+             Index < TotalNumberOfElements;
+             Index++) {
+
+            if (Count == 0) {
+                INDENT();
+            }
+
+            OUTPUT_HEX(*Source8++);
+
+            *Output++ = ',';
+
+            if (++Count == 4) {
+                Count = 0;
+                *Output++ = '\n';
+            } else {
+                *Output++ = ' ';
+            }
+        }
+
+    } else if (UsingAssigned16) {
         Source16 = Graph->Assigned16;
 
         for (Index = 0, Count = 0;

@@ -181,6 +181,17 @@ if(TARGET PerfectHashCreateExe AND TARGET PerfectHashBulkCreateExe)
     )
 
     add_test(
+        NAME perfecthash.cli.codegen.graphimpl4
+        COMMAND ${CMAKE_COMMAND}
+            -DTEST_EXE=$<TARGET_FILE:PerfectHashCreateExe>
+            -DTEST_OUTPUT=${TEST_OUTPUT_DIR}/codegen-graphimpl4
+            -DTEST_PYTHON=${Python3_EXECUTABLE}
+            -DTEST_CARGO=${CARGO_EXECUTABLE}
+            -DTEST_BUILD_CONFIG=$<CONFIG>
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/run_cli_graphimpl4_codegen_test.cmake
+    )
+
+    add_test(
         NAME perfecthash.cli.codegen.mulshrolate3rx
         COMMAND ${CMAKE_COMMAND}
             -DTEST_EXE=$<TARGET_FILE:PerfectHashCreateExe>

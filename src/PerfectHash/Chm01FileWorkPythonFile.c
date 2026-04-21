@@ -41,6 +41,7 @@ SavePythonFileChm01(
     ULONG Seed3Byte3;
     ULONG Seed3Byte4;
     PGRAPH Graph;
+    PUCHAR Source8;
     PULONG Source;
     PUSHORT Source16;
     ULONGLONG NumberOfKeys;
@@ -53,6 +54,7 @@ SavePythonFileChm01(
     PTABLE_INFO_ON_DISK TableInfo;
     ULONGLONG TotalNumberOfElements;
     const ULONG Indent = 0x20202020;
+    BOOLEAN UsingAssigned8;
     BOOLEAN UsingAssigned16;
     BOOLEAN Supported;
 
@@ -72,6 +74,7 @@ SavePythonFileChm01(
     NumberOfSeeds = Graph->NumberOfSeeds;
     Seeds = &Graph->FirstSeed;
     NumberOfKeys = Keys->NumberOfKeys.QuadPart;
+    UsingAssigned8 = IsUsingAssigned8(Graph);
     UsingAssigned16 = IsUsingAssigned16(Graph);
     Supported = (
         Table->MaskFunctionId == PerfectHashAndMaskFunctionId &&
@@ -193,7 +196,40 @@ SavePythonFileChm01(
 
     OUTPUT_RAW("TABLE_DATA = [\n");
 
-    if (UsingAssigned16) {
+    if (UsingAssigned8) {
+        OUTPUT_RAW("TABLE_DATA_TYPE = int\n");
+    } else if (UsingAssigned16) {
+        OUTPUT_RAW("TABLE_DATA_TYPE = int\n");
+    } else {
+        OUTPUT_RAW("TABLE_DATA_TYPE = int\n");
+    }
+    OUTPUT_RAW("\n");
+
+    if (UsingAssigned8) {
+
+        Source8 = Graph->Assigned8;
+
+        for (Index = 0, Count = 0;
+             Index < TotalNumberOfElements;
+             Index++) {
+
+            if (Count == 0) {
+                INDENT();
+            }
+
+            OUTPUT_HEX(*Source8++);
+
+            *Output++ = ',';
+
+            if (++Count == 4) {
+                Count = 0;
+                *Output++ = '\n';
+            } else {
+                *Output++ = ' ';
+            }
+        }
+
+    } else if (UsingAssigned16) {
 
         Source16 = Graph->Assigned16;
 

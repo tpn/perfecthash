@@ -457,8 +457,10 @@ SaveCppSourceUnityFileChm01(
     PULONG Long;
     PULONG Seeds;
     PGRAPH Graph;
+    UCHAR Value8;
     ULONG Value;
     USHORT Value16;
+    PUCHAR Source8;
     PULONG Source;
     PUSHORT Source16;
     ULONG NumberOfSeeds;
@@ -491,6 +493,7 @@ SaveCppSourceUnityFileChm01(
     NumberOfElements = TotalNumberOfElements >> 1;
     Graph = (PGRAPH)Context->SolvedContext;
     NumberOfSeeds = Graph->NumberOfSeeds;
+    Source8 = Graph->Assigned8;
     Source = Graph->Assigned;
     Source16 = Graph->Assigned16;
 
@@ -634,7 +637,33 @@ SaveCppSourceUnityFileChm01(
     OUTPUT_INT(TotalNumberOfElements);
     OUTPUT_RAW("] = {\n\n    //\n    // 1st half.\n    //\n\n");
 
-    if (!IsUsingAssigned16(Graph)) {
+    if (IsUsingAssigned8(Graph)) {
+
+        for (Index = 0, Count = 0; Index < TotalNumberOfElements; Index++) {
+
+            if (Count == 0) {
+                INDENT();
+            }
+
+            Value8 = *Source8++;
+
+            OUTPUT_HEX(Value8);
+
+            *Output++ = ',';
+
+            if (++Count == 4) {
+                Count = 0;
+                *Output++ = '\n';
+            } else {
+                *Output++ = ' ';
+            }
+
+            if (Index == NumberOfElements-1) {
+                OUTPUT_RAW("\n    //\n    // 2nd half.\n    //\n\n");
+            }
+        }
+
+    } else if (!IsUsingAssigned16(Graph)) {
 
         for (Index = 0, Count = 0; Index < TotalNumberOfElements; Index++) {
 

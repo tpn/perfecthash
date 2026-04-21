@@ -30,9 +30,8 @@ SaveTableFileChm01(
     )
 {
     PRTL Rtl;
-    PULONG Dest;
     PGRAPH Graph;
-    PULONG Source;
+    PVOID Source;
     PVOID BaseAddress;
     HRESULT Result = S_OK;
     LONGLONG SizeInBytes;
@@ -49,17 +48,23 @@ SaveTableFileChm01(
     Rtl = Context->Rtl;
     Table = Context->Table;
     File = *Item->FilePointer;
-    Dest = (PULONG)File->BaseAddress;
     Graph = (PGRAPH)Context->SolvedContext;
-    Source = Graph->Assigned;
     TableInfoOnDisk = Table->TableInfoOnDisk;
+
+    if (IsUsingAssigned8(Graph)) {
+        Source = Graph->Assigned8;
+    } else if (IsUsingAssigned16(Graph)) {
+        Source = Graph->Assigned16;
+    } else {
+        Source = Graph->Assigned;
+    }
 
     SizeInBytes = (
         TableInfoOnDisk->NumberOfTableElements.QuadPart *
         TableInfoOnDisk->AssignedElementSizeInBytes
     );
 
-    if (SizeInBytes != File->FileInfo.EndOfFile.QuadPart) {
+    if (SizeInBytes > File->FileInfo.EndOfFile.QuadPart) {
         PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
     }
 
@@ -68,7 +73,7 @@ SaveTableFileChm01(
     // backing memory map.
     //
 
-    CopyMemory(Dest, Source, SizeInBytes);
+    CopyMemory(File->BaseAddress, Source, SizeInBytes);
 
     EndOfFile.QuadPart = (LONGLONG)SizeInBytes;
 
