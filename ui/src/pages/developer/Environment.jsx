@@ -68,7 +68,8 @@ const buildCondaPackages = ({
       `clang=${compilerVersion}`,
       `clangxx=${compilerVersion}`,
       `lld=${compilerVersion}`,
-      `llvmdev=${compilerVersion}`
+      `llvmdev=${compilerVersion}`,
+      `llvm-tools=${compilerVersion}`
     );
   }
 

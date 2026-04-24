@@ -44,6 +44,9 @@ set_target_properties(perfecthash_unit_tests PROPERTIES
 if(PERFECTHASH_HAS_RAWDOG_JIT)
     target_compile_definitions(perfecthash_unit_tests PRIVATE PH_HAS_RAWDOG_JIT)
 endif()
+if(TARGET PerfectHashLLVM)
+    add_dependencies(perfecthash_unit_tests PerfectHashLLVM)
+endif()
 
 add_executable(perfecthash_online_jit_invalid_env
     PerfectHashOnlineJitInvalidEnv.cpp
@@ -79,6 +82,9 @@ set_target_properties(perfecthash_benchmarks PROPERTIES
 
 if(PERFECTHASH_HAS_RAWDOG_JIT)
     target_compile_definitions(perfecthash_benchmarks PRIVATE PH_HAS_RAWDOG_JIT)
+endif()
+if(TARGET PerfectHashLLVM)
+    add_dependencies(perfecthash_benchmarks PerfectHashLLVM)
 endif()
 
 include(GoogleTest)

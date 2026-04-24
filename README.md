@@ -218,7 +218,7 @@ environment manually:
 
 ```
 mamba create -y -n perfecthash-dev -c conda-forge \
-  python=3.12 rust cmake ninja make pkg-config clang clangxx lld llvmdev pytest
+  python=3.12 rust cmake ninja make pkg-config clang clangxx lld llvmdev llvm-tools pytest
 mamba activate perfecthash-dev
 ```
 
@@ -228,12 +228,16 @@ git clone https://github.com/tpn/perfecthash
 git clone https://github.com/tpn/perfecthash-keys
 
 cd perfecthash
-cmake -S . -B build -G"Ninja Multi-Config"
+cmake -S . -B build -G"Ninja Multi-Config" -DPERFECTHASH_BUILD_PROFILE=full
 cmake --build build --config Release
 cmake --build build --config Debug
 ```
 Note: the default build enables `-march=native` for required SIMD intrinsics.
 Use `-DPERFECTHASH_ENABLE_NATIVE_ARCH=OFF` if you need a portable binary.
+
+If you plan to exercise the LLVM JIT backend, make sure the build actually
+produces `PerfectHashLLVM` by using either the `full`,
+`online-rawdog-and-llvm-jit`, or `online-llvm-jit` profile.
 
 Build profile examples:
 

@@ -118,6 +118,7 @@ dependencies:
               - clangxx>=15
               - lld>=15
               - llvmdev>=15
+              - llvm-tools>=15
           - matrix:
               os: macos
               compiler: llvm
@@ -126,6 +127,7 @@ dependencies:
               - clangxx>=15
               - lld>=15
               - llvmdev>=15
+              - llvm-tools>=15
           - matrix:
               os: linux
               compiler: gcc

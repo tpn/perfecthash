@@ -5,6 +5,7 @@ dependencies:
   - cmake>=3.20
   - ninja
   - nasm
+  - llvm-tools>=15
   - llvmdev>=15
   - clang
   - zlib
