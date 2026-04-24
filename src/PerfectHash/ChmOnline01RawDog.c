@@ -4451,6 +4451,11 @@ PerfectHashTableCompileJitRawDog(
         return PH_E_INVARIANT_CHECK_FAILED;
     }
 
+    if (Table->State.UsingAssigned8 ||
+        Table->TableInfoOnDisk->AssignedElementSizeInBytes == 1) {
+        return PH_E_NOT_IMPLEMENTED;
+    }
+
     if (Table->State.UsingAssigned16) {
         if (!ARGUMENT_PRESENT(Table->Assigned16)) {
             return PH_E_INVARIANT_CHECK_FAILED;

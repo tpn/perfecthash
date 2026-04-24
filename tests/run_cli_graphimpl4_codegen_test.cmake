@@ -119,3 +119,37 @@ string(FIND "${generated_cuda}" "using table_data_type = std::uint8_t;" has_cuda
 if(has_cuda_u8 LESS 0)
   message(FATAL_ERROR "Expected uint8_t table data type in generated CUDA file")
 endif()
+
+set(build_dir "${test_output_native}/_build")
+file(MAKE_DIRECTORY "${build_dir}")
+
+execute_process(
+  COMMAND "${CMAKE_COMMAND}" -S "${gen_dir}" -B "${build_dir}"
+  RESULT_VARIABLE result
+  OUTPUT_VARIABLE stdout
+  ERROR_VARIABLE stderr
+)
+
+if(NOT result EQUAL 0)
+  message(STATUS "stdout: ${stdout}")
+  message(STATUS "stderr: ${stderr}")
+  message(FATAL_ERROR "CMake configure failed with exit code ${result}")
+endif()
+
+set(build_command "${CMAKE_COMMAND}" --build "${build_dir}")
+if(DEFINED TEST_BUILD_CONFIG AND NOT TEST_BUILD_CONFIG STREQUAL "")
+  list(APPEND build_command --config "${TEST_BUILD_CONFIG}")
+endif()
+
+execute_process(
+  COMMAND ${build_command}
+  RESULT_VARIABLE result
+  OUTPUT_VARIABLE stdout
+  ERROR_VARIABLE stderr
+)
+
+if(NOT result EQUAL 0)
+  message(STATUS "stdout: ${stdout}")
+  message(STATUS "stderr: ${stderr}")
+  message(FATAL_ERROR "Generated project build failed with exit code ${result}")
+endif()

@@ -102,6 +102,42 @@ add_test(
 )
 set_tests_properties(perfecthash.fast.unit PROPERTIES LABELS fast)
 
+if(PERFECTHASH_HAS_LLVM OR PERFECTHASH_HAS_RAWDOG_JIT)
+    add_test(
+        NAME perfecthash.bench.graphimpl4.jit
+        COMMAND ${CMAKE_COMMAND} -E env
+            LD_LIBRARY_PATH=$<TARGET_FILE_DIR:PerfectHash>
+            $<TARGET_FILE:perfecthash_benchmarks>
+            --keys=256
+            --iterations=1
+            --loops=1
+            --graph-impl=4
+            --jit-backend=rawdog
+            --no-std-map-baselines
+    )
+
+    add_test(
+        NAME perfecthash.bench.graphimpl4.jit.assigned16
+        COMMAND ${CMAKE_COMMAND} -E env
+            LD_LIBRARY_PATH=$<TARGET_FILE_DIR:PerfectHash>
+            $<TARGET_FILE:perfecthash_benchmarks>
+            --keys=256
+            --iterations=1
+            --loops=1
+            --graph-impl=4
+            --jit-backend=rawdog
+            --allow-assigned16
+            --no-std-map-baselines
+    )
+
+    set_tests_properties(
+        perfecthash.bench.graphimpl4.jit
+        perfecthash.bench.graphimpl4.jit.assigned16
+        PROPERTIES
+            LABELS fast
+    )
+endif()
+
 set(TEST_KEYS_FILE "${PERFECTHASH_ROOT_DIR}/keys/HologramWorld-31016.keys")
 set(TEST_KEYS_DIR "${PERFECTHASH_ROOT_DIR}/keys")
 set(TEST_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/cli-out")

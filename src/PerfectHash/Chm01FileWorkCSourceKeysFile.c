@@ -42,6 +42,11 @@ PrepareCSourceKeysFileChm01(
     PPERFECT_HASH_PATH Path;
     PPERFECT_HASH_FILE File;
     PPERFECT_HASH_TABLE Table;
+    LARGE_INTEGER EndOfFile;
+    ULONGLONG BaseSize;
+    ULONGLONG KeyElementBytes;
+    ULONGLONG RequiredSize;
+    ULONGLONG AlignedSize;
     const ULONG Indent = 0x20202020;
 
     //
@@ -55,6 +60,28 @@ PrepareCSourceKeysFileChm01(
     Path = GetActivePath(File);
     Name = &Path->TableNameA;
     NumberOfKeys = Keys->NumberOfKeys.QuadPart;
+
+    BaseSize = Context->SystemAllocationGranularity;
+    KeyElementBytes = (
+        Keys->OriginalKeySizeType == LongLongType ? 24 : 16
+    );
+    RequiredSize = (
+        BaseSize +
+        (NumberOfKeys * KeyElementBytes)
+    );
+    AlignedSize = ALIGN_UP(RequiredSize,
+                           Context->SystemAllocationGranularity);
+
+    if (AlignedSize > (ULONGLONG)File->FileInfo.EndOfFile.QuadPart) {
+        EndOfFile.QuadPart = (LONGLONG)AlignedSize;
+        AcquirePerfectHashFileLockExclusive(File);
+        Result = File->Vtbl->Extend(File, &EndOfFile);
+        ReleasePerfectHashFileLockExclusive(File);
+        if (FAILED(Result)) {
+            PH_ERROR(PerfectHashFileExtend, Result);
+            return Result;
+        }
+    }
 
     Base = (PCHAR)File->BaseAddress;
     Output = Base;

@@ -394,6 +394,47 @@ protected:
     return table;
   }
 
+  PERFECT_HASH_TABLE_FLAGS GetTableFlags(PPERFECT_HASH_TABLE table) {
+    PERFECT_HASH_TABLE_FLAGS flags = {0};
+    auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
+    EXPECT_GE(shim->Vtbl->GetFlags(table, sizeof(flags), &flags), 0);
+    return flags;
+  }
+
+  std::vector<ULONG> CaptureIndexes(
+      PPERFECT_HASH_TABLE table,
+      const std::vector<ULONG> &keys) {
+    std::vector<ULONG> indexes;
+    auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
+    indexes.reserve(keys.size());
+
+    for (ULONG key : keys) {
+      ULONG index = 0;
+      EXPECT_GE(shim->Vtbl->Index(table, key, &index), 0);
+      indexes.push_back(index);
+    }
+
+    return indexes;
+  }
+
+  std::vector<ULONG> CaptureIndexes64(
+      PPERFECT_HASH_TABLE table,
+      const std::vector<ULONGLONG> &keys) {
+    std::vector<ULONG> indexes;
+    auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
+    const ULONGLONG mask = BuildDownsizeMask(keys);
+    indexes.reserve(keys.size());
+
+    for (ULONGLONG key : keys) {
+      ULONG downsized = DownsizeKey(key, mask);
+      ULONG index = 0;
+      EXPECT_GE(shim->Vtbl->Index(table, downsized, &index), 0);
+      indexes.push_back(index);
+    }
+
+    return indexes;
+  }
+
 protected:
   PICLASSFACTORY classFactory_ = nullptr;
   PPERFECT_HASH_ONLINE online_ = nullptr;
@@ -685,7 +726,165 @@ TEST_F(PerfectHashOnlineTests, GraphImpl4RejectsNonGoodHashes) {
   EXPECT_EQ(table, nullptr);
 }
 
+TEST_F(PerfectHashOnlineTests, GraphImpl4Assigned8JitRejected) {
+  const auto keys = MakePseudoRandomKeys(8, 0xD00DFEEDu);
+
+  PPERFECT_HASH_TABLE table = CreateTableFromKeys(
+      keys,
+      PerfectHashHashMultiplyShiftRFunctionId,
+      true,
+      4,
+      nullptr,
+      5);
+  ASSERT_NE(table, nullptr);
+
+  auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
+  PERFECT_HASH_TABLE_FLAGS flags = GetTableFlags(table);
+  ASSERT_EQ(flags.AssignedElementSizeInBits << 3, 8u);
+
+  bool tested_backend = false;
+
+#if defined(PH_HAS_LLVM)
+  {
+    PERFECT_HASH_TABLE_COMPILE_FLAGS compileFlags = {0};
+    compileFlags.JitBackendLlvm = TRUE;
+    EXPECT_EQ(online_->Vtbl->CompileTable(online_, table, &compileFlags),
+              PH_E_NOT_IMPLEMENTED);
+    tested_backend = true;
+  }
+#endif
+
 #if defined(PH_HAS_RAWDOG_JIT)
+  {
+    PERFECT_HASH_TABLE_COMPILE_FLAGS compileFlags = {0};
+    compileFlags.JitBackendRawDog = TRUE;
+    EXPECT_EQ(online_->Vtbl->CompileTable(online_, table, &compileFlags),
+              PH_E_NOT_IMPLEMENTED);
+    tested_backend = true;
+  }
+#endif
+
+  if (!tested_backend) {
+    shim->Vtbl->Release(table);
+    GTEST_SKIP() << "No JIT backend enabled for this build.";
+  }
+
+  shim->Vtbl->Release(table);
+}
+
+#if defined(PH_HAS_RAWDOG_JIT)
+TEST_F(PerfectHashOnlineTests, GraphImpl4RawDogJitMatchesIndexAssigned32) {
+  const auto keys = MakePseudoRandomKeys(64, 0x31415926u);
+
+  PPERFECT_HASH_TABLE table = CreateTableFromKeys(
+      keys,
+      PerfectHashHashMultiplyShiftRFunctionId,
+      false,
+      4,
+      nullptr,
+      5);
+  ASSERT_NE(table, nullptr);
+
+  auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
+  PERFECT_HASH_TABLE_FLAGS flags = GetTableFlags(table);
+  ASSERT_EQ(flags.AssignedElementSizeInBits << 3, 32u);
+  ASSERT_EQ(shim->Vtbl->SlowIndex, nullptr);
+
+  const auto expected = CaptureIndexes(table, keys);
+
+  PERFECT_HASH_TABLE_COMPILE_FLAGS compileFlags = {0};
+  compileFlags.JitBackendRawDog = TRUE;
+
+  HRESULT result = online_->Vtbl->CompileTable(online_, table, &compileFlags);
+  if (result == PH_E_NOT_IMPLEMENTED) {
+    shim->Vtbl->Release(table);
+    GTEST_SKIP() << "RawDog GraphImpl4 scalar JIT unavailable on this host.";
+  }
+  ASSERT_GE(result, 0);
+
+  for (size_t i = 0; i < keys.size(); ++i) {
+    ULONG index = 0;
+    ASSERT_GE(shim->Vtbl->Index(table, keys[i], &index), 0);
+    EXPECT_EQ(expected[i], index);
+  }
+
+  shim->Vtbl->Release(table);
+}
+
+TEST_F(PerfectHashOnlineTests, GraphImpl4RawDogIndex32x4MatchesIndexAssigned16) {
+  const auto keys = MakePseudoRandomKeys(256, 0x13572468u);
+
+  PPERFECT_HASH_TABLE table = CreateTableFromKeys(
+      keys,
+      PerfectHashHashMultiplyShiftRFunctionId,
+      true,
+      4,
+      nullptr,
+      5);
+  ASSERT_NE(table, nullptr);
+
+  auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
+  PERFECT_HASH_TABLE_FLAGS flags = GetTableFlags(table);
+  ASSERT_EQ(flags.AssignedElementSizeInBits << 3, 16u);
+  ASSERT_EQ(shim->Vtbl->SlowIndex, nullptr);
+
+  const auto expected = CaptureIndexes(table, keys);
+
+  PERFECT_HASH_TABLE_COMPILE_FLAGS compileFlags = {0};
+  compileFlags.JitBackendRawDog = TRUE;
+  compileFlags.JitIndex32x4 = TRUE;
+
+  HRESULT result = online_->Vtbl->CompileTable(online_, table, &compileFlags);
+  if (result == PH_E_NOT_IMPLEMENTED) {
+    shim->Vtbl->Release(table);
+    GTEST_SKIP() << "RawDog GraphImpl4 Index32x4 unavailable on this host.";
+  }
+  ASSERT_GE(result, 0);
+
+  PPERFECT_HASH_TABLE_JIT_INTERFACE jit = nullptr;
+  result = shim->Vtbl->QueryInterface(
+      table,
+#ifdef PH_WINDOWS
+      IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
+#else
+      &IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
+#endif
+      reinterpret_cast<void **>(&jit));
+  ASSERT_GE(result, 0);
+  ASSERT_NE(jit, nullptr);
+
+  PERFECT_HASH_TABLE_JIT_INFO info = {0};
+  result = jit->Vtbl->GetInfo(jit, &info);
+  ASSERT_GE(result, 0);
+  EXPECT_TRUE(info.Flags.Index32x4Compiled);
+
+  for (size_t i = 0; i < keys.size(); i += 4) {
+    ULONG index1 = 0;
+    ULONG index2 = 0;
+    ULONG index3 = 0;
+    ULONG index4 = 0;
+
+    result = jit->Vtbl->Index32x4(jit,
+                                  keys[i],
+                                  keys[i + 1],
+                                  keys[i + 2],
+                                  keys[i + 3],
+                                  &index1,
+                                  &index2,
+                                  &index3,
+                                  &index4);
+    ASSERT_GE(result, 0);
+
+    EXPECT_EQ(expected[i], index1);
+    EXPECT_EQ(expected[i + 1], index2);
+    EXPECT_EQ(expected[i + 2], index3);
+    EXPECT_EQ(expected[i + 3], index4);
+  }
+
+  jit->Vtbl->Release(jit);
+  shim->Vtbl->Release(table);
+}
+
 TEST_F(PerfectHashOnlineTests, RawDogJitIndexMatchesSlowIndex) {
   const std::vector<ULONG> keys = {
       1, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53,
@@ -3958,6 +4157,233 @@ TEST_F(PerfectHashOnlineTests,
 #endif
 
 #if defined(PH_HAS_LLVM)
+TEST_F(PerfectHashOnlineTests, GraphImpl4LlvmJitMatchesIndexAssigned32) {
+  const auto keys = MakePseudoRandomKeys(64, 0xC001D00Du);
+
+  PPERFECT_HASH_TABLE table = CreateTableFromKeys(
+      keys,
+      PerfectHashHashMultiplyShiftRFunctionId,
+      false,
+      4,
+      nullptr,
+      5);
+  ASSERT_NE(table, nullptr);
+
+  auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
+  PERFECT_HASH_TABLE_FLAGS flags = GetTableFlags(table);
+  ASSERT_EQ(flags.AssignedElementSizeInBits << 3, 32u);
+  ASSERT_EQ(shim->Vtbl->SlowIndex, nullptr);
+
+  const auto expected = CaptureIndexes(table, keys);
+
+  PERFECT_HASH_TABLE_COMPILE_FLAGS compileFlags = {0};
+  compileFlags.JitBackendLlvm = TRUE;
+
+  HRESULT result = online_->Vtbl->CompileTable(online_, table, &compileFlags);
+  if (result < 0) {
+    shim->Vtbl->Release(table);
+    GTEST_SKIP() << "LLVM GraphImpl4 scalar JIT unavailable on this host.";
+  }
+  ASSERT_GE(result, 0);
+
+  for (size_t i = 0; i < keys.size(); ++i) {
+    ULONG index = 0;
+    ASSERT_GE(shim->Vtbl->Index(table, keys[i], &index), 0);
+    EXPECT_EQ(expected[i], index);
+  }
+
+  shim->Vtbl->Release(table);
+}
+
+TEST_F(PerfectHashOnlineTests, GraphImpl4LlvmJitMulshrolate3RXMatchesIndexAssigned32) {
+  const auto keys = MakePseudoRandomKeys(64, 0xB16B00B5u);
+
+  PPERFECT_HASH_TABLE table = CreateTableFromKeys(
+      keys,
+      PerfectHashHashMulshrolate3RXFunctionId,
+      false,
+      4,
+      nullptr,
+      5);
+  ASSERT_NE(table, nullptr);
+
+  auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
+  PERFECT_HASH_TABLE_FLAGS flags = GetTableFlags(table);
+  ASSERT_EQ(flags.AssignedElementSizeInBits << 3, 32u);
+  ASSERT_EQ(shim->Vtbl->SlowIndex, nullptr);
+
+  const auto expected = CaptureIndexes(table, keys);
+
+  PERFECT_HASH_TABLE_COMPILE_FLAGS compileFlags = {0};
+  compileFlags.JitBackendLlvm = TRUE;
+
+  HRESULT result = online_->Vtbl->CompileTable(online_, table, &compileFlags);
+  if (result < 0) {
+    shim->Vtbl->Release(table);
+    GTEST_SKIP() << "LLVM GraphImpl4 Mulshrolate3RX JIT unavailable on this host.";
+  }
+  ASSERT_GE(result, 0);
+
+  for (size_t i = 0; i < keys.size(); ++i) {
+    ULONG index = 0;
+    ASSERT_GE(shim->Vtbl->Index(table, keys[i], &index), 0);
+    EXPECT_EQ(expected[i], index);
+  }
+
+  shim->Vtbl->Release(table);
+}
+
+TEST_F(PerfectHashOnlineTests, GraphImpl4LlvmIndex32x4MatchesIndexAssigned16) {
+  const auto keys = MakePseudoRandomKeys(256, 0xFEEDFACEu);
+
+  PPERFECT_HASH_TABLE table = CreateTableFromKeys(
+      keys,
+      PerfectHashHashMultiplyShiftRFunctionId,
+      true,
+      4,
+      nullptr,
+      5);
+  ASSERT_NE(table, nullptr);
+
+  auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
+  PERFECT_HASH_TABLE_FLAGS flags = GetTableFlags(table);
+  ASSERT_EQ(flags.AssignedElementSizeInBits << 3, 16u);
+  ASSERT_EQ(shim->Vtbl->SlowIndex, nullptr);
+
+  const auto expected = CaptureIndexes(table, keys);
+
+  PERFECT_HASH_TABLE_COMPILE_FLAGS compileFlags = {0};
+  compileFlags.JitBackendLlvm = TRUE;
+  compileFlags.JitVectorIndex32x4 = TRUE;
+
+  HRESULT result = online_->Vtbl->CompileTable(online_, table, &compileFlags);
+  if (result < 0) {
+    shim->Vtbl->Release(table);
+    GTEST_SKIP() << "LLVM GraphImpl4 Index32x4 unavailable on this host.";
+  }
+  ASSERT_GE(result, 0);
+
+  PPERFECT_HASH_TABLE_JIT_INTERFACE jit = nullptr;
+  result = shim->Vtbl->QueryInterface(
+      table,
+#ifdef PH_WINDOWS
+      IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
+#else
+      &IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
+#endif
+      reinterpret_cast<void **>(&jit));
+  ASSERT_GE(result, 0);
+  ASSERT_NE(jit, nullptr);
+
+  PERFECT_HASH_TABLE_JIT_INFO info = {0};
+  result = jit->Vtbl->GetInfo(jit, &info);
+  ASSERT_GE(result, 0);
+  EXPECT_TRUE(info.Flags.Index32x4Vector);
+
+  for (size_t i = 0; i < keys.size(); i += 4) {
+    ULONG index1 = 0;
+    ULONG index2 = 0;
+    ULONG index3 = 0;
+    ULONG index4 = 0;
+
+    result = jit->Vtbl->Index32x4(jit,
+                                  keys[i],
+                                  keys[i + 1],
+                                  keys[i + 2],
+                                  keys[i + 3],
+                                  &index1,
+                                  &index2,
+                                  &index3,
+                                  &index4);
+    ASSERT_GE(result, 0);
+
+    EXPECT_EQ(expected[i], index1);
+    EXPECT_EQ(expected[i + 1], index2);
+    EXPECT_EQ(expected[i + 2], index3);
+    EXPECT_EQ(expected[i + 3], index4);
+  }
+
+  jit->Vtbl->Release(jit);
+  shim->Vtbl->Release(table);
+}
+
+TEST_F(PerfectHashOnlineTests, GraphImpl4LlvmIndex64x4MatchesDownsizedIndex) {
+  const std::vector<ULONGLONG> keys = {
+      1ull, 3ull, 5ull, 7ull, 11ull, 13ull, 17ull, 19ull,
+      23ull, 29ull, 31ull, 37ull, 41ull, 43ull, 47ull, 53ull,
+      59ull, 61ull, 67ull, 71ull, 73ull, 79ull, 83ull, 89ull,
+      97ull, 101ull, 103ull, 107ull, 109ull, 113ull, 127ull, 131ull,
+  };
+
+  PPERFECT_HASH_TABLE table =
+      CreateTableFromKeys64(keys, PerfectHashHashMultiplyShiftRFunctionId, false, 4);
+  ASSERT_NE(table, nullptr);
+
+  auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
+  PERFECT_HASH_TABLE_FLAGS flags = GetTableFlags(table);
+  ASSERT_EQ(flags.AssignedElementSizeInBits << 3, 32u);
+  ASSERT_EQ(shim->Vtbl->SlowIndex, nullptr);
+
+  const auto expected = CaptureIndexes64(table, keys);
+
+  PERFECT_HASH_TABLE_COMPILE_FLAGS compileFlags = {0};
+  compileFlags.JitBackendLlvm = TRUE;
+  compileFlags.JitIndex64 = TRUE;
+  compileFlags.JitIndex32x4 = TRUE;
+
+  HRESULT result = online_->Vtbl->CompileTable(online_, table, &compileFlags);
+  if (result < 0) {
+    shim->Vtbl->Release(table);
+    GTEST_SKIP() << "LLVM GraphImpl4 Index64 JIT unavailable on this host.";
+  }
+  ASSERT_GE(result, 0);
+
+  PPERFECT_HASH_TABLE_JIT_INTERFACE jit = nullptr;
+  result = shim->Vtbl->QueryInterface(
+      table,
+#ifdef PH_WINDOWS
+      IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
+#else
+      &IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
+#endif
+      reinterpret_cast<void **>(&jit));
+  ASSERT_GE(result, 0);
+  ASSERT_NE(jit, nullptr);
+
+  for (size_t i = 0; i < keys.size(); ++i) {
+    ULONG index = 0;
+    result = jit->Vtbl->Index64(jit, keys[i], &index);
+    ASSERT_GE(result, 0);
+    EXPECT_EQ(expected[i], index);
+  }
+
+  for (size_t i = 0; i < keys.size(); i += 4) {
+    ULONG index1 = 0;
+    ULONG index2 = 0;
+    ULONG index3 = 0;
+    ULONG index4 = 0;
+
+    result = jit->Vtbl->Index64x4(jit,
+                                  keys[i],
+                                  keys[i + 1],
+                                  keys[i + 2],
+                                  keys[i + 3],
+                                  &index1,
+                                  &index2,
+                                  &index3,
+                                  &index4);
+    ASSERT_GE(result, 0);
+
+    EXPECT_EQ(expected[i], index1);
+    EXPECT_EQ(expected[i + 1], index2);
+    EXPECT_EQ(expected[i + 2], index3);
+    EXPECT_EQ(expected[i + 3], index4);
+  }
+
+  jit->Vtbl->Release(jit);
+  shim->Vtbl->Release(table);
+}
+
 TEST_F(PerfectHashOnlineTests, JitIndexMatchesSlowIndex) {
   const std::vector<ULONG> keys = {
       1, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53,

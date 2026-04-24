@@ -861,19 +861,6 @@ int RunBenchmark(const BenchmarkOptions &base,
   ApplySeed3Bytes(&options);
   NormalizeVectorOptions(&options);
 
-  if (options.graph_impl == 4) {
-    if ((options.compare_isa || options.compare_backends ||
-         options.compare_backends_process) && verbose) {
-      std::cout << "GraphImpl4 currently supports solver benchmarks only; "
-                   "disabling JIT/backend comparison modes.\n";
-    }
-    if (options.jit && verbose) {
-      std::cout << "GraphImpl4 JIT benchmarking is disabled; running solver "
-                   "benchmark only.\n";
-    }
-    options.jit = false;
-  }
-
 #ifndef PH_HAS_LLVM
   if (options.jit &&
       options.jit_backend != BenchmarkOptions::JitBackend::RawDog &&
@@ -2294,14 +2281,6 @@ int main(int argc, char **argv) {
   BenchmarkOptions options;
   if (!ParseArguments(argc, argv, &options)) {
     PrintUsage(argv ? argv[0] : nullptr);
-    return 1;
-  }
-
-  if (options.graph_impl == 4 &&
-      (options.compare_backends || options.compare_backends_process ||
-       options.compare_isa)) {
-    std::cerr << "GraphImpl4 currently supports direct solver benchmarking "
-                 "only.  Omit compare-backend / compare-isa modes.\n";
     return 1;
   }
 

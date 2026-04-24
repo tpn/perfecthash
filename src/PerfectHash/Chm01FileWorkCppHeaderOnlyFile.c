@@ -55,6 +55,12 @@ SaveCppHeaderOnlyFileChm01(
     PPERFECT_HASH_FILE File;
     PPERFECT_HASH_TABLE Table;
     PTABLE_INFO_ON_DISK TableInfo;
+    LARGE_INTEGER EndOfFile;
+    ULONGLONG BaseSize;
+    ULONGLONG KeyElementBytes;
+    ULONGLONG TableElementBytes;
+    ULONGLONG RequiredSize;
+    ULONGLONG AlignedSize;
     ULONGLONG TotalNumberOfElements;
     const ULONG Indent = 0x20202020;
 
@@ -80,6 +86,30 @@ SaveCppHeaderOnlyFileChm01(
         Table->MaskFunctionId == PerfectHashAndMaskFunctionId &&
         IsGoodPerfectHashHashFunctionId(Table->HashFunctionId)
     );
+
+    BaseSize = Context->SystemAllocationGranularity * 2ULL;
+    TableElementBytes = 16;
+    KeyElementBytes = (
+        Keys->OriginalKeySizeType == LongLongType ? 24 : 16
+    );
+    RequiredSize = (
+        BaseSize +
+        (TotalNumberOfElements * TableElementBytes) +
+        (NumberOfKeys * KeyElementBytes)
+    );
+    AlignedSize = ALIGN_UP(RequiredSize,
+                           Context->SystemAllocationGranularity);
+
+    if (AlignedSize > (ULONGLONG)File->FileInfo.EndOfFile.QuadPart) {
+        EndOfFile.QuadPart = (LONGLONG)AlignedSize;
+        AcquirePerfectHashFileLockExclusive(File);
+        Result = File->Vtbl->Extend(File, &EndOfFile);
+        ReleasePerfectHashFileLockExclusive(File);
+        if (FAILED(Result)) {
+            PH_ERROR(PerfectHashFileExtend, Result);
+            return Result;
+        }
+    }
 
     Base = (PCHAR)File->BaseAddress;
     Output = Base;

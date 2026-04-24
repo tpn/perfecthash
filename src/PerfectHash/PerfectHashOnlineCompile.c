@@ -60,10 +60,6 @@ Return Value:
         return E_POINTER;
     }
 
-    if (Table->GraphImpl == 4) {
-        return PH_E_NOT_IMPLEMENTED;
-    }
-
     if (ARGUMENT_PRESENT(CompileFlagsPointer)) {
         Result = IsValidTableCompileFlags(CompileFlagsPointer);
         if (FAILED(Result)) {
@@ -72,6 +68,13 @@ Return Value:
         CompileFlags.AsULong = CompileFlagsPointer->AsULong;
     } else {
         CompileFlags.AsULong = 0;
+    }
+
+    if (Table->GraphImpl == 4 &&
+        (Table->State.UsingAssigned8 ||
+         (ARGUMENT_PRESENT(Table->TableInfoOnDisk) &&
+          Table->TableInfoOnDisk->AssignedElementSizeInBytes == 1))) {
+        return PH_E_NOT_IMPLEMENTED;
     }
 
     //
