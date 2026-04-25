@@ -2,24 +2,118 @@
 
 #include <PerfectHash/PerfectHash.h>
 
+#include "PerfectHashGraphImpl4TestConfig.h"
+
 #include <algorithm>
+#include <chrono>
 #include <cctype>
+#include <cstdint>
 #include <cstdlib>
+#include <exception>
+#include <filesystem>
 #include <fstream>
+#include <optional>
 #include <string>
+#include <system_error>
 #include <unordered_set>
 #include <vector>
 
+#ifdef PH_WINDOWS
+#include <process.h>
+#else
+#include <unistd.h>
+#endif
+
 namespace {
+
+namespace fs = std::filesystem;
+
+#ifdef PH_WINDOWS
+#define PH_TEST_IID(Name) IID_##Name
+#else
+#define PH_TEST_IID(Name) &IID_##Name
+#endif
+
+constexpr const char *kGraphImpl4Sparse32ReloadSeedsArg =
+    "--Seeds=0x8A696C6B,0x5CC6B6A7,0x608";
+constexpr const char *kGraphImpl4Downsized64ReloadSeedsArg =
+    "--Seeds=0xDDE48099,0x20C4AF8D,0x608";
+constexpr const char *kGraphImpl3Downsized64ReloadSeedsArg =
+    "--Seeds=0x9F5ABF20,0x0F97985A,0x608";
+// Deterministic MultiplyShiftR/And seeds for the exact reload fixtures below.
+// Each fixture has its own pinned seed triple so failures identify the key
+// shape that needs regeneration.  Regenerate them if the solver path, key
+// generators, or hash schedule changes and the guards fire.
+// Regenerate by scanning i=1.. with Seed1 = 0x01234567 + i*0x9E3779B9,
+// Seed2 = 0x89ABCDEF + i*0x85EBCA6B, and Seed3 = 0x608, then use the first
+// successful PerfectHashCreate candidate for the matching key generator and
+// GraphImpl.
+
+#define ASSERT_RELOAD_FIXTURE_CREATE_SUCCEEDED(Result, SeedsArg)           \
+  do {                                                                     \
+    if ((Result) == PH_I_SOLVE_TIMEOUT_EXPIRED) {                          \
+      GTEST_SKIP() << "reload fixture seeds timed out on this host; "      \
+                   << "regenerate with the documented seed scan if this "  \
+                   << "is persistent: " << (SeedsArg);                    \
+    }                                                                      \
+    ASSERT_NE((Result), PH_I_CREATE_TABLE_ROUTINE_FAILED_TO_FIND_SOLUTION) \
+        << "reload fixture seeds did not solve; regenerate using the "     \
+        << "documented seed scan: " << (SeedsArg);                        \
+    ASSERT_GE((Result), 0)                                                 \
+        << "reload fixture create failed for seeds: " << (SeedsArg);      \
+  } while (false)
+
+std::vector<ULONG> SeedValuesFromSeedsArg(const char *seeds_arg) {
+  constexpr const char *prefix = "--Seeds=";
+  std::string text(seeds_arg);
+  std::vector<ULONG> seeds;
+
+  if (text.rfind(prefix, 0) != 0) {
+    ADD_FAILURE() << "Invalid seeds arg: " << text;
+    return seeds;
+  }
+
+  size_t start = std::string(prefix).size();
+  while (start < text.size()) {
+    size_t comma = text.find(',', start);
+    std::string token = text.substr(
+        start,
+        comma == std::string::npos ? std::string::npos : comma - start);
+    char *end = nullptr;
+    unsigned long value = std::strtoul(token.c_str(), &end, 0);
+    if (token.empty() || end == token.c_str() || *end != '\0') {
+      ADD_FAILURE() << "Invalid seed token in " << text << ": " << token;
+      return {};
+    }
+    seeds.push_back(static_cast<ULONG>(value));
+    if (comma == std::string::npos) {
+      break;
+    }
+    start = comma + 1;
+  }
+
+  return seeds;
+}
 
 struct PerfectHashTableShim {
   PPERFECT_HASH_TABLE_VTBL Vtbl;
 };
 
-ULONGLONG BuildDownsizeMask(const std::vector<ULONGLONG> &keys) {
+extern "C" {
+ULONGLONG PerfectHashComposeGraphImpl4DownsizeBitmap(ULONGLONG outer_bitmap,
+                                                     ULONG inner_bitmap);
+VOID PerfectHashComputeDownsizeMetadataFromBitmap(ULONGLONG bitmap,
+                                                  PBOOLEAN metadata_valid,
+                                                  PULONGLONG shifted_mask,
+                                                  PBYTE trailing_zeros,
+                                                  PBOOLEAN contiguous);
+}
+
+template <typename T>
+ULONGLONG BuildDownsizeMask(const std::vector<T> &keys) {
   ULONGLONG mask = 0;
   for (auto key : keys) {
-    mask |= key;
+    mask |= static_cast<ULONGLONG>(key);
   }
   return mask;
 }
@@ -39,6 +133,228 @@ ULONG DownsizeKey(ULONGLONG key, ULONGLONG mask) {
   }
 
   return static_cast<ULONG>(result);
+}
+
+template <typename T>
+ULONGLONG BuildDownsizedKeyMask(const std::vector<T> &keys,
+                                ULONGLONG downsize_mask) {
+  ULONGLONG mask = 0;
+  for (auto key : keys) {
+    mask |= DownsizeKey(static_cast<ULONGLONG>(key), downsize_mask);
+  }
+  return mask;
+}
+
+bool IsContiguousBitmap(ULONGLONG mask) {
+  if (mask == 0) {
+    return false;
+  }
+
+  while ((mask & 1ull) == 0) {
+    mask >>= 1;
+  }
+
+  while ((mask & 1ull) != 0) {
+    mask >>= 1;
+  }
+
+  return mask == 0;
+}
+
+void AssertCollisionFreeIndexes(const std::vector<ULONG> &indexes,
+                                size_t number_of_keys,
+                                const char *label) {
+  SCOPED_TRACE(label);
+  ASSERT_EQ(indexes.size(), number_of_keys);
+
+  std::unordered_set<ULONG> seen;
+  seen.reserve(number_of_keys);
+  for (ULONG index : indexes) {
+    EXPECT_LT(index, number_of_keys);
+    EXPECT_TRUE(seen.insert(index).second);
+  }
+  EXPECT_EQ(seen.size(), number_of_keys);
+}
+
+PERFECT_HASH_TABLE_COMPILE_FLAGS MakeLlvmJitCompileFlags() {
+  PERFECT_HASH_TABLE_COMPILE_FLAGS flags = {0};
+
+  //
+  // PerfectHashOnlineCompileTable also forces Jit before table dispatch.  Set
+  // both flags explicitly so these tests document the loaded-table LLVM
+  // precondition and remain equivalent if routed through Table::Compile.
+  //
+  flags.Jit = TRUE;
+  flags.JitBackendLlvm = TRUE;
+
+  return flags;
+}
+
+template <typename T>
+ULONGLONG ExpandSparseBits(T value, const std::vector<int> &bit_positions) {
+  ULONGLONG result = 0;
+  for (size_t index = 0; index < bit_positions.size(); ++index) {
+    if ((static_cast<ULONGLONG>(value) & (1ull << index)) != 0) {
+      result |= (1ull << bit_positions[index]);
+    }
+  }
+  return result;
+}
+
+std::vector<ULONG> MakeSparse32Keys(size_t count) {
+  const std::vector<int> bit_positions = {0, 3, 7, 12, 16, 21, 25, 29, 31};
+  std::vector<ULONG> keys;
+  keys.reserve(count);
+
+  for (ULONG value = 1; keys.size() < count; ++value) {
+    keys.push_back(static_cast<ULONG>(ExpandSparseBits(value, bit_positions)));
+  }
+
+  return keys;
+}
+
+std::vector<ULONGLONG> MakeSparseDownsized64KeysWithPositions(
+    size_t count,
+    const std::vector<int> &bit_positions) {
+  std::vector<ULONGLONG> keys;
+  keys.reserve(count);
+
+  for (ULONG value = 1; keys.size() < count; ++value) {
+    keys.push_back(ExpandSparseBits(value, bit_positions));
+  }
+
+  return keys;
+}
+
+std::vector<ULONGLONG> MakeSparseDownsized64Keys(size_t count) {
+  const std::vector<int> bit_positions = {
+      PERFECTHASH_GRAPHIMPL4_DOWNSIZED64_BIT_POSITIONS
+  };
+  return MakeSparseDownsized64KeysWithPositions(count, bit_positions);
+}
+
+template <typename T>
+void WriteBinaryKeys(const fs::path &path, const std::vector<T> &keys) {
+  std::ofstream file(path, std::ios::binary | std::ios::trunc);
+  ASSERT_TRUE(file) << path;
+  file.write(reinterpret_cast<const char *>(keys.data()),
+             static_cast<std::streamsize>(keys.size() * sizeof(T)));
+  ASSERT_TRUE(file.good()) << path;
+}
+
+fs::path MakeTestDirectory(const char *name) {
+  auto ticks = std::chrono::steady_clock::now().time_since_epoch().count();
+#ifdef PH_WINDOWS
+  auto process_id = _getpid();
+#else
+  auto process_id = getpid();
+#endif
+  fs::path dir = fs::temp_directory_path() /
+                 (std::string("perfecthash_") + name + "_" +
+                  std::to_string(static_cast<long long>(process_id)) + "_" +
+                  std::to_string(static_cast<long long>(ticks)));
+  fs::remove_all(dir);
+  fs::create_directories(dir);
+  return dir;
+}
+
+class ScopedTestDirectory {
+ public:
+  explicit ScopedTestDirectory(const char *name) : path_(MakeTestDirectory(name)) {}
+
+  ~ScopedTestDirectory() {
+    std::error_code error;
+    fs::remove_all(path_, error);
+  }
+
+  const fs::path &path() const { return path_; }
+
+ private:
+  fs::path path_;
+};
+
+class ScopedPhKeys {
+ public:
+  explicit ScopedPhKeys(PPERFECT_HASH_KEYS value = nullptr) : value_(value) {}
+  ScopedPhKeys(const ScopedPhKeys &) = delete;
+  ScopedPhKeys &operator=(const ScopedPhKeys &) = delete;
+
+  ~ScopedPhKeys() {
+    if (value_ != nullptr) {
+      value_->Vtbl->Release(value_);
+    }
+  }
+
+  PPERFECT_HASH_KEYS get() const { return value_; }
+
+ private:
+  PPERFECT_HASH_KEYS value_;
+};
+
+class ScopedPhTable {
+ public:
+  explicit ScopedPhTable(PPERFECT_HASH_TABLE value = nullptr) : value_(value) {}
+  ScopedPhTable(const ScopedPhTable &) = delete;
+  ScopedPhTable &operator=(const ScopedPhTable &) = delete;
+
+  ~ScopedPhTable() {
+    if (value_ != nullptr) {
+      // PPERFECT_HASH_TABLE is opaque in the public C API, so table tests use
+      // the local vtbl-prefix shim to release table instances.
+      reinterpret_cast<PerfectHashTableShim *>(value_)->Vtbl->Release(value_);
+    }
+  }
+
+  PPERFECT_HASH_TABLE get() const { return value_; }
+
+ private:
+  PPERFECT_HASH_TABLE value_;
+};
+
+class ScopedPhJit {
+ public:
+  explicit ScopedPhJit(PPERFECT_HASH_TABLE_JIT_INTERFACE value = nullptr) :
+      value_(value) {}
+  ScopedPhJit(const ScopedPhJit &) = delete;
+  ScopedPhJit &operator=(const ScopedPhJit &) = delete;
+
+  ~ScopedPhJit() {
+    if (value_ != nullptr) {
+      value_->Vtbl->Release(value_);
+    }
+  }
+
+  PPERFECT_HASH_TABLE_JIT_INTERFACE get() const { return value_; }
+
+ private:
+  PPERFECT_HASH_TABLE_JIT_INTERFACE value_;
+};
+
+UNICODE_STRING MakeUnicodeString(std::wstring *value) {
+  UNICODE_STRING string = {};
+  string.Length = static_cast<USHORT>(value->size() * sizeof(WCHAR));
+  string.MaximumLength = static_cast<USHORT>((value->size() + 1) * sizeof(WCHAR));
+  string.Buffer = const_cast<PWSTR>(value->c_str());
+  return string;
+}
+
+fs::path FindSingleTableFile(const fs::path &output_dir) {
+  std::vector<fs::path> table_paths;
+  for (const auto &entry : fs::recursive_directory_iterator(output_dir)) {
+    if (!entry.is_regular_file()) {
+      continue;
+    }
+    if (entry.path().extension() == ".pht1") {
+      table_paths.push_back(entry.path());
+    }
+  }
+
+  if (table_paths.size() != 1u) {
+    ADD_FAILURE() << "Expected exactly one .pht1 file under " << output_dir
+                  << ", found " << table_paths.size();
+    return fs::path();
+  }
+  return table_paths[0];
 }
 
 std::string TrimWhitespace(std::string value) {
@@ -224,6 +540,180 @@ private:
   bool had_old_ = false;
 };
 
+TEST(GraphImpl4BitUtils, ContiguousBitmapDetection) {
+  const ULONGLONG contiguous_composed_mask = 0x380ull;
+  const ULONGLONG high_contiguous_mask = 0xffffffffffffff00ull;
+  const ULONGLONG contiguous_samples[] = {
+      0x080ull,
+      0x100ull,
+      0x180ull,
+      0x380ull,
+      0xffffull,
+  };
+
+  ASSERT_TRUE(IsContiguousBitmap(contiguous_composed_mask));
+  ASSERT_FALSE(IsContiguousBitmap(0x81ull));
+  ASSERT_TRUE(IsContiguousBitmap(high_contiguous_mask));
+  ASSERT_FALSE(IsContiguousBitmap(0x8000000000000001ull));
+  for (ULONGLONG sample : contiguous_samples) {
+    ULONG via_shift = static_cast<ULONG>((sample >> 7) & 0x7ull);
+    ULONG via_extract = DownsizeKey(sample, contiguous_composed_mask);
+    EXPECT_EQ(via_extract, via_shift);
+  }
+
+  BOOLEAN metadata_valid = FALSE;
+  BOOLEAN contiguous = FALSE;
+  BYTE trailing_zeros = 0;
+  ULONGLONG shifted_mask = 0;
+
+  PerfectHashComputeDownsizeMetadataFromBitmap(high_contiguous_mask,
+                                               &metadata_valid,
+                                               &shifted_mask,
+                                               &trailing_zeros,
+                                               &contiguous);
+  EXPECT_TRUE(metadata_valid);
+  EXPECT_TRUE(contiguous);
+  EXPECT_EQ(trailing_zeros, 8u);
+  EXPECT_EQ(shifted_mask, 0x00ffffffffffffffull);
+
+  ULONG high_via_shift =
+      static_cast<ULONG>((0xffffffffffffff00ull >> trailing_zeros) &
+                         shifted_mask);
+  ULONG high_via_extract =
+      DownsizeKey(0xffffffffffffff00ull, high_contiguous_mask);
+  EXPECT_EQ(high_via_extract, high_via_shift);
+
+  PerfectHashComputeDownsizeMetadataFromBitmap(0x8000000000000001ull,
+                                               &metadata_valid,
+                                               &shifted_mask,
+                                               &trailing_zeros,
+                                               &contiguous);
+  EXPECT_TRUE(metadata_valid);
+  EXPECT_FALSE(contiguous);
+  EXPECT_EQ(shifted_mask, 0ull);
+}
+
+TEST(GraphImpl4BitUtils, ComposedDownsizeMetadataUsesComposedBitmap) {
+  const ULONGLONG outer_mask = (1ull << 8) |
+                               (1ull << 9) |
+                               (1ull << 10) |
+                               (1ull << 30) |
+                               (1ull << 32);
+  const ULONG inner_mask = 0x7u;
+  const ULONGLONG composed_mask = 0x700ull;
+
+  ASSERT_FALSE(IsContiguousBitmap(outer_mask));
+  ASSERT_TRUE(IsContiguousBitmap(inner_mask));
+  ASSERT_EQ(PerfectHashComposeGraphImpl4DownsizeBitmap(outer_mask, inner_mask),
+            composed_mask);
+
+  BOOLEAN metadata_valid = FALSE;
+  BOOLEAN contiguous = FALSE;
+  BYTE trailing_zeros = 0;
+  ULONGLONG shifted_mask = 0;
+
+  PerfectHashComputeDownsizeMetadataFromBitmap(composed_mask,
+                                               &metadata_valid,
+                                               &shifted_mask,
+                                               &trailing_zeros,
+                                               &contiguous);
+  EXPECT_TRUE(metadata_valid);
+  EXPECT_TRUE(contiguous);
+  EXPECT_EQ(trailing_zeros, 8u);
+  EXPECT_EQ(shifted_mask, 0x7ull);
+}
+
+TEST(GraphImpl4BitUtils,
+     ComposedDownsizeMetadataRejectsInnerContiguityMismatch) {
+  const ULONGLONG outer_mask = (1ull << 8) |
+                               (1ull << 10) |
+                               (1ull << 30) |
+                               (1ull << 32);
+  const ULONG inner_mask = 0x7u;
+  const ULONGLONG composed_mask = (1ull << 8) |
+                                  (1ull << 10) |
+                                  (1ull << 30);
+
+  ASSERT_FALSE(IsContiguousBitmap(outer_mask));
+  ASSERT_TRUE(IsContiguousBitmap(inner_mask));
+  ASSERT_EQ(PerfectHashComposeGraphImpl4DownsizeBitmap(outer_mask, inner_mask),
+            composed_mask);
+  ASSERT_FALSE(IsContiguousBitmap(composed_mask));
+
+  BOOLEAN metadata_valid = FALSE;
+  BOOLEAN contiguous = TRUE;
+  BYTE trailing_zeros = 0;
+  ULONGLONG shifted_mask = 0;
+
+  PerfectHashComputeDownsizeMetadataFromBitmap(composed_mask,
+                                               &metadata_valid,
+                                               &shifted_mask,
+                                               &trailing_zeros,
+                                               &contiguous);
+  EXPECT_TRUE(metadata_valid);
+  EXPECT_FALSE(contiguous);
+  EXPECT_EQ(shifted_mask, 0ull);
+
+  for (ULONGLONG value = 0; value < 8; ++value) {
+    ULONGLONG key = 0;
+    if ((value & 1ull) != 0) {
+      key |= (1ull << 8);
+    }
+    if ((value & 2ull) != 0) {
+      key |= (1ull << 10);
+    }
+    if ((value & 4ull) != 0) {
+      key |= (1ull << 30);
+    }
+
+    ULONG outer = DownsizeKey(key, outer_mask);
+    ULONG two_step = DownsizeKey(outer, inner_mask);
+    ULONG direct = DownsizeKey(key, composed_mask);
+    EXPECT_EQ(two_step, direct);
+  }
+}
+
+TEST(GraphImpl4BitUtils, ComposedExtractionMatchesTwoStepExtraction) {
+  const ULONGLONG outer_mask = 0x1f00ull;
+  const ULONG inner_mask = 0x15u;
+  const ULONGLONG composed_mask = 0x1500ull;
+
+  ASSERT_TRUE(IsContiguousBitmap(outer_mask));
+  ASSERT_FALSE(IsContiguousBitmap(inner_mask));
+  ASSERT_EQ(PerfectHashComposeGraphImpl4DownsizeBitmap(outer_mask, inner_mask),
+            composed_mask);
+  ASSERT_FALSE(IsContiguousBitmap(composed_mask));
+
+  for (ULONGLONG value = 0; value < 32; ++value) {
+    ULONGLONG key = value << 8;
+    ULONG outer = DownsizeKey(key, outer_mask);
+    ULONG two_step = DownsizeKey(outer, inner_mask);
+    ULONG direct = DownsizeKey(key, composed_mask);
+    EXPECT_EQ(two_step, direct);
+  }
+}
+
+TEST(GraphImpl4BitUtils, Downsized64OuterBitmapProducesIdentityInnerBitmap) {
+  const std::vector<int> bit_positions = {1, 3, 6, 10, 18, 24, 32, 41, 56};
+  const auto keys = MakeSparseDownsized64KeysWithPositions(256,
+                                                           bit_positions);
+  const ULONGLONG outer_mask = BuildDownsizeMask(keys);
+  const ULONGLONG downsized_mask = BuildDownsizedKeyMask(keys, outer_mask);
+  const ULONGLONG expected_mask = (1ull << bit_positions.size()) - 1ull;
+
+  //
+  // Starting the raw 64-bit positions above bit 0 does not create a non-zero
+  // trailing shift after outer downsizing.  Because the outer bitmap is the OR
+  // of the same key set, every packed bit has at least one source key and the
+  // GraphImpl4 inner bitmap is identity in the downsized64 domain.
+  //
+
+  ASSERT_EQ(outer_mask & 1ull, 0ull);
+  EXPECT_EQ(downsized_mask, expected_mask);
+  EXPECT_TRUE(IsContiguousBitmap(downsized_mask));
+  EXPECT_NE(downsized_mask & 1ull, 0ull);
+}
+
 class PerfectHashOnlineTests : public ::testing::Test {
 protected:
   void SetUp() override {
@@ -272,7 +762,8 @@ protected:
       const std::vector<ULONG> *seeds = nullptr,
       ULONG maxSolveTimeInSeconds = 0,
       bool useSystemRng = false,
-      bool useRandomStartSeed = false) {
+      bool useRandomStartSeed = false,
+      bool hashAllKeysFirst = false) {
     PERFECT_HASH_KEYS_LOAD_FLAGS keysFlags = {0};
     PERFECT_HASH_TABLE_CREATE_FLAGS tableFlags = {0};
     std::vector<PERFECT_HASH_TABLE_CREATE_PARAMETER> table_params;
@@ -284,6 +775,7 @@ protected:
     tableFlags.Quiet = TRUE;
     tableFlags.DoNotTryUseHash16Impl = allowAssigned16 ? FALSE : TRUE;
     tableFlags.RngUseRandomStartSeed = useRandomStartSeed ? TRUE : FALSE;
+    tableFlags.HashAllKeysFirst = hashAllKeysFirst ? TRUE : FALSE;
 
     if (graphImpl != 0) {
       PERFECT_HASH_TABLE_CREATE_PARAMETER param = {};
@@ -344,7 +836,8 @@ protected:
       PERFECT_HASH_HASH_FUNCTION_ID hashFunctionId,
       bool allowAssigned16 = false,
       ULONG graphImpl = 0,
-      ULONG maxSolveTimeInSeconds = 0) {
+      ULONG maxSolveTimeInSeconds = 0,
+      const std::vector<ULONG> *seeds = nullptr) {
     PERFECT_HASH_KEYS_LOAD_FLAGS keysFlags = {0};
     PERFECT_HASH_TABLE_CREATE_FLAGS tableFlags = {0};
     std::vector<PERFECT_HASH_TABLE_CREATE_PARAMETER> table_params;
@@ -355,6 +848,7 @@ protected:
     tableFlags.NoFileIo = TRUE;
     tableFlags.Quiet = TRUE;
     tableFlags.DoNotTryUseHash16Impl = allowAssigned16 ? FALSE : TRUE;
+    tableFlags.HashAllKeysFirst = FALSE;  // Mirrors --DoNotHashAllKeysFirst.
 
     if (graphImpl != 0) {
       PERFECT_HASH_TABLE_CREATE_PARAMETER param = {};
@@ -367,6 +861,15 @@ protected:
       PERFECT_HASH_TABLE_CREATE_PARAMETER param = {};
       param.Id = TableCreateParameterMaxSolveTimeInSecondsId;
       param.AsULong = maxSolveTimeInSeconds;
+      table_params.push_back(param);
+    }
+
+    if (seeds && !seeds->empty()) {
+      PERFECT_HASH_TABLE_CREATE_PARAMETER param = {};
+      param.Id = TableCreateParameterSeedsId;
+      param.AsValueArray.Values = const_cast<ULONG *>(seeds->data());
+      param.AsValueArray.NumberOfValues = static_cast<ULONG>(seeds->size());
+      param.AsValueArray.ValueSizeInBytes = sizeof(ULONG);
       table_params.push_back(param);
     }
 
@@ -435,6 +938,220 @@ protected:
     return indexes;
   }
 
+  std::optional<ULONGLONG> LoadKeyDownsizeBitmapFromHeader(
+      const fs::path &table_path) {
+    fs::path header_path = table_path;
+    header_path.replace_extension(".h");
+
+    std::ifstream file(header_path);
+    EXPECT_TRUE(file.is_open()) << "Failed to open " << header_path;
+    if (!file.is_open()) {
+      return std::nullopt;
+    }
+
+    std::string macro_prefix = header_path.stem().string();
+    std::transform(macro_prefix.begin(),
+                   macro_prefix.end(),
+                   macro_prefix.begin(),
+                   [](unsigned char ch) {
+                     return static_cast<char>(std::toupper(ch));
+                   });
+
+    const std::string key_downsize_needle =
+        "#define " + macro_prefix + "_KEY_DOWNSIZE_BITMAP ";
+    const std::string graphimpl4_needle =
+        "#define " + macro_prefix + "_GRAPHIMPL4_KEY_DOWNSIZE_BITMAP ";
+
+    std::vector<std::string> lines;
+    std::string line;
+    while (std::getline(file, line)) {
+      lines.push_back(line);
+    }
+
+    //
+    // Prefer the 64-bit key-downsize macro when present.  Sparse 32-bit
+    // GraphImpl4 tables do not emit that macro, so fall back to the GraphImpl4
+    // inner compact-key bitmap; the return below intentionally exits both loops.
+    //
+    for (const auto &needle : {key_downsize_needle, graphimpl4_needle}) {
+      for (const auto &candidate : lines) {
+        if (candidate.find(needle) != 0) {
+          continue;
+        }
+
+        const std::string value = candidate.substr(needle.size());
+        try {
+          //
+          // Generated hex macros are emitted with a 0x prefix by
+          // OUTPUT_HEX_RAW; base 0 parsing below depends on that prefix.
+          //
+          return static_cast<ULONGLONG>(std::stoull(value, nullptr, 0));
+        } catch (const std::exception &ex) {
+          ADD_FAILURE() << "Failed to parse key downsize bitmap from "
+                        << header_path << ": " << candidate << " ("
+                        << ex.what() << ")";
+          return std::nullopt;
+        }
+      }
+    }
+
+    ADD_FAILURE() << "Failed to find key downsize bitmap macro in "
+                  << header_path;
+    return std::nullopt;
+  }
+
+  HRESULT CreateFileBackedTableFromKeys(
+      const fs::path &keys_path,
+      const fs::path &output_dir,
+      ULONG key_size_in_bytes,
+      const std::vector<std::string> &extra_args = {},
+      ULONG graph_impl = 4) {
+    PPERFECT_HASH_CONTEXT context = nullptr;
+    auto createInstance = classFactory_->Vtbl->CreateInstance;
+    HRESULT result = createInstance(
+        classFactory_,
+        nullptr,
+        PH_TEST_IID(PERFECT_HASH_CONTEXT),
+        reinterpret_cast<void **>(&context));
+    EXPECT_GE(result, 0);
+    EXPECT_NE(context, nullptr);
+    if (FAILED(result)) {
+      if (context != nullptr) {
+        context->Vtbl->Release(context);
+      }
+      return result;
+    }
+    if (context == nullptr) {
+      return E_POINTER;
+    }
+
+    std::vector<std::string> args = {
+        "PerfectHashCreateExe",
+        keys_path.string(),
+        output_dir.string(),
+        "Chm01",
+        "MultiplyShiftR",
+        "And",
+        "1",
+        "--Quiet",
+        "--DoNotHashAllKeysFirst",
+        "--MaxSolveTimeInSeconds=5",
+        "--KeySizeInBytes=" + std::to_string(key_size_in_bytes),
+    };
+
+    if (graph_impl != 0) {
+      args.push_back("--GraphImpl=" + std::to_string(graph_impl));
+    }
+
+    args.insert(args.end(), extra_args.begin(), extra_args.end());
+
+    std::vector<char *> argv;
+    argv.reserve(args.size());
+    for (auto &arg : args) {
+      argv.push_back(arg.data());
+    }
+
+    result = context->Vtbl->TableCreateArgvA(
+        context,
+        static_cast<int>(argv.size()),
+        argv.data());
+
+    context->Vtbl->Release(context);
+    return result;
+  }
+
+  PPERFECT_HASH_KEYS LoadKeysFromPath(
+      const fs::path &keys_path,
+      ULONG key_size_in_bytes) {
+    PPERFECT_HASH_KEYS keys = nullptr;
+    auto createInstance = classFactory_->Vtbl->CreateInstance;
+    HRESULT result = createInstance(
+        classFactory_,
+        nullptr,
+        PH_TEST_IID(PERFECT_HASH_KEYS),
+        reinterpret_cast<void **>(&keys));
+    EXPECT_GE(result, 0);
+    EXPECT_NE(keys, nullptr);
+    if (FAILED(result)) {
+      if (keys != nullptr) {
+        keys->Vtbl->Release(keys);
+      }
+      return nullptr;
+    }
+    if (keys == nullptr) {
+      return nullptr;
+    }
+
+    std::wstring keys_path_w = keys_path.wstring();
+    UNICODE_STRING keys_path_string = MakeUnicodeString(&keys_path_w);
+    PERFECT_HASH_KEYS_LOAD_FLAGS keys_load_flags = {0};
+
+    result = keys->Vtbl->Load(keys,
+                              &keys_load_flags,
+                              &keys_path_string,
+                              key_size_in_bytes);
+    EXPECT_GE(result, 0);
+    if (FAILED(result)) {
+      keys->Vtbl->Release(keys);
+      return nullptr;
+    }
+
+    return keys;
+  }
+
+  PPERFECT_HASH_TABLE LoadTableFromPath(
+      const fs::path &table_path,
+      PPERFECT_HASH_KEYS keys = nullptr,
+      HRESULT *load_result = nullptr,
+      bool allow_not_implemented = false) {
+    PPERFECT_HASH_TABLE table = nullptr;
+    if (load_result != nullptr) {
+      *load_result = S_OK;
+    }
+
+    auto createInstance = classFactory_->Vtbl->CreateInstance;
+    HRESULT result = createInstance(
+        classFactory_,
+        nullptr,
+        PH_TEST_IID(PERFECT_HASH_TABLE),
+        reinterpret_cast<void **>(&table));
+    if (load_result != nullptr) {
+      *load_result = result;
+    }
+    EXPECT_GE(result, 0);
+    if (FAILED(result)) {
+      if (table != nullptr) {
+        auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
+        shim->Vtbl->Release(table);
+      }
+      return nullptr;
+    }
+    if (table == nullptr) {
+      if (load_result != nullptr) {
+        *load_result = E_POINTER;
+      }
+      return nullptr;
+    }
+
+    std::wstring table_path_w = table_path.wstring();
+    UNICODE_STRING table_path_string = MakeUnicodeString(&table_path_w);
+    PERFECT_HASH_TABLE_LOAD_FLAGS load_flags = {0};
+    auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
+    result = shim->Vtbl->Load(table, &load_flags, &table_path_string, keys);
+    if (load_result != nullptr) {
+      *load_result = result;
+    }
+    if (!(allow_not_implemented && result == PH_E_NOT_IMPLEMENTED)) {
+      EXPECT_GE(result, 0);
+    }
+    if (FAILED(result)) {
+      shim->Vtbl->Release(table);
+      return nullptr;
+    }
+
+    return table;
+  }
+
 protected:
   PICLASSFACTORY classFactory_ = nullptr;
   PPERFECT_HASH_ONLINE online_ = nullptr;
@@ -453,6 +1170,11 @@ TEST_F(PerfectHashOnlineTests, CreateTableFromKeysReturnsUniqueIndexes) {
   ASSERT_NE(table, nullptr);
 
   auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
+  //
+  // The keyed and keyless reload paths consume the same persisted metadata.
+  // In addition to cross-checking the two paths agree, assert that the
+  // keyless path still maps this key set into a dense, collision-free range.
+  //
   std::unordered_set<ULONG> seen;
   seen.reserve(keys.size());
 
@@ -691,6 +1413,456 @@ TEST_F(PerfectHashOnlineTests, GraphImpl4SupportsDownsized64BitInputs) {
   shim->Vtbl->Release(table);
 }
 
+TEST_F(PerfectHashOnlineTests, GraphImpl4FileBackedReloadPreservesSparse32Compaction) {
+  const ScopedTestDirectory root("graphimpl4_sparse32_reload");
+  const auto keys_path = root.path() / "GraphImpl4Sparse32.keys";
+  const auto output_dir = root.path() / "out";
+  const auto keys = MakeSparse32Keys(256);
+
+  WriteBinaryKeys(keys_path, keys);
+  HRESULT result = CreateFileBackedTableFromKeys(keys_path,
+                                                 output_dir,
+                                                 sizeof(ULONG),
+                                                 {kGraphImpl4Sparse32ReloadSeedsArg});
+  ASSERT_RELOAD_FIXTURE_CREATE_SUCCEEDED(result,
+                                         kGraphImpl4Sparse32ReloadSeedsArg);
+
+  fs::path table_path = FindSingleTableFile(output_dir);
+  ASSERT_FALSE(table_path.empty());
+
+  ScopedPhKeys reference_keys(LoadKeysFromPath(keys_path, sizeof(ULONG)));
+  ASSERT_NE(reference_keys.get(), nullptr);
+
+  ScopedPhTable reference_table(LoadTableFromPath(table_path,
+                                                 reference_keys.get()));
+  ASSERT_NE(reference_table.get(), nullptr);
+
+  ScopedPhTable table(LoadTableFromPath(table_path));
+  ASSERT_NE(table.get(), nullptr);
+
+  auto *reference_shim =
+      reinterpret_cast<PerfectHashTableShim *>(reference_table.get());
+  auto *shim = reinterpret_cast<PerfectHashTableShim *>(table.get());
+  std::vector<ULONG> reference_indexes;
+  std::vector<ULONG> keyless_indexes;
+  reference_indexes.reserve(keys.size());
+  keyless_indexes.reserve(keys.size());
+
+  const ULONGLONG mask = BuildDownsizeMask(keys);
+  const auto header_mask = LoadKeyDownsizeBitmapFromHeader(table_path);
+  ASSERT_TRUE(header_mask.has_value());
+  ASSERT_EQ(mask, *header_mask);
+  ASSERT_FALSE(IsContiguousBitmap(mask));
+
+  //
+  // This sparse32 reload test is the file-backed coverage for non-identity
+  // GraphImpl4 inner compact-key metadata.  There is no outer 64-bit downsize
+  // here, so the header loader falls back to _GRAPHIMPL4_KEY_DOWNSIZE_BITMAP.
+  //
+
+  for (size_t index = 0; index < keys.size(); ++index) {
+    ULONG key = keys[index];
+    ULONG expected = 0;
+    ULONG actual = 0;
+    ASSERT_GE(reference_shim->Vtbl->Index(reference_table.get(),
+                                          key,
+                                          &expected), 0);
+    ASSERT_GE(shim->Vtbl->Index(table.get(), key, &actual), 0);
+    EXPECT_EQ(expected, actual);
+    EXPECT_LT(expected, keys.size());
+    EXPECT_LT(actual, keys.size());
+    reference_indexes.push_back(expected);
+    keyless_indexes.push_back(actual);
+  }
+
+  AssertCollisionFreeIndexes(reference_indexes,
+                             keys.size(),
+                             "keyed sparse32 reload");
+  AssertCollisionFreeIndexes(keyless_indexes,
+                             keys.size(),
+                             "keyless sparse32 reload");
+}
+
+TEST_F(PerfectHashOnlineTests, GraphImpl4FileBackedReloadPreservesDownsized64Compaction) {
+  const ScopedTestDirectory root("graphimpl4_downsized64_reload_nojit");
+  const auto keys_path = root.path() / "GraphImpl4Downsized64.keys";
+  const auto output_dir = root.path() / "out";
+  const auto keys = MakeSparseDownsized64Keys(256);
+
+  WriteBinaryKeys(keys_path, keys);
+  HRESULT result = CreateFileBackedTableFromKeys(keys_path,
+                                                 output_dir,
+                                                 sizeof(ULONGLONG),
+                                                 {kGraphImpl4Downsized64ReloadSeedsArg});
+  ASSERT_RELOAD_FIXTURE_CREATE_SUCCEEDED(
+      result,
+      kGraphImpl4Downsized64ReloadSeedsArg);
+
+  fs::path table_path = FindSingleTableFile(output_dir);
+  ASSERT_FALSE(table_path.empty());
+
+  ScopedPhKeys loaded_keys(LoadKeysFromPath(keys_path, sizeof(ULONGLONG)));
+  ASSERT_NE(loaded_keys.get(), nullptr);
+
+  HRESULT reference_load_result = S_OK;
+  ScopedPhTable reference_table(LoadTableFromPath(table_path,
+                                                 loaded_keys.get(),
+                                                 &reference_load_result));
+  ASSERT_EQ(reference_load_result, S_OK);
+  ASSERT_NE(reference_table.get(), nullptr);
+
+  HRESULT keyless_load_result = S_OK;
+  ScopedPhTable table(LoadTableFromPath(table_path,
+                                       nullptr,
+                                       &keyless_load_result));
+  ASSERT_EQ(keyless_load_result, S_OK);
+  ASSERT_NE(table.get(), nullptr);
+
+  auto *reference_shim =
+      reinterpret_cast<PerfectHashTableShim *>(reference_table.get());
+  auto *shim = reinterpret_cast<PerfectHashTableShim *>(table.get());
+  const ULONGLONG mask = BuildDownsizeMask(keys);
+  const auto create_seeds =
+      SeedValuesFromSeedsArg(kGraphImpl4Downsized64ReloadSeedsArg);
+  ASSERT_FALSE(create_seeds.empty());
+  ScopedPhTable created_table(CreateTableFromKeys64(
+      keys,
+      PerfectHashHashMultiplyShiftRFunctionId,
+      false,
+      4,
+      5,
+      &create_seeds));
+  ASSERT_NE(created_table.get(), nullptr);
+  auto *created_shim =
+      reinterpret_cast<PerfectHashTableShim *>(created_table.get());
+  std::vector<ULONG> reference_indexes;
+  std::vector<ULONG> keyless_indexes;
+  std::vector<ULONG> created_indexes;
+  reference_indexes.reserve(keys.size());
+  keyless_indexes.reserve(keys.size());
+  created_indexes.reserve(keys.size());
+
+  const auto header_mask = LoadKeyDownsizeBitmapFromHeader(table_path);
+  ASSERT_TRUE(header_mask.has_value());
+  ASSERT_EQ(mask, *header_mask);
+  ASSERT_FALSE(IsContiguousBitmap(mask));
+
+  //
+  // The loaded-table Index() API is 32-bit.  For downsized-64 GraphImpl4
+  // tables, callers pass the outer-bitmap result rather than the raw 64-bit
+  // key; the GraphImpl4 vtbl then applies the inner compact-key step.
+  // The in-memory table anchors reload correctness to creation-time state so a
+  // shared keyed/keyless reload bug cannot make this test pass by agreement.
+  //
+
+  for (size_t index = 0; index < keys.size(); ++index) {
+    ULONGLONG key = keys[index];
+    ULONG created = 0;
+    ULONG expected = 0;
+    ULONG actual = 0;
+    ULONG downsized = DownsizeKey(key, mask);
+
+    ASSERT_GE(created_shim->Vtbl->Index(created_table.get(),
+                                        downsized,
+                                        &created), 0);
+    ASSERT_GE(reference_shim->Vtbl->Index(reference_table.get(),
+                                          downsized,
+                                          &expected), 0);
+    ASSERT_GE(shim->Vtbl->Index(table.get(), downsized, &actual), 0);
+    EXPECT_EQ(created, expected);
+    EXPECT_EQ(created, actual);
+    EXPECT_EQ(expected, actual);
+    EXPECT_LT(created, keys.size());
+    EXPECT_LT(expected, keys.size());
+    EXPECT_LT(actual, keys.size());
+    created_indexes.push_back(created);
+    reference_indexes.push_back(expected);
+    keyless_indexes.push_back(actual);
+  }
+
+  AssertCollisionFreeIndexes(created_indexes,
+                             keys.size(),
+                             "created downsized64 reference");
+  AssertCollisionFreeIndexes(reference_indexes,
+                             keys.size(),
+                             "keyed downsized64 reload");
+  AssertCollisionFreeIndexes(keyless_indexes,
+                             keys.size(),
+                             "keyless downsized64 reload");
+}
+
+TEST_F(PerfectHashOnlineTests, NonGraphImplFileBackedReloadPreservesDownsized64Metadata) {
+  const ScopedTestDirectory root("graphimpl3_downsized64_reload_nojit");
+  const auto keys_path = root.path() / "GraphImpl3Downsized64.keys";
+  const auto output_dir = root.path() / "out";
+  const auto keys = MakeSparseDownsized64Keys(128);
+
+  WriteBinaryKeys(keys_path, keys);
+  HRESULT result = CreateFileBackedTableFromKeys(keys_path,
+                                                 output_dir,
+                                                 sizeof(ULONGLONG),
+                                                 {kGraphImpl3Downsized64ReloadSeedsArg},
+                                                 3);
+  ASSERT_RELOAD_FIXTURE_CREATE_SUCCEEDED(
+      result,
+      kGraphImpl3Downsized64ReloadSeedsArg);
+
+  fs::path table_path = FindSingleTableFile(output_dir);
+  ASSERT_FALSE(table_path.empty());
+
+  ScopedPhKeys loaded_keys(LoadKeysFromPath(keys_path, sizeof(ULONGLONG)));
+  ASSERT_NE(loaded_keys.get(), nullptr);
+
+  ScopedPhTable reference_table(LoadTableFromPath(table_path,
+                                                 loaded_keys.get()));
+  ASSERT_NE(reference_table.get(), nullptr);
+
+  ScopedPhTable table(LoadTableFromPath(table_path));
+  ASSERT_NE(table.get(), nullptr);
+
+  auto *reference_shim =
+      reinterpret_cast<PerfectHashTableShim *>(reference_table.get());
+  auto *shim = reinterpret_cast<PerfectHashTableShim *>(table.get());
+  const ULONGLONG mask = BuildDownsizeMask(keys);
+  const auto create_seeds =
+      SeedValuesFromSeedsArg(kGraphImpl3Downsized64ReloadSeedsArg);
+  ASSERT_FALSE(create_seeds.empty());
+  ScopedPhTable created_table(CreateTableFromKeys64(
+      keys,
+      PerfectHashHashMultiplyShiftRFunctionId,
+      false,
+      3,
+      5,
+      &create_seeds));
+  ASSERT_NE(created_table.get(), nullptr);
+  auto *created_shim =
+      reinterpret_cast<PerfectHashTableShim *>(created_table.get());
+  const auto header_mask = LoadKeyDownsizeBitmapFromHeader(table_path);
+  ASSERT_TRUE(header_mask.has_value());
+  ASSERT_EQ(mask, *header_mask);
+  ASSERT_FALSE(IsContiguousBitmap(mask));
+
+  std::unordered_set<ULONG> created_seen;
+  std::unordered_set<ULONG> seen;
+  created_seen.reserve(keys.size());
+  seen.reserve(keys.size());
+  for (ULONGLONG key : keys) {
+    ULONG created = 0;
+    ULONG expected = 0;
+    ULONG actual = 0;
+    ULONG downsized = DownsizeKey(key, mask);
+
+    ASSERT_GE(created_shim->Vtbl->Index(created_table.get(),
+                                        downsized,
+                                        &created), 0);
+    ASSERT_GE(reference_shim->Vtbl->Index(reference_table.get(),
+                                          downsized,
+                                          &expected), 0);
+    ASSERT_GE(shim->Vtbl->Index(table.get(), downsized, &actual), 0);
+    EXPECT_EQ(created, expected);
+    EXPECT_EQ(created, actual);
+    EXPECT_EQ(expected, actual);
+    EXPECT_LT(created, keys.size());
+    EXPECT_LT(expected, keys.size());
+    EXPECT_LT(actual, keys.size());
+    EXPECT_TRUE(created_seen.insert(created).second);
+    EXPECT_TRUE(seen.insert(actual).second);
+  }
+
+  EXPECT_EQ(created_seen.size(), keys.size());
+  EXPECT_EQ(seen.size(), keys.size());
+}
+
+#if defined(PH_HAS_LLVM)
+TEST_F(PerfectHashOnlineTests, GraphImpl4FileBackedReloadSparse32JitIndex32) {
+  const ScopedTestDirectory root("graphimpl4_sparse32_reload_jit");
+  const auto keys_path = root.path() / "GraphImpl4Sparse32.keys";
+  const auto output_dir = root.path() / "out";
+  const auto keys = MakeSparse32Keys(256);
+
+  WriteBinaryKeys(keys_path, keys);
+  HRESULT result = CreateFileBackedTableFromKeys(keys_path,
+                                                 output_dir,
+                                                 sizeof(ULONG),
+                                                 {kGraphImpl4Sparse32ReloadSeedsArg});
+  ASSERT_RELOAD_FIXTURE_CREATE_SUCCEEDED(result,
+                                         kGraphImpl4Sparse32ReloadSeedsArg);
+
+  fs::path table_path = FindSingleTableFile(output_dir);
+  ASSERT_FALSE(table_path.empty());
+
+  ScopedPhTable table(LoadTableFromPath(table_path));
+  ASSERT_NE(table.get(), nullptr);
+
+  auto *shim = reinterpret_cast<PerfectHashTableShim *>(table.get());
+  const auto expected = CaptureIndexes(table.get(), keys);
+
+  PERFECT_HASH_TABLE_COMPILE_FLAGS compile_flags = MakeLlvmJitCompileFlags();
+  result = online_->Vtbl->CompileTable(online_,
+                                       table.get(),
+                                       &compile_flags);
+  if (result == PH_E_LLVM_BACKEND_NOT_FOUND) {
+    GTEST_SKIP() << "LLVM backend not found on this host.";
+  }
+  //
+  // Backend availability is the only skip case.  Any other compile failure is
+  // specific to loaded sparse32 GraphImpl4 JIT state and should fail loudly.
+  //
+  ASSERT_EQ(result, S_OK)
+      << "LLVM compile of keyless sparse32 table failed: 0x"
+      << std::hex << result;
+
+  std::vector<ULONG> indexes;
+  indexes.reserve(keys.size());
+  for (size_t index = 0; index < keys.size(); ++index) {
+    ULONG key = keys[index];
+    ULONG actual = 0;
+
+    ASSERT_GE(shim->Vtbl->Index(table.get(), key, &actual), 0);
+    ASSERT_LT(index, expected.size());
+    EXPECT_EQ(expected[index], actual);
+    indexes.push_back(actual);
+  }
+
+  AssertCollisionFreeIndexes(indexes,
+                             keys.size(),
+                             "keyless sparse32 reload jit");
+}
+
+TEST_F(PerfectHashOnlineTests, GraphImpl4FileBackedReloadDownsized64JitIndex64) {
+  const ScopedTestDirectory root("graphimpl4_downsized64_reload");
+  const auto keys_path = root.path() / "GraphImpl4Downsized64.keys";
+  const auto output_dir = root.path() / "out";
+  const auto keys = MakeSparseDownsized64Keys(256);
+
+  WriteBinaryKeys(keys_path, keys);
+  HRESULT result = CreateFileBackedTableFromKeys(keys_path,
+                                                 output_dir,
+                                                 sizeof(ULONGLONG),
+                                                 {kGraphImpl4Downsized64ReloadSeedsArg});
+  ASSERT_RELOAD_FIXTURE_CREATE_SUCCEEDED(
+      result,
+      kGraphImpl4Downsized64ReloadSeedsArg);
+
+  fs::path table_path = FindSingleTableFile(output_dir);
+  ASSERT_FALSE(table_path.empty());
+
+  ScopedPhTable table(LoadTableFromPath(table_path));
+  ASSERT_NE(table.get(), nullptr);
+
+  PERFECT_HASH_TABLE_COMPILE_FLAGS compile_flags = MakeLlvmJitCompileFlags();
+  compile_flags.JitIndex64 = TRUE;
+
+  result = online_->Vtbl->CompileTable(online_,
+                                       table.get(),
+                                       &compile_flags);
+  if (result == PH_E_LLVM_BACKEND_NOT_FOUND) {
+    GTEST_SKIP() << "LLVM backend not found on this host.";
+  }
+  ASSERT_EQ(result, S_OK)
+      << "LLVM compile of keyless loaded table failed: 0x"
+      << std::hex << result;
+
+  PPERFECT_HASH_TABLE_JIT_INTERFACE raw_jit = nullptr;
+  auto *shim = reinterpret_cast<PerfectHashTableShim *>(table.get());
+  result = shim->Vtbl->QueryInterface(
+      table.get(),
+      PH_TEST_IID(PERFECT_HASH_TABLE_JIT_INTERFACE),
+      reinterpret_cast<void **>(&raw_jit));
+  ScopedPhJit jit(raw_jit);
+  ASSERT_GE(result, 0);
+  ASSERT_NE(jit.get(), nullptr);
+
+  const ULONGLONG mask = BuildDownsizeMask(keys);
+  const ULONGLONG downsized_mask = BuildDownsizedKeyMask(keys, mask);
+
+  ASSERT_FALSE(IsContiguousBitmap(mask));
+  ASSERT_TRUE(IsContiguousBitmap(downsized_mask));
+
+  std::vector<ULONG> keyless_indexes;
+  keyless_indexes.reserve(keys.size());
+  std::unordered_set<ULONG> keyless_seen;
+  keyless_seen.reserve(keys.size());
+
+  for (size_t index = 0; index < keys.size(); ++index) {
+    ULONGLONG key = keys[index];
+    ULONG reloaded = 0;
+    ULONG actual = 0;
+    ULONG downsized = DownsizeKey(key, mask);
+
+    //
+    // Index() receives the already-outer-downsized 32-bit key here.  Comparing
+    // it with Index64() validates the outer-downsize plus inner-compact
+    // decomposition used by loaded-table JIT.
+    //
+    ASSERT_GE(shim->Vtbl->Index(table.get(), downsized, &reloaded), 0);
+    ASSERT_GE(jit.get()->Vtbl->Index64(jit.get(), key, &actual), 0);
+    EXPECT_EQ(reloaded, actual);
+    EXPECT_LT(reloaded, keys.size());
+    EXPECT_LT(actual, keys.size());
+    EXPECT_TRUE(keyless_seen.insert(actual).second);
+    keyless_indexes.push_back(actual);
+  }
+  EXPECT_EQ(keyless_seen.size(), keys.size());
+
+  ScopedPhKeys loaded_keys(LoadKeysFromPath(keys_path, sizeof(ULONGLONG)));
+  ASSERT_NE(loaded_keys.get(), nullptr);
+  const auto header_mask = LoadKeyDownsizeBitmapFromHeader(table_path);
+  ASSERT_TRUE(header_mask.has_value());
+  ASSERT_EQ(mask, *header_mask);
+
+  ScopedPhTable keyed_table(LoadTableFromPath(table_path, loaded_keys.get()));
+  ASSERT_NE(keyed_table.get(), nullptr);
+
+  result = online_->Vtbl->CompileTable(online_,
+                                       keyed_table.get(),
+                                       &compile_flags);
+  //
+  // The keyless compile above already proved LLVM availability.  A failure here
+  // is keyed-load specific, even if it reports backend availability, and should
+  // fail loudly rather than skip.
+  //
+  ASSERT_EQ(result, S_OK)
+      << "LLVM compile of keyed-loaded table failed: 0x"
+      << std::hex << result;
+
+  PPERFECT_HASH_TABLE_JIT_INTERFACE raw_keyed_jit = nullptr;
+  auto *keyed_shim =
+      reinterpret_cast<PerfectHashTableShim *>(keyed_table.get());
+  result = keyed_shim->Vtbl->QueryInterface(
+      keyed_table.get(),
+      PH_TEST_IID(PERFECT_HASH_TABLE_JIT_INTERFACE),
+      reinterpret_cast<void **>(&raw_keyed_jit));
+  ScopedPhJit keyed_jit(raw_keyed_jit);
+  ASSERT_GE(result, 0);
+  ASSERT_NE(keyed_jit.get(), nullptr);
+
+  std::unordered_set<ULONG> keyed_seen;
+  keyed_seen.reserve(keys.size());
+
+  for (size_t index = 0; index < keys.size(); ++index) {
+    ULONGLONG key = keys[index];
+    ULONG reloaded = 0;
+    ULONG actual = 0;
+    ULONG downsized = DownsizeKey(key, mask);
+
+    ASSERT_GE(keyed_shim->Vtbl->Index(keyed_table.get(),
+                                      downsized,
+                                      &reloaded), 0);
+    ASSERT_GE(keyed_jit.get()->Vtbl->Index64(keyed_jit.get(),
+                                             key,
+                                             &actual), 0);
+    ASSERT_LT(index, keyless_indexes.size());
+    EXPECT_EQ(keyless_indexes[index], reloaded);
+    EXPECT_EQ(keyless_indexes[index], actual);
+    EXPECT_LT(reloaded, keys.size());
+    EXPECT_LT(actual, keys.size());
+    EXPECT_TRUE(keyed_seen.insert(actual).second);
+  }
+  EXPECT_EQ(keyed_seen.size(), keys.size());
+}
+#endif
+
 TEST_F(PerfectHashOnlineTests, GraphImpl4RejectsNonGoodHashes) {
   const auto keys = MakePseudoRandomKeys(64, 0x13579BDFu);
   PERFECT_HASH_KEYS_LOAD_FLAGS keysFlags = {0};
@@ -776,85 +1948,123 @@ TEST_F(PerfectHashOnlineTests, GraphImpl4Assigned8JitRejected) {
 TEST_F(PerfectHashOnlineTests, GraphImpl4RawDogJitMatchesIndexAssigned32) {
   const auto keys = MakePseudoRandomKeys(64, 0x31415926u);
 
-  PPERFECT_HASH_TABLE table = CreateTableFromKeys(
+  ScopedPhTable table(CreateTableFromKeys(
       keys,
       PerfectHashHashMultiplyShiftRFunctionId,
       false,
       4,
       nullptr,
-      5);
-  ASSERT_NE(table, nullptr);
+      5));
+  ASSERT_NE(table.get(), nullptr);
 
-  auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
-  PERFECT_HASH_TABLE_FLAGS flags = GetTableFlags(table);
+  auto *shim = reinterpret_cast<PerfectHashTableShim *>(table.get());
+  PERFECT_HASH_TABLE_FLAGS flags = GetTableFlags(table.get());
   ASSERT_EQ(flags.AssignedElementSizeInBits << 3, 32u);
   ASSERT_EQ(shim->Vtbl->SlowIndex, nullptr);
 
-  const auto expected = CaptureIndexes(table, keys);
+  const auto expected = CaptureIndexes(table.get(), keys);
 
   PERFECT_HASH_TABLE_COMPILE_FLAGS compileFlags = {0};
   compileFlags.JitBackendRawDog = TRUE;
 
-  HRESULT result = online_->Vtbl->CompileTable(online_, table, &compileFlags);
+  HRESULT result = online_->Vtbl->CompileTable(online_,
+                                               table.get(),
+                                               &compileFlags);
   if (result == PH_E_NOT_IMPLEMENTED) {
-    shim->Vtbl->Release(table);
     GTEST_SKIP() << "RawDog GraphImpl4 scalar JIT unavailable on this host.";
   }
   ASSERT_GE(result, 0);
 
   for (size_t i = 0; i < keys.size(); ++i) {
     ULONG index = 0;
-    ASSERT_GE(shim->Vtbl->Index(table, keys[i], &index), 0);
+    ASSERT_GE(shim->Vtbl->Index(table.get(), keys[i], &index), 0);
     EXPECT_EQ(expected[i], index);
   }
+}
 
-  shim->Vtbl->Release(table);
+TEST_F(PerfectHashOnlineTests, GraphImpl4RawDogJitMatchesIndexSparse32) {
+  const auto keys = MakeSparse32Keys(256);
+
+  ScopedPhTable table(CreateTableFromKeys(
+      keys,
+      PerfectHashHashMultiplyShiftRFunctionId,
+      false,
+      4,
+      nullptr,
+      5));
+  ASSERT_NE(table.get(), nullptr);
+
+  auto *shim = reinterpret_cast<PerfectHashTableShim *>(table.get());
+  PERFECT_HASH_TABLE_FLAGS flags = GetTableFlags(table.get());
+  ASSERT_EQ(flags.AssignedElementSizeInBits << 3, 32u);
+  ASSERT_EQ(shim->Vtbl->SlowIndex, nullptr);
+
+  const auto expected = CaptureIndexes(table.get(), keys);
+
+  PERFECT_HASH_TABLE_COMPILE_FLAGS compileFlags = {0};
+  compileFlags.JitBackendRawDog = TRUE;
+
+  HRESULT result = online_->Vtbl->CompileTable(online_,
+                                               table.get(),
+                                               &compileFlags);
+  if (result == PH_E_NOT_IMPLEMENTED) {
+    GTEST_SKIP() << "RawDog GraphImpl4 scalar JIT unavailable on this host.";
+  }
+  ASSERT_GE(result, 0);
+
+  for (size_t i = 0; i < keys.size(); ++i) {
+    ULONG index = 0;
+    ASSERT_GE(shim->Vtbl->Index(table.get(), keys[i], &index), 0);
+    EXPECT_EQ(expected[i], index);
+  }
 }
 
 TEST_F(PerfectHashOnlineTests, GraphImpl4RawDogIndex32x4MatchesIndexAssigned16) {
-  const auto keys = MakePseudoRandomKeys(256, 0x13572468u);
+  const auto keys = MakeSparse32Keys(256);
 
-  PPERFECT_HASH_TABLE table = CreateTableFromKeys(
+  ScopedPhTable table(CreateTableFromKeys(
       keys,
       PerfectHashHashMultiplyShiftRFunctionId,
       true,
       4,
       nullptr,
-      5);
-  ASSERT_NE(table, nullptr);
+      5));
+  ASSERT_NE(table.get(), nullptr);
 
-  auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
-  PERFECT_HASH_TABLE_FLAGS flags = GetTableFlags(table);
+  auto *shim = reinterpret_cast<PerfectHashTableShim *>(table.get());
+  PERFECT_HASH_TABLE_FLAGS flags = GetTableFlags(table.get());
   ASSERT_EQ(flags.AssignedElementSizeInBits << 3, 16u);
   ASSERT_EQ(shim->Vtbl->SlowIndex, nullptr);
 
-  const auto expected = CaptureIndexes(table, keys);
+  const auto expected = CaptureIndexes(table.get(), keys);
 
   PERFECT_HASH_TABLE_COMPILE_FLAGS compileFlags = {0};
   compileFlags.JitBackendRawDog = TRUE;
   compileFlags.JitIndex32x4 = TRUE;
 
-  HRESULT result = online_->Vtbl->CompileTable(online_, table, &compileFlags);
+  HRESULT result = online_->Vtbl->CompileTable(online_,
+                                               table.get(),
+                                               &compileFlags);
   if (result == PH_E_NOT_IMPLEMENTED) {
-    shim->Vtbl->Release(table);
     GTEST_SKIP() << "RawDog GraphImpl4 Index32x4 unavailable on this host.";
   }
   ASSERT_GE(result, 0);
 
-  PPERFECT_HASH_TABLE_JIT_INTERFACE jit = nullptr;
+  PPERFECT_HASH_TABLE_JIT_INTERFACE raw_jit = nullptr;
   result = shim->Vtbl->QueryInterface(
-      table,
+      table.get(),
 #ifdef PH_WINDOWS
       IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
 #else
       &IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
 #endif
-      reinterpret_cast<void **>(&jit));
+      reinterpret_cast<void **>(&raw_jit));
+  ScopedPhJit jit(raw_jit);
   ASSERT_GE(result, 0);
-  ASSERT_NE(jit, nullptr);
+  ASSERT_NE(jit.get(), nullptr);
 
   PERFECT_HASH_TABLE_JIT_INFO info = {0};
-  result = jit->Vtbl->GetInfo(jit, &info);
+  result = jit.get()->Vtbl->GetInfo(jit.get(), &info);
   ASSERT_GE(result, 0);
   EXPECT_TRUE(info.Flags.Index32x4Compiled);
 
@@ -864,15 +2074,15 @@ TEST_F(PerfectHashOnlineTests, GraphImpl4RawDogIndex32x4MatchesIndexAssigned16) 
     ULONG index3 = 0;
     ULONG index4 = 0;
 
-    result = jit->Vtbl->Index32x4(jit,
-                                  keys[i],
-                                  keys[i + 1],
-                                  keys[i + 2],
-                                  keys[i + 3],
-                                  &index1,
-                                  &index2,
-                                  &index3,
-                                  &index4);
+    result = jit.get()->Vtbl->Index32x4(jit.get(),
+                                        keys[i],
+                                        keys[i + 1],
+                                        keys[i + 2],
+                                        keys[i + 3],
+                                        &index1,
+                                        &index2,
+                                        &index3,
+                                        &index4);
     ASSERT_GE(result, 0);
 
     EXPECT_EQ(expected[i], index1);
@@ -881,8 +2091,6 @@ TEST_F(PerfectHashOnlineTests, GraphImpl4RawDogIndex32x4MatchesIndexAssigned16) 
     EXPECT_EQ(expected[i + 3], index4);
   }
 
-  jit->Vtbl->Release(jit);
-  shim->Vtbl->Release(table);
 }
 
 TEST_F(PerfectHashOnlineTests, RawDogJitIndexMatchesSlowIndex) {
@@ -4160,123 +5368,157 @@ TEST_F(PerfectHashOnlineTests,
 TEST_F(PerfectHashOnlineTests, GraphImpl4LlvmJitMatchesIndexAssigned32) {
   const auto keys = MakePseudoRandomKeys(64, 0xC001D00Du);
 
-  PPERFECT_HASH_TABLE table = CreateTableFromKeys(
+  ScopedPhTable table(CreateTableFromKeys(
       keys,
       PerfectHashHashMultiplyShiftRFunctionId,
       false,
       4,
       nullptr,
-      5);
-  ASSERT_NE(table, nullptr);
+      5));
+  ASSERT_NE(table.get(), nullptr);
 
-  auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
-  PERFECT_HASH_TABLE_FLAGS flags = GetTableFlags(table);
+  auto *shim = reinterpret_cast<PerfectHashTableShim *>(table.get());
+  PERFECT_HASH_TABLE_FLAGS flags = GetTableFlags(table.get());
   ASSERT_EQ(flags.AssignedElementSizeInBits << 3, 32u);
   ASSERT_EQ(shim->Vtbl->SlowIndex, nullptr);
 
-  const auto expected = CaptureIndexes(table, keys);
+  const auto expected = CaptureIndexes(table.get(), keys);
 
-  PERFECT_HASH_TABLE_COMPILE_FLAGS compileFlags = {0};
-  compileFlags.JitBackendLlvm = TRUE;
+  PERFECT_HASH_TABLE_COMPILE_FLAGS compileFlags = MakeLlvmJitCompileFlags();
 
-  HRESULT result = online_->Vtbl->CompileTable(online_, table, &compileFlags);
-  if (result < 0) {
-    shim->Vtbl->Release(table);
-    GTEST_SKIP() << "LLVM GraphImpl4 scalar JIT unavailable on this host.";
+  HRESULT result = online_->Vtbl->CompileTable(online_,
+                                               table.get(),
+                                               &compileFlags);
+  if (result == PH_E_LLVM_BACKEND_NOT_FOUND) {
+    GTEST_SKIP() << "LLVM GraphImpl4 scalar JIT backend not found on this host.";
   }
-  ASSERT_GE(result, 0);
+  ASSERT_EQ(result, S_OK);
 
   for (size_t i = 0; i < keys.size(); ++i) {
     ULONG index = 0;
-    ASSERT_GE(shim->Vtbl->Index(table, keys[i], &index), 0);
+    ASSERT_GE(shim->Vtbl->Index(table.get(), keys[i], &index), 0);
     EXPECT_EQ(expected[i], index);
   }
+}
 
-  shim->Vtbl->Release(table);
+TEST_F(PerfectHashOnlineTests, GraphImpl4LlvmJitMatchesIndexSparse32) {
+  const auto keys = MakeSparse32Keys(256);
+
+  ScopedPhTable table(CreateTableFromKeys(
+      keys,
+      PerfectHashHashMultiplyShiftRFunctionId,
+      false,
+      4,
+      nullptr,
+      5));
+  ASSERT_NE(table.get(), nullptr);
+
+  auto *shim = reinterpret_cast<PerfectHashTableShim *>(table.get());
+  PERFECT_HASH_TABLE_FLAGS flags = GetTableFlags(table.get());
+  ASSERT_EQ(flags.AssignedElementSizeInBits << 3, 32u);
+  ASSERT_EQ(shim->Vtbl->SlowIndex, nullptr);
+
+  const auto expected = CaptureIndexes(table.get(), keys);
+
+  PERFECT_HASH_TABLE_COMPILE_FLAGS compileFlags = MakeLlvmJitCompileFlags();
+
+  HRESULT result = online_->Vtbl->CompileTable(online_,
+                                               table.get(),
+                                               &compileFlags);
+  if (result == PH_E_LLVM_BACKEND_NOT_FOUND) {
+    GTEST_SKIP() << "LLVM GraphImpl4 sparse32 scalar JIT backend not found "
+                 << "on this host.";
+  }
+  ASSERT_EQ(result, S_OK);
+
+  for (size_t i = 0; i < keys.size(); ++i) {
+    ULONG index = 0;
+    ASSERT_GE(shim->Vtbl->Index(table.get(), keys[i], &index), 0);
+    EXPECT_EQ(expected[i], index);
+  }
 }
 
 TEST_F(PerfectHashOnlineTests, GraphImpl4LlvmJitMulshrolate3RXMatchesIndexAssigned32) {
   const auto keys = MakePseudoRandomKeys(64, 0xB16B00B5u);
 
-  PPERFECT_HASH_TABLE table = CreateTableFromKeys(
+  ScopedPhTable table(CreateTableFromKeys(
       keys,
       PerfectHashHashMulshrolate3RXFunctionId,
       false,
       4,
       nullptr,
-      5);
-  ASSERT_NE(table, nullptr);
+      5));
+  ASSERT_NE(table.get(), nullptr);
 
-  auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
-  PERFECT_HASH_TABLE_FLAGS flags = GetTableFlags(table);
+  auto *shim = reinterpret_cast<PerfectHashTableShim *>(table.get());
+  PERFECT_HASH_TABLE_FLAGS flags = GetTableFlags(table.get());
   ASSERT_EQ(flags.AssignedElementSizeInBits << 3, 32u);
   ASSERT_EQ(shim->Vtbl->SlowIndex, nullptr);
 
-  const auto expected = CaptureIndexes(table, keys);
+  const auto expected = CaptureIndexes(table.get(), keys);
 
-  PERFECT_HASH_TABLE_COMPILE_FLAGS compileFlags = {0};
-  compileFlags.JitBackendLlvm = TRUE;
+  PERFECT_HASH_TABLE_COMPILE_FLAGS compileFlags = MakeLlvmJitCompileFlags();
 
-  HRESULT result = online_->Vtbl->CompileTable(online_, table, &compileFlags);
-  if (result < 0) {
-    shim->Vtbl->Release(table);
-    GTEST_SKIP() << "LLVM GraphImpl4 Mulshrolate3RX JIT unavailable on this host.";
+  HRESULT result = online_->Vtbl->CompileTable(online_,
+                                               table.get(),
+                                               &compileFlags);
+  if (result == PH_E_LLVM_BACKEND_NOT_FOUND) {
+    GTEST_SKIP() << "LLVM GraphImpl4 Mulshrolate3RX JIT backend not found on this host.";
   }
-  ASSERT_GE(result, 0);
+  ASSERT_EQ(result, S_OK);
 
   for (size_t i = 0; i < keys.size(); ++i) {
     ULONG index = 0;
-    ASSERT_GE(shim->Vtbl->Index(table, keys[i], &index), 0);
+    ASSERT_GE(shim->Vtbl->Index(table.get(), keys[i], &index), 0);
     EXPECT_EQ(expected[i], index);
   }
-
-  shim->Vtbl->Release(table);
 }
 
 TEST_F(PerfectHashOnlineTests, GraphImpl4LlvmIndex32x4MatchesIndexAssigned16) {
-  const auto keys = MakePseudoRandomKeys(256, 0xFEEDFACEu);
+  const auto keys = MakeSparse32Keys(256);
 
-  PPERFECT_HASH_TABLE table = CreateTableFromKeys(
+  ScopedPhTable table(CreateTableFromKeys(
       keys,
       PerfectHashHashMultiplyShiftRFunctionId,
       true,
       4,
       nullptr,
-      5);
-  ASSERT_NE(table, nullptr);
+      5));
+  ASSERT_NE(table.get(), nullptr);
 
-  auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
-  PERFECT_HASH_TABLE_FLAGS flags = GetTableFlags(table);
+  auto *shim = reinterpret_cast<PerfectHashTableShim *>(table.get());
+  PERFECT_HASH_TABLE_FLAGS flags = GetTableFlags(table.get());
   ASSERT_EQ(flags.AssignedElementSizeInBits << 3, 16u);
   ASSERT_EQ(shim->Vtbl->SlowIndex, nullptr);
 
-  const auto expected = CaptureIndexes(table, keys);
+  const auto expected = CaptureIndexes(table.get(), keys);
 
-  PERFECT_HASH_TABLE_COMPILE_FLAGS compileFlags = {0};
-  compileFlags.JitBackendLlvm = TRUE;
+  PERFECT_HASH_TABLE_COMPILE_FLAGS compileFlags = MakeLlvmJitCompileFlags();
   compileFlags.JitVectorIndex32x4 = TRUE;
 
-  HRESULT result = online_->Vtbl->CompileTable(online_, table, &compileFlags);
-  if (result < 0) {
-    shim->Vtbl->Release(table);
-    GTEST_SKIP() << "LLVM GraphImpl4 Index32x4 unavailable on this host.";
+  HRESULT result = online_->Vtbl->CompileTable(online_,
+                                               table.get(),
+                                               &compileFlags);
+  if (result == PH_E_LLVM_BACKEND_NOT_FOUND) {
+    GTEST_SKIP() << "LLVM GraphImpl4 Index32x4 backend not found on this host.";
   }
-  ASSERT_GE(result, 0);
+  ASSERT_EQ(result, S_OK);
 
-  PPERFECT_HASH_TABLE_JIT_INTERFACE jit = nullptr;
+  PPERFECT_HASH_TABLE_JIT_INTERFACE raw_jit = nullptr;
   result = shim->Vtbl->QueryInterface(
-      table,
+      table.get(),
 #ifdef PH_WINDOWS
       IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
 #else
       &IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
 #endif
-      reinterpret_cast<void **>(&jit));
+      reinterpret_cast<void **>(&raw_jit));
+  ScopedPhJit jit(raw_jit);
   ASSERT_GE(result, 0);
-  ASSERT_NE(jit, nullptr);
+  ASSERT_NE(jit.get(), nullptr);
 
   PERFECT_HASH_TABLE_JIT_INFO info = {0};
-  result = jit->Vtbl->GetInfo(jit, &info);
+  result = jit.get()->Vtbl->GetInfo(jit.get(), &info);
   ASSERT_GE(result, 0);
   EXPECT_TRUE(info.Flags.Index32x4Vector);
 
@@ -4286,15 +5528,15 @@ TEST_F(PerfectHashOnlineTests, GraphImpl4LlvmIndex32x4MatchesIndexAssigned16) {
     ULONG index3 = 0;
     ULONG index4 = 0;
 
-    result = jit->Vtbl->Index32x4(jit,
-                                  keys[i],
-                                  keys[i + 1],
-                                  keys[i + 2],
-                                  keys[i + 3],
-                                  &index1,
-                                  &index2,
-                                  &index3,
-                                  &index4);
+    result = jit.get()->Vtbl->Index32x4(jit.get(),
+                                        keys[i],
+                                        keys[i + 1],
+                                        keys[i + 2],
+                                        keys[i + 3],
+                                        &index1,
+                                        &index2,
+                                        &index3,
+                                        &index4);
     ASSERT_GE(result, 0);
 
     EXPECT_EQ(expected[i], index1);
@@ -4302,9 +5544,6 @@ TEST_F(PerfectHashOnlineTests, GraphImpl4LlvmIndex32x4MatchesIndexAssigned16) {
     EXPECT_EQ(expected[i + 2], index3);
     EXPECT_EQ(expected[i + 3], index4);
   }
-
-  jit->Vtbl->Release(jit);
-  shim->Vtbl->Release(table);
 }
 
 TEST_F(PerfectHashOnlineTests, GraphImpl4LlvmIndex64x4MatchesDownsizedIndex) {
@@ -4315,44 +5554,47 @@ TEST_F(PerfectHashOnlineTests, GraphImpl4LlvmIndex64x4MatchesDownsizedIndex) {
       97ull, 101ull, 103ull, 107ull, 109ull, 113ull, 127ull, 131ull,
   };
 
-  PPERFECT_HASH_TABLE table =
-      CreateTableFromKeys64(keys, PerfectHashHashMultiplyShiftRFunctionId, false, 4);
-  ASSERT_NE(table, nullptr);
+  ScopedPhTable table(CreateTableFromKeys64(keys,
+                                            PerfectHashHashMultiplyShiftRFunctionId,
+                                            false,
+                                            4));
+  ASSERT_NE(table.get(), nullptr);
 
-  auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
-  PERFECT_HASH_TABLE_FLAGS flags = GetTableFlags(table);
+  auto *shim = reinterpret_cast<PerfectHashTableShim *>(table.get());
+  PERFECT_HASH_TABLE_FLAGS flags = GetTableFlags(table.get());
   ASSERT_EQ(flags.AssignedElementSizeInBits << 3, 32u);
   ASSERT_EQ(shim->Vtbl->SlowIndex, nullptr);
 
-  const auto expected = CaptureIndexes64(table, keys);
+  const auto expected = CaptureIndexes64(table.get(), keys);
 
-  PERFECT_HASH_TABLE_COMPILE_FLAGS compileFlags = {0};
-  compileFlags.JitBackendLlvm = TRUE;
+  PERFECT_HASH_TABLE_COMPILE_FLAGS compileFlags = MakeLlvmJitCompileFlags();
   compileFlags.JitIndex64 = TRUE;
   compileFlags.JitIndex32x4 = TRUE;
 
-  HRESULT result = online_->Vtbl->CompileTable(online_, table, &compileFlags);
-  if (result < 0) {
-    shim->Vtbl->Release(table);
-    GTEST_SKIP() << "LLVM GraphImpl4 Index64 JIT unavailable on this host.";
+  HRESULT result = online_->Vtbl->CompileTable(online_,
+                                               table.get(),
+                                               &compileFlags);
+  if (result == PH_E_LLVM_BACKEND_NOT_FOUND) {
+    GTEST_SKIP() << "LLVM GraphImpl4 Index64 JIT backend not found on this host.";
   }
-  ASSERT_GE(result, 0);
+  ASSERT_EQ(result, S_OK);
 
-  PPERFECT_HASH_TABLE_JIT_INTERFACE jit = nullptr;
+  PPERFECT_HASH_TABLE_JIT_INTERFACE raw_jit = nullptr;
   result = shim->Vtbl->QueryInterface(
-      table,
+      table.get(),
 #ifdef PH_WINDOWS
       IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
 #else
       &IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
 #endif
-      reinterpret_cast<void **>(&jit));
+      reinterpret_cast<void **>(&raw_jit));
+  ScopedPhJit jit(raw_jit);
   ASSERT_GE(result, 0);
-  ASSERT_NE(jit, nullptr);
+  ASSERT_NE(jit.get(), nullptr);
 
   for (size_t i = 0; i < keys.size(); ++i) {
     ULONG index = 0;
-    result = jit->Vtbl->Index64(jit, keys[i], &index);
+    result = jit.get()->Vtbl->Index64(jit.get(), keys[i], &index);
     ASSERT_GE(result, 0);
     EXPECT_EQ(expected[i], index);
   }
@@ -4363,15 +5605,15 @@ TEST_F(PerfectHashOnlineTests, GraphImpl4LlvmIndex64x4MatchesDownsizedIndex) {
     ULONG index3 = 0;
     ULONG index4 = 0;
 
-    result = jit->Vtbl->Index64x4(jit,
-                                  keys[i],
-                                  keys[i + 1],
-                                  keys[i + 2],
-                                  keys[i + 3],
-                                  &index1,
-                                  &index2,
-                                  &index3,
-                                  &index4);
+    result = jit.get()->Vtbl->Index64x4(jit.get(),
+                                        keys[i],
+                                        keys[i + 1],
+                                        keys[i + 2],
+                                        keys[i + 3],
+                                        &index1,
+                                        &index2,
+                                        &index3,
+                                        &index4);
     ASSERT_GE(result, 0);
 
     EXPECT_EQ(expected[i], index1);
@@ -4379,9 +5621,6 @@ TEST_F(PerfectHashOnlineTests, GraphImpl4LlvmIndex64x4MatchesDownsizedIndex) {
     EXPECT_EQ(expected[i + 2], index3);
     EXPECT_EQ(expected[i + 3], index4);
   }
-
-  jit->Vtbl->Release(jit);
-  shim->Vtbl->Release(table);
 }
 
 TEST_F(PerfectHashOnlineTests, JitIndexMatchesSlowIndex) {

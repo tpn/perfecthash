@@ -236,6 +236,7 @@ set(Source_Files
     "PerfectHashPath.c"
     "PerfectHashPrimes.c"
     "PerfectHashTable.c"
+    "PerfectHashTableCompileState.c"
     "PerfectHashTableCreate.c"
     "PerfectHashTableDelete.c"
     "PerfectHashTableHash.c"

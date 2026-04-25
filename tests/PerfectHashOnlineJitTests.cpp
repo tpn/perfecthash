@@ -106,6 +106,11 @@ TEST(PerfectHashOnlineJitTests, CreateTable64AndIndex64) {
   ASSERT_NE(raw_context, nullptr);
   context.reset(raw_context);
 
+  //
+  // Mulshrolate3RX is in the curated good hash set, so CreateTable64
+  // intentionally selects GraphImpl4 for the compact-key JIT backend.
+  //
+
   ASSERT_GE(PhOnlineJitCreateTable64(context.get(),
                                      PhOnlineJitHashMulshrolate3RX,
                                      keys.data(),
@@ -114,6 +119,14 @@ TEST(PerfectHashOnlineJitTests, CreateTable64AndIndex64) {
             0);
   ASSERT_NE(raw_table, nullptr);
   table.reset(raw_table);
+
+  std::vector<uint32_t> fallback_indexes;
+  fallback_indexes.reserve(keys.size());
+  for (auto key : keys) {
+    uint32_t index = 0;
+    ASSERT_GE(PhOnlineJitIndex64(table.get(), key, &index), 0);
+    fallback_indexes.push_back(index);
+  }
 
   auto result = PhOnlineJitCompileTableEx(context.get(),
                                           table.get(),
@@ -137,9 +150,10 @@ TEST(PerfectHashOnlineJitTests, CreateTable64AndIndex64) {
   std::unordered_set<uint32_t> seen;
   seen.reserve(keys.size());
 
-  for (auto key : keys) {
+  for (size_t i = 0; i < keys.size(); ++i) {
     uint32_t index = 0;
-    ASSERT_GE(PhOnlineJitIndex64(table.get(), key, &index), 0);
+    ASSERT_GE(PhOnlineJitIndex64(table.get(), keys[i], &index), 0);
+    EXPECT_EQ(fallback_indexes[i], index);
     ASSERT_TRUE(seen.insert(index).second);
   }
 }
@@ -215,6 +229,34 @@ TEST(PerfectHashOnlineJitTests, Index64On32BitTableIsNotImplemented) {
   table.reset(raw_table);
 
   ASSERT_EQ(PhOnlineJitIndex64(table.get(), 1ULL, &index), PH_E_NOT_IMPLEMENTED);
+}
+
+TEST(PerfectHashOnlineJitTests, Index64OnNonGraphImpl64BitTableUsesMetadata) {
+  auto context = std::unique_ptr<PH_ONLINE_JIT_CONTEXT, decltype(&PhOnlineJitClose)>(
+      nullptr, &PhOnlineJitClose);
+  auto table = std::unique_ptr<PH_ONLINE_JIT_TABLE, decltype(&PhOnlineJitReleaseTable)>(
+      nullptr, &PhOnlineJitReleaseTable);
+  PH_ONLINE_JIT_CONTEXT *raw_context = nullptr;
+  PH_ONLINE_JIT_TABLE *raw_table = nullptr;
+  auto keys = MakeDownsized64Keys(64);
+
+  ASSERT_GE(PhOnlineJitOpen(&raw_context), 0);
+  context.reset(raw_context);
+  ASSERT_GE(PhOnlineJitCreateTable64(context.get(),
+                                     PhOnlineJitHashMultiplyShiftLR,
+                                     keys.data(),
+                                     static_cast<uint64_t>(keys.size()),
+                                     &raw_table),
+            0);
+  table.reset(raw_table);
+
+  std::unordered_set<uint32_t> seen;
+  seen.reserve(keys.size());
+  for (auto key : keys) {
+    uint32_t index = 0;
+    ASSERT_GE(PhOnlineJitIndex64(table.get(), key, &index), 0);
+    ASSERT_TRUE(seen.insert(index).second);
+  }
 }
 
 TEST(PerfectHashOnlineJitTests, CreateTable64RejectsNonDownsizedKeys) {

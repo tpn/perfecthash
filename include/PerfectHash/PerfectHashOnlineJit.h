@@ -96,6 +96,13 @@ PhOnlineJitCreateTable32(
     PH_ONLINE_JIT_TABLE **TablePointer
     );
 
+//
+// Creates a downsized 64-bit table.  Hash functions in the curated "good" set
+// are intentionally created with GraphImpl4 so assigned16/assigned32 JIT paths
+// can use the compact-key backend.  Other accepted hash functions keep the
+// default graph implementation.
+//
+
 PH_ONLINE_JIT_API
 int32_t
 PhOnlineJitCreateTable64(

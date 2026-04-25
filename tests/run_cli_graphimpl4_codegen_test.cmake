@@ -12,6 +12,8 @@ if(NOT DEFINED TEST_CARGO)
   set(TEST_CARGO "")
 endif()
 
+include("${CMAKE_CURRENT_LIST_DIR}/nested_cmake_args.cmake")
+
 function(require_file path)
   if(NOT EXISTS "${path}")
     message(FATAL_ERROR "Expected file not found: ${path}")
@@ -47,6 +49,9 @@ endif()
 set(TEST_KEYS "${graphimpl4_keys}")
 set(TEST_ARGS "Chm01|MultiplyShiftR|And|1")
 set(TEST_FLAGS "--Quiet|--GraphImpl=4|--DoNotHashAllKeysFirst|--MaxSolveTimeInSeconds=5")
+# This script keeps a custom create step so it can inspect GraphImpl4 outputs
+# before running codegen. Mirror the generic script's known solve-timeout exits.
+set(skip_create_results 129 136)
 
 file(TO_NATIVE_PATH "${TEST_EXE}" test_exe_native)
 file(TO_NATIVE_PATH "${TEST_KEYS}" test_keys_native)
@@ -66,6 +71,10 @@ execute_process(
 )
 
 if(NOT result EQUAL 0)
+  if("${result}" IN_LIST skip_create_results)
+    message(STATUS "SKIPPED: create command returned ${result}")
+    return()
+  endif()
   message(STATUS "stdout: ${stdout}")
   message(STATUS "stderr: ${stderr}")
   message(FATAL_ERROR "Command failed with exit code ${result}")
@@ -90,7 +99,9 @@ require_file("${test_output_native}/CompiledPerfectHash.h")
 require_file("${test_output_native}/CompiledPerfectHashMacroGlue.h")
 require_file("${test_output_native}/CompiledPerfectHash.props")
 require_file("${gen_dir}/${table_name}.pht1")
-require_file("${gen_dir}/${table_name}.pht1:Info")
+if(CMAKE_HOST_WIN32)
+  require_file("${gen_dir}/${table_name}.pht1:Info")
+endif()
 require_file("${gen_dir}/${table_name}_TableData.c")
 require_file("${gen_dir}/${table_name}_CppHeaderOnly.hpp")
 require_file("${gen_dir}/${table_name}_RustLib.rs")
@@ -123,8 +134,13 @@ endif()
 set(build_dir "${test_output_native}/_build")
 file(MAKE_DIRECTORY "${build_dir}")
 
+set(configure_command "${CMAKE_COMMAND}" -S "${gen_dir}" -B "${build_dir}")
+list(APPEND configure_command
+     ${nested_cmake_generator_args}
+     ${nested_cmake_compiler_args})
+
 execute_process(
-  COMMAND "${CMAKE_COMMAND}" -S "${gen_dir}" -B "${build_dir}"
+  COMMAND ${configure_command}
   RESULT_VARIABLE result
   OUTPUT_VARIABLE stdout
   ERROR_VARIABLE stderr

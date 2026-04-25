@@ -669,13 +669,12 @@ assign_impl(
 
 template <typename StoragePolicy, typename KeyType>
 HRESULT
-index_impl_with_assigned(
+index_impl_with_effective_key(
     PERFECT_HASH_HASH_FUNCTION_ID hash_function_id,
     PULONG seeds,
     typename StoragePolicy::assigned_type *assigned,
     ULONG hash_mask,
     ULONG index_mask,
-    PPERFECT_HASH_TABLE table,
     ULONG key,
     PULONG index
     )
@@ -684,7 +683,7 @@ index_impl_with_assigned(
     using assigned_type = typename StoragePolicy::assigned_type;
     using hash_vertex_type = typename StoragePolicy::hash_vertex_type;
 
-    KeyType effective_key = compact_key<KeyType>(table, key);
+    KeyType effective_key = static_cast<KeyType>(key);
     result_pair_type hash = hash_key_for_id<result_pair_type,
                                             KeyType,
                                             hash_vertex_type>(
@@ -710,6 +709,30 @@ index_impl_with_assigned(
 
 template <typename StoragePolicy, typename KeyType>
 HRESULT
+index_impl_with_assigned(
+    PERFECT_HASH_HASH_FUNCTION_ID hash_function_id,
+    PULONG seeds,
+    typename StoragePolicy::assigned_type *assigned,
+    ULONG hash_mask,
+    ULONG index_mask,
+    PPERFECT_HASH_TABLE table,
+    ULONG key,
+    PULONG index
+    )
+{
+    return index_impl_with_effective_key<StoragePolicy, KeyType>(
+        hash_function_id,
+        seeds,
+        assigned,
+        hash_mask,
+        index_mask,
+        compact_key<KeyType>(table, key),
+        index
+    );
+}
+
+template <typename StoragePolicy, typename KeyType>
+HRESULT
 index_impl(
     PPERFECT_HASH_TABLE table,
     ULONG key,
@@ -723,6 +746,28 @@ index_impl(
         table->HashMask,
         table->IndexMask,
         table,
+        key,
+        index
+    );
+}
+
+template <typename StorageType, typename KeyType>
+HRESULT
+index_effective_key_dispatch_impl(PPERFECT_HASH_TABLE table,
+                                  ULONG key,
+                                  PULONG index)
+{
+    //
+    // The key has already passed through the composed 64-bit-to-effective-key
+    // bitmap used by loaded-table Index64.  Do not apply inner compact-key
+    // extraction again here.
+    //
+    return index_impl_with_effective_key<storage_policy<StorageType>, KeyType>(
+        table->HashFunctionId,
+        &table->TableInfoOnDisk->FirstSeed,
+        storage_policy<StorageType>::Assigned(table),
+        table->HashMask,
+        table->IndexMask,
         key,
         index
     );
@@ -1045,8 +1090,34 @@ PerfectHashTableIndexImpl4Chm01(
     PULONG Index
     )
 {
+    //
+    // The table Index() entry point receives keys in the table's 32-bit
+    // domain.  Loaded downsized-64 callers must apply the outer downsize
+    // bitmap first; this implementation then applies any GraphImpl4 inner
+    // compact-key metadata before hashing.
+    //
     auto dispatch = [=]<typename StorageType, typename KeyType>() -> HRESULT {
         return index_dispatch_impl<StorageType, KeyType>(Table, Key, Index);
+    };
+
+    return dispatch_table_width(Table, dispatch);
+}
+
+extern "C"
+HRESULT
+NTAPI
+PerfectHashTableIndexImpl4EffectiveKeyChm01(
+    PPERFECT_HASH_TABLE Table,
+    ULONG Key,
+    PULONG Index
+    )
+{
+    auto dispatch = [=]<typename StorageType, typename KeyType>() -> HRESULT {
+        return index_effective_key_dispatch_impl<StorageType, KeyType>(
+            Table,
+            Key,
+            Index
+        );
     };
 
     return dispatch_table_width(Table, dispatch);

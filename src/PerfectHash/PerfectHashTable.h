@@ -559,7 +559,10 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
 
     //
     // If keys were downsized during load, capture the metadata required to
-    // downsize 64-bit keys at runtime (e.g. for JIT Index64 routines).
+    // downsize 64-bit keys at runtime (e.g. for JIT Index64 routines).  For
+    // non-GraphImpl4 tables, DownsizeBitmap is the outer 64-bit key bitmap.  For
+    // GraphImpl4 tables, DownsizeBitmap is the composed original-key-to-effective
+    // key bitmap: outer 64-bit key downsize plus inner compact-key extraction.
     //
 
     ULONGLONG DownsizeBitmap;
@@ -1128,6 +1131,12 @@ extern PERFECT_HASH_TABLE_GET_FILE PerfectHashTableGetFile;
     if (FAILED(Table->Vtbl->MaskIndex(Table, Hash, Result))) { \
         goto Error;                                            \
     }
+
+HRESULT
+PerfectHashTableValidateCompileState(
+    _In_ PPERFECT_HASH_TABLE Table,
+    _In_ PERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlags
+    );
 
 //
 // Declare the functions.

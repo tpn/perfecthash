@@ -17,9 +17,24 @@ Abstract:
 #include "Chm01Private.h"
 #include "GraphImpl4.h"
 
-static
+#define GRAPH_INFO_ON_DISK_FIELD_END(Field) ( \
+    FIELD_OFFSET(GRAPH_INFO_ON_DISK, Field) + \
+    RTL_FIELD_SIZE(GRAPH_INFO_ON_DISK, Field) \
+)
+
+//
+// TABLE_INFO_ON_DISK is the common header embedded at offset zero in
+// GRAPH_INFO_ON_DISK.  Its SizeOfStruct field is populated with
+// sizeof(GRAPH_INFO_ON_DISK), i.e. the outer CHM01 graph-info record size.
+//
+
+#define GRAPH_INFO_ON_DISK_HAS_FIELD(GraphInfo, Field) ( \
+    (GraphInfo)->TableInfoOnDisk.SizeOfStruct >= \
+    GRAPH_INFO_ON_DISK_FIELD_END(Field) \
+)
+
 ULONGLONG
-ComposeGraphImpl4DownsizeBitmap(
+PerfectHashComposeGraphImpl4DownsizeBitmap(
     _In_ ULONGLONG OuterBitmap,
     _In_ ULONG InnerBitmap
     )
@@ -44,13 +59,265 @@ ComposeGraphImpl4DownsizeBitmap(
 }
 
 static
+BYTE
+DownsizeLeadingZeros64(
+    _In_ ULONGLONG Value
+    )
+{
+    if (Value == 0) {
+        return 64;
+    }
+
+#if defined(_MSC_VER) && (defined(_M_AMD64) || defined(_M_ARM64))
+    unsigned long Index;
+
+    _BitScanReverse64(&Index, Value);
+    return (BYTE)(63 - Index);
+#elif defined(__GNUC__) || defined(__clang__)
+    return (BYTE)__builtin_clzll((unsigned long long)Value);
+#else
+    BYTE Leading = 0;
+
+    while ((Value & (1ULL << 63)) == 0) {
+        Leading++;
+        Value <<= 1;
+    }
+
+    return Leading;
+#endif
+}
+
+static
+BYTE
+DownsizeTrailingZeros64(
+    _In_ ULONGLONG Value
+    )
+{
+    if (Value == 0) {
+        return 64;
+    }
+
+#if defined(_MSC_VER) && (defined(_M_AMD64) || defined(_M_ARM64))
+    unsigned long Index;
+
+    _BitScanForward64(&Index, Value);
+    return (BYTE)Index;
+#elif defined(__GNUC__) || defined(__clang__)
+    return (BYTE)__builtin_ctzll((unsigned long long)Value);
+#else
+    BYTE Trailing = 0;
+
+    while ((Value & 1ULL) == 0) {
+        Trailing++;
+        Value >>= 1;
+    }
+
+    return Trailing;
+#endif
+}
+
+static
+BYTE
+DownsizePopulationCount64(
+    _In_ ULONGLONG Value
+    )
+{
+#if defined(_MSC_VER) && (defined(_M_AMD64) || defined(_M_ARM64))
+    return (BYTE)__popcnt64(Value);
+#elif defined(__GNUC__) || defined(__clang__)
+    return (BYTE)__builtin_popcountll((unsigned long long)Value);
+#else
+    BYTE PopCount = 0;
+
+    while (Value != 0) {
+        PopCount++;
+        Value &= Value - 1ULL;
+    }
+
+    return PopCount;
+#endif
+}
+
+_Use_decl_annotations_
+VOID
+PerfectHashComputeDownsizeMetadataFromBitmap(
+    _In_ ULONGLONG Bitmap,
+    _Out_ PBOOLEAN MetadataValid,
+    _Out_ PULONGLONG ShiftedMask,
+    _Out_ PBYTE TrailingZeros,
+    _Out_ PBOOLEAN Contiguous
+    )
+{
+    BYTE Leading;
+    BYTE PopCount;
+    BYTE LocalTrailingZeros;
+    ULONGLONG Mask;
+    ULONGLONG Shifted;
+
+    *MetadataValid = TRUE;
+    *ShiftedMask = 0;
+    *TrailingZeros = 0;
+    *Contiguous = FALSE;
+
+    if (Bitmap == 0) {
+        *MetadataValid = FALSE;
+        return;
+    }
+
+    Leading = DownsizeLeadingZeros64(Bitmap);
+    LocalTrailingZeros = DownsizeTrailingZeros64(Bitmap);
+    PopCount = DownsizePopulationCount64(Bitmap);
+
+    *TrailingZeros = LocalTrailingZeros;
+
+    if (PopCount == 64) {
+        //
+        // All bits set is the identity extraction: (Key >> 0) & ~0.
+        //
+        *ShiftedMask = (ULONGLONG)-1;
+        *Contiguous = TRUE;
+        return;
+    }
+
+    if ((Leading + LocalTrailingZeros) == 0) {
+        //
+        // MSB and LSB are both set with interior holes, so the bitmap spans
+        // the full 64-bit range but is still non-contiguous.  Preserve the
+        // bitmap for raw extraction; callers must not treat ShiftedMask as
+        // meaningful unless DownsizeContiguous is set.  TrailingZeros is zero
+        // because the LSB is set in this branch; it is not a meaningful shift
+        // amount when Contiguous is FALSE.
+        //
+        *TrailingZeros = 0;
+        return;
+    }
+
+    Mask = (1ULL << (64 - Leading - LocalTrailingZeros)) - 1ULL;
+    Shifted = Bitmap >> LocalTrailingZeros;
+
+    if (Mask == Shifted) {
+        *ShiftedMask = Mask;
+        *Contiguous = TRUE;
+    }
+}
+
+static
+VOID
+SetTableDownsizeMetadataFromBitmap(
+    _In_ PPERFECT_HASH_TABLE Table,
+    _In_ ULONGLONG Bitmap
+    )
+{
+    BOOLEAN MetadataValid;
+
+    //
+    // Invariant: DownsizeShiftedMask is meaningful only when
+    // DownsizeContiguous is TRUE.  If metadata is valid but non-contiguous,
+    // callers must use DownsizeBitmap with raw bit extraction.  For GraphImpl4
+    // downsized original keys, these fields describe the full composed
+    // original-64-bit-key to effective-key transform, not just the inner
+    // 32-bit compact-key bitmap; KeysBitmap->Flags.Contiguous is not the
+    // authority after outer and inner bitmaps have been composed.
+    //
+
+    Table->DownsizeBitmap = Bitmap;
+    PerfectHashComputeDownsizeMetadataFromBitmap(
+        Bitmap,
+        &MetadataValid,
+        &Table->DownsizeShiftedMask,
+        &Table->DownsizeTrailingZeros,
+        &Table->DownsizeContiguous
+    );
+    Table->State.DownsizeMetadataValid = MetadataValid;
+}
+
+static
+HRESULT
+CaptureGraphInfoRuntimeMetadata(
+    _In_ PPERFECT_HASH_TABLE Table,
+    _Inout_ PGRAPH_INFO_ON_DISK GraphInfoOnDisk
+    )
+{
+    BOOLEAN DownsizeMetadataValid;
+
+    GraphInfoOnDisk->RuntimeFlags.AsULong = 0;
+    GraphInfoOnDisk->GraphImpl = Table->GraphImpl;
+    if (Table->GraphImpl != 0) {
+        GraphInfoOnDisk->RuntimeFlags.GraphImplVersionValid = TRUE;
+    }
+    GraphInfoOnDisk->DownsizeBitmap = 0;
+    GraphInfoOnDisk->DownsizeShiftedMask = 0;
+    GraphInfoOnDisk->DownsizeTrailingZeros = 0;
+    GraphInfoOnDisk->DownsizeContiguous = FALSE;
+    GraphInfoOnDisk->DownsizePadding[0] = 0;
+    GraphInfoOnDisk->DownsizePadding[1] = 0;
+    GraphInfoOnDisk->GraphImpl4EffectiveKeySizeInBytes = 0;
+    GraphInfoOnDisk->GraphImpl4KeyDownsizeBitmap = 0;
+    GraphInfoOnDisk->GraphImpl4KeyDownsizeShiftedMask = 0;
+    GraphInfoOnDisk->GraphImpl4KeyDownsizeTrailingZeros = 0;
+    GraphInfoOnDisk->GraphImpl4KeyDownsizeContiguous = FALSE;
+    GraphInfoOnDisk->GraphImpl4Padding[0] = 0;
+    GraphInfoOnDisk->GraphImpl4Padding[1] = 0;
+
+    if (Table->State.DownsizeMetadataValid) {
+        GraphInfoOnDisk->DownsizeBitmap = Table->DownsizeBitmap;
+        //
+        // Recompute these fields from the exact bitmap being persisted.  For
+        // downsized key sets, Table->DownsizeBitmap describes the original
+        // 64-bit-to-active-key transform, while the table's shifted/trailing
+        // fields may describe the active 32-bit key distribution.
+        //
+        PerfectHashComputeDownsizeMetadataFromBitmap(
+            Table->DownsizeBitmap,
+            &DownsizeMetadataValid,
+            &GraphInfoOnDisk->DownsizeShiftedMask,
+            &GraphInfoOnDisk->DownsizeTrailingZeros,
+            &GraphInfoOnDisk->DownsizeContiguous
+        );
+        ASSERT(DownsizeMetadataValid);
+        if (!DownsizeMetadataValid) {
+            GraphInfoOnDisk->DownsizeBitmap = 0;
+            return PH_E_INVARIANT_CHECK_FAILED;
+        }
+        GraphInfoOnDisk->RuntimeFlags.DownsizeMetadataValid = TRUE;
+    }
+
+    if (Table->GraphImpl == 4 &&
+        Table->GraphImpl4EffectiveKeySizeInBytes != 0) {
+        C_ASSERT(sizeof(Table->GraphImpl4KeyDownsizeBitmap) == sizeof(ULONG));
+        C_ASSERT(sizeof(Table->GraphImpl4KeyDownsizeShiftedMask) ==
+                 sizeof(ULONG));
+        if (Table->GraphImpl4EffectiveKeySizeInBytes >= sizeof(ULONG)) {
+            ASSERT(Table->GraphImpl4KeyDownsizeBitmap == 0);
+            if (Table->GraphImpl4KeyDownsizeBitmap != 0) {
+                return PH_E_INVARIANT_CHECK_FAILED;
+            }
+        }
+        if (Table->GraphImpl4EffectiveKeySizeInBytes < sizeof(ULONG)) {
+            GraphInfoOnDisk->RuntimeFlags.GraphImpl4MetadataValid = TRUE;
+        }
+        GraphInfoOnDisk->GraphImpl4EffectiveKeySizeInBytes =
+            Table->GraphImpl4EffectiveKeySizeInBytes;
+        GraphInfoOnDisk->GraphImpl4KeyDownsizeBitmap =
+            Table->GraphImpl4KeyDownsizeBitmap;
+        GraphInfoOnDisk->GraphImpl4KeyDownsizeShiftedMask =
+            Table->GraphImpl4KeyDownsizeShiftedMask;
+        GraphInfoOnDisk->GraphImpl4KeyDownsizeTrailingZeros =
+            Table->GraphImpl4KeyDownsizeTrailingZeros;
+        GraphInfoOnDisk->GraphImpl4KeyDownsizeContiguous =
+            Table->GraphImpl4KeyDownsizeContiguous;
+    }
+
+    return S_OK;
+}
+
+static
 VOID
 InitializeGraphImpl4KeyMetadata(
     _In_ PPERFECT_HASH_TABLE Table
     )
 {
     ULONG Bitmap;
-    BYTE Trailing;
     ULONGLONG FinalBitmap;
     PPERFECT_HASH_KEYS Keys;
     PPERFECT_HASH_KEYS_BITMAP KeysBitmap;
@@ -72,29 +339,27 @@ InitializeGraphImpl4KeyMetadata(
     }
 
     if (Table->GraphImpl4EffectiveKeySizeInBytes >= sizeof(ULONG)) {
+        //
+        // Full-width 32-bit GraphImpl4 tables use the input key as-is.  Keep
+        // the compact-key bitmap unset so JIT Index32 wrappers only downsize
+        // assigned8/16 tables.
+        //
+        ASSERT(Table->GraphImpl4KeyDownsizeBitmap == 0);
         return;
     }
 
     Table->GraphImpl4KeyDownsizeBitmap = Bitmap;
     Table->GraphImpl4KeyDownsizeContiguous = KeysBitmap->Flags.Contiguous;
+    ASSERT(KeysBitmap->ShiftedMask <= ULONG_MAX);
     Table->GraphImpl4KeyDownsizeShiftedMask = (ULONG)KeysBitmap->ShiftedMask;
     Table->GraphImpl4KeyDownsizeTrailingZeros = KeysBitmap->TrailingZeros;
 
     if (KeysWereDownsized(Keys)) {
-        FinalBitmap = ComposeGraphImpl4DownsizeBitmap(Keys->DownsizeBitmap,
-                                                      Bitmap);
-
-        Table->State.DownsizeMetadataValid = TRUE;
-        Table->DownsizeBitmap = FinalBitmap;
-        Trailing = (BYTE)Table->Rtl->TrailingZeros64(FinalBitmap);
-        Table->DownsizeTrailingZeros = Trailing;
-        if (KeysBitmap->Flags.Contiguous) {
-            Table->DownsizeShiftedMask = KeysBitmap->ShiftedMask;
-            Table->DownsizeContiguous = TRUE;
-        } else {
-            Table->DownsizeShiftedMask = 0;
-            Table->DownsizeContiguous = FALSE;
-        }
+        FinalBitmap = PerfectHashComposeGraphImpl4DownsizeBitmap(
+            Keys->DownsizeBitmap,
+            Bitmap
+        );
+        SetTableDownsizeMetadataFromBitmap(Table, FinalBitmap);
     }
 }
 
@@ -1063,6 +1328,10 @@ Return Value:
     );
 
     CopyInline(&GraphInfoOnDisk->Dimensions, Dim, sizeof(*Dim));
+    Result = CaptureGraphInfoRuntimeMetadata(Table, GraphInfoOnDisk);
+    if (FAILED(Result)) {
+        return Result;
+    }
 
     //
     // Capture ratios.
@@ -1284,9 +1553,14 @@ Return Value:
 
 --*/
 {
+    PGRAPH_INFO_ON_DISK GraphInfoOnDisk;
     PTABLE_INFO_ON_DISK OnDisk;
+    BOOLEAN HasGraphImplMetadata;
 
     OnDisk = Table->TableInfoOnDisk;
+    GraphInfoOnDisk = CONTAINING_RECORD(OnDisk,
+                                        GRAPH_INFO_ON_DISK,
+                                        TableInfoOnDisk);
 
     Table->HashSize = OnDisk->HashSize;
     Table->IndexSize = OnDisk->IndexSize;
@@ -1298,6 +1572,96 @@ Return Value:
     Table->IndexFold = OnDisk->IndexFold;
     Table->HashModulus = OnDisk->HashModulus;
     Table->IndexModulus = OnDisk->IndexModulus;
+
+    HasGraphImplMetadata = (
+        GRAPH_INFO_ON_DISK_HAS_FIELD(GraphInfoOnDisk, GraphImpl) &&
+        GraphInfoOnDisk->RuntimeFlags.GraphImplVersionValid &&
+        GraphInfoOnDisk->GraphImpl != 0
+    );
+
+    if (HasGraphImplMetadata) {
+        Table->GraphImpl = GraphInfoOnDisk->GraphImpl;
+    } else {
+        //
+        // Legacy graph-info records predate explicit GraphImpl metadata.  Use
+        // a sentinel instead of aliasing an in-range implementation version;
+        // explicitly identified GraphImpl4 records below still fail closed if
+        // compact-key metadata is absent.
+        //
+        Table->GraphImpl = 0;
+    }
+
+    if (Table->GraphImpl != 0 &&
+        Table->GraphImpl != 1 &&
+        Table->GraphImpl != 2 &&
+        Table->GraphImpl != 3 &&
+        Table->GraphImpl != 4) {
+        return PH_E_INVALID_GRAPH_IMPL;
+    }
+
+    //
+    // Restore composed downsize metadata only from the extended on-disk layout.
+    // Older experimental GraphImpl4 files either fail the field-size guard or
+    // lack DownsizeMetadataValid, so we never reinterpret their inner bitmap
+    // metadata as the new original-key-to-effective-key composed bitmap.
+    //
+
+    if (GRAPH_INFO_ON_DISK_HAS_FIELD(GraphInfoOnDisk, DownsizeContiguous) &&
+        GraphInfoOnDisk->RuntimeFlags.DownsizeMetadataValid) {
+        Table->State.DownsizeMetadataValid = TRUE;
+        Table->DownsizeBitmap = GraphInfoOnDisk->DownsizeBitmap;
+        Table->DownsizeShiftedMask = GraphInfoOnDisk->DownsizeShiftedMask;
+        Table->DownsizeTrailingZeros = GraphInfoOnDisk->DownsizeTrailingZeros;
+        Table->DownsizeContiguous = GraphInfoOnDisk->DownsizeContiguous;
+    }
+
+    if (Table->GraphImpl == 4) {
+        if (!IsGoodPerfectHashHashFunctionId(Table->HashFunctionId)) {
+            return PH_E_NOT_IMPLEMENTED;
+        }
+
+        if (!GRAPH_INFO_ON_DISK_HAS_FIELD(GraphInfoOnDisk,
+                                          GraphImpl4KeyDownsizeContiguous)) {
+            return PH_E_INVALID_GRAPH_IMPL;
+        }
+
+        Table->GraphImpl4EffectiveKeySizeInBytes =
+            GraphInfoOnDisk->GraphImpl4EffectiveKeySizeInBytes;
+
+        switch (Table->GraphImpl4EffectiveKeySizeInBytes) {
+            case sizeof(BYTE):
+            case sizeof(USHORT):
+            case sizeof(ULONG):
+                break;
+            default:
+                return PH_E_INVALID_KEY_SIZE;
+        }
+
+        if (OnDisk->KeySizeInBytes > sizeof(ULONGLONG)) {
+            return PH_E_NOT_IMPLEMENTED;
+        }
+
+        Table->GraphImpl4KeyDownsizeBitmap =
+            GraphInfoOnDisk->GraphImpl4KeyDownsizeBitmap;
+        Table->GraphImpl4KeyDownsizeShiftedMask =
+            GraphInfoOnDisk->GraphImpl4KeyDownsizeShiftedMask;
+        Table->GraphImpl4KeyDownsizeTrailingZeros =
+            GraphInfoOnDisk->GraphImpl4KeyDownsizeTrailingZeros;
+        Table->GraphImpl4KeyDownsizeContiguous =
+            GraphInfoOnDisk->GraphImpl4KeyDownsizeContiguous;
+
+        if (Table->GraphImpl4EffectiveKeySizeInBytes >= sizeof(ULONG)) {
+            if (Table->GraphImpl4KeyDownsizeBitmap != 0) {
+                return PH_E_INVALID_GRAPH_IMPL;
+            }
+        } else if (!GraphInfoOnDisk->RuntimeFlags.GraphImpl4MetadataValid) {
+            return PH_E_INVALID_GRAPH_IMPL;
+        }
+
+        Table->Vtbl->Index = PerfectHashTableIndexImpl4Chm01;
+        Table->Vtbl->FastIndex = NULL;
+        Table->Vtbl->SlowIndex = NULL;
+    }
 
     return S_OK;
 }

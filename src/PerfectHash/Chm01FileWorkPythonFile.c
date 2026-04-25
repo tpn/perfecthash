@@ -194,16 +194,9 @@ SavePythonFileChm01(
     // Write table data.
     //
 
-    OUTPUT_RAW("TABLE_DATA = [\n");
+    OUTPUT_RAW("TABLE_DATA_TYPE = int\n\n");
 
-    if (UsingAssigned8) {
-        OUTPUT_RAW("TABLE_DATA_TYPE = int\n");
-    } else if (UsingAssigned16) {
-        OUTPUT_RAW("TABLE_DATA_TYPE = int\n");
-    } else {
-        OUTPUT_RAW("TABLE_DATA_TYPE = int\n");
-    }
-    OUTPUT_RAW("\n");
+    OUTPUT_RAW("TABLE_DATA = [\n");
 
     if (UsingAssigned8) {
 

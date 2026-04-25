@@ -3811,6 +3811,7 @@ RawDogTableIndexJit(
         return PH_E_NOT_IMPLEMENTED;
     }
 
+    Key = PerfectHashTableJitIndex32Key(Table, Key);
     *Index = IndexFunction(Key);
     return S_OK;
 }
@@ -3926,6 +3927,7 @@ RawDogJitInterfaceIndex32(
         return PH_E_NOT_IMPLEMENTED;
     }
 
+    Key = PerfectHashTableJitIndex32Key(Table, Key);
     *Index = IndexFunction(Key);
     return S_OK;
 }
@@ -4005,6 +4007,11 @@ RawDogJitInterfaceIndex32x4(
         return PH_E_NOT_IMPLEMENTED;
     }
 
+    Key1 = PerfectHashTableJitIndex32Key(Table, Key1);
+    Key2 = PerfectHashTableJitIndex32Key(Table, Key2);
+    Key3 = PerfectHashTableJitIndex32Key(Table, Key3);
+    Key4 = PerfectHashTableJitIndex32Key(Table, Key4);
+
     IndexFunction(Key1,
                   Key2,
                   Key3,
@@ -4070,6 +4077,15 @@ RawDogJitInterfaceIndex32x8(
     if (!ARGUMENT_PRESENT(IndexFunction)) {
         return PH_E_NOT_IMPLEMENTED;
     }
+
+    Key1 = PerfectHashTableJitIndex32Key(Table, Key1);
+    Key2 = PerfectHashTableJitIndex32Key(Table, Key2);
+    Key3 = PerfectHashTableJitIndex32Key(Table, Key3);
+    Key4 = PerfectHashTableJitIndex32Key(Table, Key4);
+    Key5 = PerfectHashTableJitIndex32Key(Table, Key5);
+    Key6 = PerfectHashTableJitIndex32Key(Table, Key6);
+    Key7 = PerfectHashTableJitIndex32Key(Table, Key7);
+    Key8 = PerfectHashTableJitIndex32Key(Table, Key8);
 
     IndexFunction(Key1,
                   Key2,
@@ -4168,6 +4184,23 @@ RawDogJitInterfaceIndex32x16(
     if (!ARGUMENT_PRESENT(IndexFunction)) {
         return PH_E_NOT_IMPLEMENTED;
     }
+
+    Key1 = PerfectHashTableJitIndex32Key(Table, Key1);
+    Key2 = PerfectHashTableJitIndex32Key(Table, Key2);
+    Key3 = PerfectHashTableJitIndex32Key(Table, Key3);
+    Key4 = PerfectHashTableJitIndex32Key(Table, Key4);
+    Key5 = PerfectHashTableJitIndex32Key(Table, Key5);
+    Key6 = PerfectHashTableJitIndex32Key(Table, Key6);
+    Key7 = PerfectHashTableJitIndex32Key(Table, Key7);
+    Key8 = PerfectHashTableJitIndex32Key(Table, Key8);
+    Key9 = PerfectHashTableJitIndex32Key(Table, Key9);
+    Key10 = PerfectHashTableJitIndex32Key(Table, Key10);
+    Key11 = PerfectHashTableJitIndex32Key(Table, Key11);
+    Key12 = PerfectHashTableJitIndex32Key(Table, Key12);
+    Key13 = PerfectHashTableJitIndex32Key(Table, Key13);
+    Key14 = PerfectHashTableJitIndex32Key(Table, Key14);
+    Key15 = PerfectHashTableJitIndex32Key(Table, Key15);
+    Key16 = PerfectHashTableJitIndex32Key(Table, Key16);
 
     IndexFunction(Key1,
                   Key2,
@@ -4444,7 +4477,14 @@ PerfectHashTableCompileJitRawDog(
     }
 
     if (!Table->Flags.Created) {
-        return PH_E_TABLE_NOT_CREATED;
+        //
+        // RawDog loaded-table JIT is intentionally out of scope.  Return
+        // not-implemented for loaded tables so callers can distinguish that
+        // unsupported mode from a table that has neither been created nor
+        // loaded.
+        //
+        return Table->Flags.Loaded ? PH_E_NOT_IMPLEMENTED :
+                                     PH_E_TABLE_NOT_CREATED;
     }
 
     if (!ARGUMENT_PRESENT(Table->TableInfoOnDisk)) {

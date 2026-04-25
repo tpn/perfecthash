@@ -61,7 +61,11 @@ Return Value:
 
     PH_E_TABLE_LOCKED - The table is locked.
 
-    PH_E_TABLE_NOT_CREATED - The table has not been created.
+    PH_E_TABLE_NOT_CREATED - The table has neither been created nor loaded.
+
+    PH_E_NOT_IMPLEMENTED - The table was loaded but does not satisfy the
+        loaded-table JIT preconditions, or the requested compile path is not
+        implemented.
 
     PH_E_INVALID_CPU_ARCH_ID - Invalid CPU architecture ID.
 
@@ -118,9 +122,10 @@ Return Value:
         return PH_E_TABLE_LOCKED;
     }
 
-    if (!Table->Flags.Created) {
+    Result = PerfectHashTableValidateCompileState(Table, TableCompileFlags);
+    if (FAILED(Result)) {
         ReleasePerfectHashTableLockExclusive(Table);
-        return PH_E_TABLE_NOT_CREATED;
+        return Result;
     }
 
     if (TableCompileFlags.Jit) {

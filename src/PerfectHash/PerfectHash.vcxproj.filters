@@ -130,6 +130,9 @@
     <ClCompile Include="PerfectHashTableCompileCompat.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="PerfectHashTableCompileState.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="PerfectHashFile.c">
       <Filter>Source Files</Filter>
     </ClCompile>

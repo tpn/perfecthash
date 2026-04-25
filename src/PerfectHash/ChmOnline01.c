@@ -3927,7 +3927,6 @@ CompileChm01IndexJit(
     PTABLE_INFO_ON_DISK TableInfo;
     PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId;
     PPERFECT_HASH_KEYS Keys;
-    PRTL Rtl;
     ULONGLONG DownsizeBitmap = 0;
     ULONGLONG DownsizeShiftedMask = 0;
     BYTE DownsizeTrailingZeros = 0;
@@ -3966,7 +3965,6 @@ CompileChm01IndexJit(
     TableInfo = Table->TableInfoOnDisk;
     HashFunctionId = Table->HashFunctionId;
     Keys = Table->Keys;
-    Rtl = Table->Rtl;
     UseAssigned16 = (Table->State.UsingAssigned16 != FALSE);
     KeysDownsized = (TableInfo->OriginalKeySizeInBytes >
                      TableInfo->KeySizeInBytes);
@@ -4019,14 +4017,17 @@ CompileChm01IndexJit(
     CompileVectorIndex64x8 = (CompileIndex64 && CompileVectorIndex32x8);
 
     if (KeysDownsized) {
-        ULONGLONG One;
-        ULONGLONG Mask;
-        ULONGLONG Shifted;
-        ULONGLONG Leading;
-        ULONGLONG Trailing;
-        ULONGLONG PopCount;
+        BOOLEAN DownsizeMetadataValid;
 
-        if (Keys) {
+        if (Table->GraphImpl == 4 && Table->State.DownsizeMetadataValid) {
+            //
+            // GraphImpl4 stores the composed outer+inner bitmap on the table.
+            // Index64 JIT extracts directly from the original 64-bit key into
+            // the effective key, so this takes priority over Keys->DownsizeBitmap,
+            // which only captures the outer key-set bitmap.
+            //
+            DownsizeBitmap = Table->DownsizeBitmap;
+        } else if (Keys) {
             DownsizeBitmap = Keys->DownsizeBitmap;
         } else if (Table->State.DownsizeMetadataValid) {
             DownsizeBitmap = Table->DownsizeBitmap;
@@ -4034,26 +4035,15 @@ CompileChm01IndexJit(
             return PH_E_NOT_IMPLEMENTED;
         }
 
-        One = 1;
-        Leading = Rtl->LeadingZeros64(DownsizeBitmap);
-        Trailing = Rtl->TrailingZeros64(DownsizeBitmap);
-        PopCount = Rtl->PopulationCount64(DownsizeBitmap);
-        Mask = (One << (64 - Leading - Trailing)) - One;
-
-        DownsizeTrailingZeros = (BYTE)Trailing;
-
-        if (PopCount == 64) {
-            DownsizeContiguous = TRUE;
-        } else if (Leading == 0) {
-            DownsizeContiguous = FALSE;
-        } else {
-            Shifted = DownsizeBitmap;
-            Shifted >>= Trailing;
-            DownsizeContiguous = (Mask == Shifted);
-        }
-
-        if (DownsizeContiguous) {
-            DownsizeShiftedMask = Mask;
+        PerfectHashComputeDownsizeMetadataFromBitmap(
+            DownsizeBitmap,
+            &DownsizeMetadataValid,
+            &DownsizeShiftedMask,
+            &DownsizeTrailingZeros,
+            &DownsizeContiguous
+        );
+        if (!DownsizeMetadataValid) {
+            return PH_E_NOT_IMPLEMENTED;
         }
     }
 
@@ -5703,6 +5693,7 @@ PerfectHashTableJitInterfaceIndex32(
         return PH_E_NOT_IMPLEMENTED;
     }
 
+    Key = PerfectHashTableJitIndex32Key(Table, Key);
     *Index = IndexFunction(Key);
     return S_OK;
 }
@@ -5739,6 +5730,12 @@ PerfectHashTableJitInterfaceIndex64(
     if (!ARGUMENT_PRESENT(IndexFunction)) {
         return PH_E_NOT_IMPLEMENTED;
     }
+
+    //
+    // The JIT Index64 IR performs the full 64-bit composed-bitmap extraction
+    // internally, including GraphImpl4 inner compact-key handling.  Do not
+    // pre-transform Key here or GraphImpl4 keys will be compacted twice.
+    //
 
     *Index = IndexFunction(Key);
     return S_OK;
@@ -5781,6 +5778,8 @@ PerfectHashTableJitInterfaceIndex32x2(
         return PH_E_NOT_IMPLEMENTED;
     }
 
+    Key1 = PerfectHashTableJitIndex32Key(Table, Key1);
+    Key2 = PerfectHashTableJitIndex32Key(Table, Key2);
     IndexFunction(Key1, Key2, Index1, Index2);
     return S_OK;
 }
@@ -5827,6 +5826,11 @@ PerfectHashTableJitInterfaceIndex32x4(
     if (!ARGUMENT_PRESENT(IndexFunction)) {
         return PH_E_NOT_IMPLEMENTED;
     }
+
+    Key1 = PerfectHashTableJitIndex32Key(Table, Key1);
+    Key2 = PerfectHashTableJitIndex32Key(Table, Key2);
+    Key3 = PerfectHashTableJitIndex32Key(Table, Key3);
+    Key4 = PerfectHashTableJitIndex32Key(Table, Key4);
 
     IndexFunction(Key1,
                   Key2,
@@ -5893,6 +5897,15 @@ PerfectHashTableJitInterfaceIndex32x8(
     if (!ARGUMENT_PRESENT(IndexFunction)) {
         return PH_E_NOT_IMPLEMENTED;
     }
+
+    Key1 = PerfectHashTableJitIndex32Key(Table, Key1);
+    Key2 = PerfectHashTableJitIndex32Key(Table, Key2);
+    Key3 = PerfectHashTableJitIndex32Key(Table, Key3);
+    Key4 = PerfectHashTableJitIndex32Key(Table, Key4);
+    Key5 = PerfectHashTableJitIndex32Key(Table, Key5);
+    Key6 = PerfectHashTableJitIndex32Key(Table, Key6);
+    Key7 = PerfectHashTableJitIndex32Key(Table, Key7);
+    Key8 = PerfectHashTableJitIndex32Key(Table, Key8);
 
     IndexFunction(Key1,
                   Key2,
@@ -5991,6 +6004,23 @@ PerfectHashTableJitInterfaceIndex32x16(
     if (!ARGUMENT_PRESENT(IndexFunction)) {
         return PH_E_NOT_IMPLEMENTED;
     }
+
+    Key1 = PerfectHashTableJitIndex32Key(Table, Key1);
+    Key2 = PerfectHashTableJitIndex32Key(Table, Key2);
+    Key3 = PerfectHashTableJitIndex32Key(Table, Key3);
+    Key4 = PerfectHashTableJitIndex32Key(Table, Key4);
+    Key5 = PerfectHashTableJitIndex32Key(Table, Key5);
+    Key6 = PerfectHashTableJitIndex32Key(Table, Key6);
+    Key7 = PerfectHashTableJitIndex32Key(Table, Key7);
+    Key8 = PerfectHashTableJitIndex32Key(Table, Key8);
+    Key9 = PerfectHashTableJitIndex32Key(Table, Key9);
+    Key10 = PerfectHashTableJitIndex32Key(Table, Key10);
+    Key11 = PerfectHashTableJitIndex32Key(Table, Key11);
+    Key12 = PerfectHashTableJitIndex32Key(Table, Key12);
+    Key13 = PerfectHashTableJitIndex32Key(Table, Key13);
+    Key14 = PerfectHashTableJitIndex32Key(Table, Key14);
+    Key15 = PerfectHashTableJitIndex32Key(Table, Key15);
+    Key16 = PerfectHashTableJitIndex32Key(Table, Key16);
 
     IndexFunction(Key1,
                   Key2,
@@ -6835,6 +6865,7 @@ PerfectHashTableIndexJit(
         return PH_E_NOT_IMPLEMENTED;
     }
 
+    Key = PerfectHashTableJitIndex32Key(Table, Key);
     *Index = IndexFunction(Key);
     return S_OK;
 }

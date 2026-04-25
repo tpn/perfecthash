@@ -28,5 +28,14 @@ EXTERN_C HRESULT NTAPI GraphVerify4(PGRAPH Graph);
 EXTERN_C HRESULT NTAPI PerfectHashTableIndexImpl4Chm01(PPERFECT_HASH_TABLE Table,
                                                        ULONG Key,
                                                        PULONG Index);
+//
+// The Key argument must already be the GraphImpl4 effective key.  For loaded
+// downsized 64-bit tables, callers must pass the result of the persisted
+// composed outer-bitmap ExtractBits64 step, not the original raw input key.
+//
+EXTERN_C HRESULT NTAPI
+PerfectHashTableIndexImpl4EffectiveKeyChm01(PPERFECT_HASH_TABLE Table,
+                                            ULONG Key,
+                                            PULONG Index);
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

@@ -268,6 +268,14 @@ PrepareCHeaderFileChm01(
         OUTPUT_RAW("_ROTATE_KEY_RIGHT RotateRight32\n\n");
     }
 
+    if (Table->GraphImpl == 4 && Table->GraphImpl4KeyDownsizeBitmap != 0) {
+        OUTPUT_RAW("#define ");
+        OUTPUT_STRING(Upper);
+        OUTPUT_RAW("_GRAPHIMPL4_KEY_DOWNSIZE_BITMAP 0x");
+        OUTPUT_HEX_RAW(Table->GraphImpl4KeyDownsizeBitmap);
+        OUTPUT_RAW("\n\n");
+    }
+
     OUTPUT_RAW("#include <CompiledPerfectHashMacroGlue.h>\n");
 
     OUTPUT_RAW("\n\n//\n// (End of preparation phase.)\n//\n\n");

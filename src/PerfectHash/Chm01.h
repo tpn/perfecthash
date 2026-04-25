@@ -96,6 +96,60 @@ extern PREPARE_TABLE_OUTPUT_DIRECTORY PrepareTableOutputDirectory;
 extern PREPARE_GRAPH_INFO PrepareGraphInfoChm01;
 extern PREPARE_GRAPH_INFO PrepareGraphInfoChm02;
 
+ULONGLONG
+PerfectHashComposeGraphImpl4DownsizeBitmap(
+    _In_ ULONGLONG OuterBitmap,
+    _In_ ULONG InnerBitmap
+    );
+
+//
+// N.B. ShiftedMask and TrailingZeros are meaningful only when Contiguous is
+//      TRUE.  MetadataValid only indicates that Bitmap was non-zero; callers
+//      must use Bitmap/raw extraction when MetadataValid is TRUE and
+//      Contiguous is FALSE.
+//
+
+VOID
+PerfectHashComputeDownsizeMetadataFromBitmap(
+    _In_ ULONGLONG Bitmap,
+    _Out_ PBOOLEAN MetadataValid,
+    _Out_ PULONGLONG ShiftedMask,
+    _Out_ PBYTE TrailingZeros,
+    _Out_ PBOOLEAN Contiguous
+    );
+
+#ifndef PERFECT_HASH_TABLE_JIT_INDEX32_KEY_INLINE_DEFINED
+#define PERFECT_HASH_TABLE_JIT_INDEX32_KEY_INLINE_DEFINED
+
+FORCEINLINE
+ULONG
+PerfectHashTableJitIndex32Key(
+    _In_ PPERFECT_HASH_TABLE Table,
+    _In_ ULONG Key
+    )
+{
+    ULONGLONG Value;
+
+    if (Table->GraphImpl != 4 ||
+        Table->GraphImpl4EffectiveKeySizeInBytes == 0 ||
+        Table->GraphImpl4EffectiveKeySizeInBytes >= sizeof(ULONG) ||
+        Table->GraphImpl4KeyDownsizeBitmap == 0) {
+        return Key;
+    }
+
+    Value = (ULONGLONG)Key;
+    if (Table->GraphImpl4KeyDownsizeContiguous != FALSE) {
+        return (ULONG)(
+            (Value >> Table->GraphImpl4KeyDownsizeTrailingZeros) &
+            Table->GraphImpl4KeyDownsizeShiftedMask
+        );
+    }
+
+    return (ULONG)ExtractBits64(Value, Table->GraphImpl4KeyDownsizeBitmap);
+}
+
+#endif
+
 //
 //
 // Internal methods private to Chm01.c and Chm01Compat.c.

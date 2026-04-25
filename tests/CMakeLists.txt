@@ -17,6 +17,55 @@ find_program(CARGO_EXECUTABLE cargo)
 if(NOT CARGO_EXECUTABLE)
     set(CARGO_EXECUTABLE "")
 endif()
+find_program(MAKE_EXECUTABLE NAMES make gmake)
+if(NOT MAKE_EXECUTABLE)
+    set(MAKE_EXECUTABLE "")
+endif()
+
+set(GRAPHIMPL4_DOWNSIZED64_BIT_POSITIONS 0 2 5 9 17 23 31 40 55)
+string(JOIN "," GRAPHIMPL4_DOWNSIZED64_BIT_POSITIONS_CSV
+    ${GRAPHIMPL4_DOWNSIZED64_BIT_POSITIONS})
+string(REPLACE "," ", " GRAPHIMPL4_DOWNSIZED64_BIT_POSITIONS_CPP
+    "${GRAPHIMPL4_DOWNSIZED64_BIT_POSITIONS_CSV}")
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashGraphImpl4TestConfig.h.in
+    ${CMAKE_CURRENT_BINARY_DIR}/PerfectHashGraphImpl4TestConfig.h
+    @ONLY
+)
+
+set(CODEGEN_TEST_CMAKE_ARGS "")
+if(CMAKE_GENERATOR)
+    list(APPEND CODEGEN_TEST_CMAKE_ARGS
+        "-DTEST_CMAKE_GENERATOR=${CMAKE_GENERATOR}")
+endif()
+if(CMAKE_GENERATOR_PLATFORM)
+    list(APPEND CODEGEN_TEST_CMAKE_ARGS
+        "-DTEST_CMAKE_GENERATOR_PLATFORM=${CMAKE_GENERATOR_PLATFORM}")
+endif()
+if(CMAKE_GENERATOR_TOOLSET)
+    list(APPEND CODEGEN_TEST_CMAKE_ARGS
+        "-DTEST_CMAKE_GENERATOR_TOOLSET=${CMAKE_GENERATOR_TOOLSET}")
+endif()
+if(CMAKE_MAKE_PROGRAM)
+    list(APPEND CODEGEN_TEST_CMAKE_ARGS
+        "-DTEST_CMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}")
+endif()
+if(MAKE_EXECUTABLE)
+    list(APPEND CODEGEN_TEST_CMAKE_ARGS
+        "-DTEST_CMAKE_UNIX_MAKE_PROGRAM=${MAKE_EXECUTABLE}")
+endif()
+if(CMAKE_TOOLCHAIN_FILE)
+    list(APPEND CODEGEN_TEST_CMAKE_ARGS
+        "-DTEST_CMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}")
+endif()
+if(CMAKE_C_COMPILER)
+    list(APPEND CODEGEN_TEST_CMAKE_ARGS
+        "-DTEST_CMAKE_C_COMPILER=${CMAKE_C_COMPILER}")
+endif()
+if(CMAKE_CXX_COMPILER)
+    list(APPEND CODEGEN_TEST_CMAKE_ARGS
+        "-DTEST_CMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}")
+endif()
 
 add_executable(perfecthash_unit_tests
     PerfectHashArgvTests.cpp
@@ -28,6 +77,11 @@ target_link_libraries(perfecthash_unit_tests
     PRIVATE
         PerfectHash
         GTest::gtest_main
+)
+
+target_include_directories(perfecthash_unit_tests
+    PRIVATE
+        ${CMAKE_CURRENT_BINARY_DIR}
 )
 
 perfecthash_apply_common_definitions(perfecthash_unit_tests)
@@ -183,6 +237,7 @@ if(TARGET PerfectHashCreateExe AND TARGET PerfectHashBulkCreateExe)
     add_test(
         NAME perfecthash.cli.codegen
         COMMAND ${CMAKE_COMMAND}
+            ${CODEGEN_TEST_CMAKE_ARGS}
             -DTEST_EXE=$<TARGET_FILE:PerfectHashCreateExe>
             -DTEST_KEYS=${TEST_KEYS_FILE}
             -DTEST_OUTPUT=${TEST_OUTPUT_DIR}/codegen
@@ -197,6 +252,7 @@ if(TARGET PerfectHashCreateExe AND TARGET PerfectHashBulkCreateExe)
     add_test(
         NAME perfecthash.cli.codegen.mulshrolate1rx
         COMMAND ${CMAKE_COMMAND}
+            ${CODEGEN_TEST_CMAKE_ARGS}
             -DTEST_EXE=$<TARGET_FILE:PerfectHashCreateExe>
             -DTEST_KEYS=${TEST_KEYS_FILE}
             -DTEST_OUTPUT=${TEST_OUTPUT_DIR}/codegen-mulshrolate1rx
@@ -211,6 +267,7 @@ if(TARGET PerfectHashCreateExe AND TARGET PerfectHashBulkCreateExe)
     add_test(
         NAME perfecthash.cli.codegen.mulshrolate2rx
         COMMAND ${CMAKE_COMMAND}
+            ${CODEGEN_TEST_CMAKE_ARGS}
             -DTEST_EXE=$<TARGET_FILE:PerfectHashCreateExe>
             -DTEST_KEYS=${TEST_KEYS_FILE}
             -DTEST_OUTPUT=${TEST_OUTPUT_DIR}/codegen-mulshrolate2rx
@@ -225,6 +282,7 @@ if(TARGET PerfectHashCreateExe AND TARGET PerfectHashBulkCreateExe)
     add_test(
         NAME perfecthash.cli.codegen.graphimpl4
         COMMAND ${CMAKE_COMMAND}
+            ${CODEGEN_TEST_CMAKE_ARGS}
             -DTEST_EXE=$<TARGET_FILE:PerfectHashCreateExe>
             -DTEST_OUTPUT=${TEST_OUTPUT_DIR}/codegen-graphimpl4
             -DTEST_PYTHON=${Python3_EXECUTABLE}
@@ -234,8 +292,22 @@ if(TARGET PerfectHashCreateExe AND TARGET PerfectHashBulkCreateExe)
     )
 
     add_test(
+        NAME perfecthash.cli.codegen.graphimpl4-downsized64
+        COMMAND ${CMAKE_COMMAND}
+            ${CODEGEN_TEST_CMAKE_ARGS}
+            -DTEST_EXE=$<TARGET_FILE:PerfectHashCreateExe>
+            -DTEST_OUTPUT=${TEST_OUTPUT_DIR}/codegen-graphimpl4-downsized64
+            -DTEST_PYTHON=${Python3_EXECUTABLE}
+            -DTEST_CARGO=${CARGO_EXECUTABLE}
+            -DTEST_BUILD_CONFIG=$<CONFIG>
+            -DTEST_GRAPHIMPL4_DOWNSIZED64_BIT_POSITIONS=${GRAPHIMPL4_DOWNSIZED64_BIT_POSITIONS_CSV}
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/run_cli_graphimpl4_downsized64_codegen_test.cmake
+    )
+
+    add_test(
         NAME perfecthash.cli.codegen.mulshrolate3rx
         COMMAND ${CMAKE_COMMAND}
+            ${CODEGEN_TEST_CMAKE_ARGS}
             -DTEST_EXE=$<TARGET_FILE:PerfectHashCreateExe>
             -DTEST_KEYS=${TEST_KEYS_FILE}
             -DTEST_OUTPUT=${TEST_OUTPUT_DIR}/codegen-mulshrolate3rx
@@ -250,6 +322,7 @@ if(TARGET PerfectHashCreateExe AND TARGET PerfectHashBulkCreateExe)
     add_test(
         NAME perfecthash.cli.codegen.mulshrolate4rx
         COMMAND ${CMAKE_COMMAND}
+            ${CODEGEN_TEST_CMAKE_ARGS}
             -DTEST_EXE=$<TARGET_FILE:PerfectHashCreateExe>
             -DTEST_KEYS=${TEST_KEYS_FILE}
             -DTEST_OUTPUT=${TEST_OUTPUT_DIR}/codegen-mulshrolate4rx
@@ -264,6 +337,7 @@ if(TARGET PerfectHashCreateExe AND TARGET PerfectHashBulkCreateExe)
     add_test(
         NAME perfecthash.cli.codegen.multiplyshiftrx
         COMMAND ${CMAKE_COMMAND}
+            ${CODEGEN_TEST_CMAKE_ARGS}
             -DTEST_EXE=$<TARGET_FILE:PerfectHashCreateExe>
             -DTEST_KEYS=${TEST_KEYS_FILE}
             -DTEST_OUTPUT=${TEST_OUTPUT_DIR}/codegen-multiplyshiftrx
@@ -300,6 +374,7 @@ if(TARGET PerfectHashCreateExe AND TARGET PerfectHashBulkCreateExe)
     add_test(
         NAME perfecthash.fast.cli.codegen
         COMMAND ${CMAKE_COMMAND}
+            ${CODEGEN_TEST_CMAKE_ARGS}
             -DTEST_EXE=$<TARGET_FILE:PerfectHashCreateExe>
             -DTEST_KEYS=${TEST_KEYS_FILE}
             -DTEST_OUTPUT=${TEST_OUTPUT_DIR}/fast-codegen

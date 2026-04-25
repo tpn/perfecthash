@@ -14,6 +14,7 @@ Abstract:
 --*/
 
 #include "stdafx.h"
+#include "GraphImpl4.h"
 #include <PerfectHash/PerfectHashOnlineJit.h>
 
 #include <stdint.h>
@@ -29,6 +30,7 @@ struct PH_ONLINE_JIT_CONTEXT {
 struct PH_ONLINE_JIT_TABLE {
     PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_TABLE_JIT_INTERFACE JitInterface;
+    BOOLEAN Compiled;
 };
 
 static
@@ -210,6 +212,9 @@ PhCompileOnlineJitBackend(
     }
 
     CompileFlags.JitMaxIsa = (ULONG)JitMaxIsa;
+    if (TableInfo->OriginalKeySizeInBytes > sizeof(ULONG)) {
+        CompileFlags.JitIndex64 = TRUE;
+    }
 
     return Context->Online->Vtbl->CompileTable(Context->Online,
                                                Table->Table,
@@ -382,6 +387,9 @@ PhOnlineJitCreateTable64(
     HRESULT Result;
     PERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlags = {0};
     PERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags = {0};
+    PERFECT_HASH_TABLE_CREATE_PARAMETER TableCreateParam = {0};
+    PERFECT_HASH_TABLE_CREATE_PARAMETERS TableCreateParams = {0};
+    PPERFECT_HASH_TABLE_CREATE_PARAMETERS TableCreateParamsPointer = NULL;
     PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId;
     PPERFECT_HASH_TABLE Table = NULL;
     PH_ONLINE_JIT_TABLE *Wrapper = NULL;
@@ -408,6 +416,16 @@ PhOnlineJitCreateTable64(
     TableCreateFlags.Quiet = TRUE;
     TableCreateFlags.DoNotTryUseHash16Impl = TRUE;
 
+    if (IsGoodPerfectHashHashFunctionId(HashFunctionId)) {
+        TableCreateParam.Id = TableCreateParameterGraphImplId;
+        TableCreateParam.AsULong = 4;
+
+        TableCreateParams.SizeOfStruct = sizeof(TableCreateParams);
+        TableCreateParams.NumberOfElements = 1;
+        TableCreateParams.Params = &TableCreateParam;
+        TableCreateParamsPointer = &TableCreateParams;
+    }
+
     Result = Context->Online->Vtbl->CreateTableFromKeys(
         Context->Online,
         PerfectHashChm01AlgorithmId,
@@ -418,7 +436,7 @@ PhOnlineJitCreateTable64(
         (PVOID)Keys,
         &KeysLoadFlags,
         &TableCreateFlags,
-        NULL,
+        TableCreateParamsPointer,
         &Table
     );
     if (FAILED(Result)) {
@@ -500,6 +518,7 @@ PhOnlineJitCompileTableEx(
     //
 
     PhReleaseOnlineJitInterface(Table);
+    Table->Compiled = FALSE;
 
     if (!IsValidPerfectHashJitMaxIsaId((PERFECT_HASH_JIT_MAX_ISA_ID)JitMaxIsa)) {
         return E_INVALIDARG;
@@ -527,6 +546,7 @@ PhOnlineJitCompileTableEx(
                                            VectorWidth,
                                            JitMaxIsa);
         if (SUCCEEDED(Result)) {
+            Table->Compiled = TRUE;
             if (ARGUMENT_PRESENT(EffectiveBackend)) {
                 *EffectiveBackend = PhOnlineJitBackendLlvmJit;
             }
@@ -582,6 +602,7 @@ PhOnlineJitCompileTableEx(
                                            CandidateWidths[Index],
                                            JitMaxIsa);
         if (SUCCEEDED(Result)) {
+            Table->Compiled = TRUE;
             if (ARGUMENT_PRESENT(EffectiveBackend)) {
                 *EffectiveBackend = PhOnlineJitBackendRawDogJit;
             }
@@ -613,6 +634,7 @@ PhOnlineJitCompileTableEx(
                                        VectorWidth,
                                        JitMaxIsa);
     if (SUCCEEDED(Result)) {
+        Table->Compiled = TRUE;
         if (ARGUMENT_PRESENT(EffectiveBackend)) {
             *EffectiveBackend = PhOnlineJitBackendLlvmJit;
         }
@@ -663,7 +685,9 @@ PhOnlineJitIndex64(
     uint32_t *Index
     )
 {
+    HRESULT Result;
     PTABLE_INFO_ON_DISK TableInfo;
+    ULONGLONG DownsizeBitmap;
     ULONG DownsizedKey;
 
     if (!ARGUMENT_PRESENT(Table) ||
@@ -681,21 +705,40 @@ PhOnlineJitIndex64(
         TableInfo->KeySizeInBytes > sizeof(uint32_t)) {
         return PH_E_NOT_IMPLEMENTED;
     }
-    DownsizedKey = (ULONG)ExtractBits64((ULONGLONG)Key, Table->Table->DownsizeBitmap);
-    if (Table->Table->GraphImpl == 4 &&
-        Table->Table->GraphImpl4EffectiveKeySizeInBytes < sizeof(ULONG) &&
-        Table->Table->GraphImpl4KeyDownsizeBitmap != 0) {
-        if (Table->Table->GraphImpl4KeyDownsizeContiguous) {
-            DownsizedKey = (ULONG)(
-                (DownsizedKey >> Table->Table->GraphImpl4KeyDownsizeTrailingZeros) &
-                Table->Table->GraphImpl4KeyDownsizeShiftedMask
-            );
-        } else {
-            DownsizedKey = (ULONG)ExtractBits64(
-                (ULONGLONG)DownsizedKey,
-                Table->Table->GraphImpl4KeyDownsizeBitmap
-            );
+
+    if (Table->Compiled) {
+        Result = PhEnsureOnlineJitInterface(Table);
+        if (FAILED(Result)) {
+            return Result;
         }
+
+        return Table->JitInterface->Vtbl->Index64(
+            Table->JitInterface,
+            (ULONGLONG)Key,
+            (PULONG)Index
+        );
+    }
+
+    //
+    // The online JIT wrapper owns only the table, not the original keys object.
+    // Use the table metadata as the source of truth; GraphImpl4 stores a
+    // composed outer+inner bitmap here, whereas a keys bitmap would be outer-only.
+    // Non-GraphImpl4 downsized tables with captured metadata continue to use
+    // the regular table Index() path below.  Non-downsized 64-bit tables and
+    // tables without captured downsize metadata are intentionally unsupported
+    // by Index64.
+    //
+    if (!Table->Table->State.DownsizeMetadataValid) {
+        return PH_E_NOT_IMPLEMENTED;
+    }
+
+    DownsizeBitmap = Table->Table->DownsizeBitmap;
+    DownsizedKey = (ULONG)ExtractBits64((ULONGLONG)Key, DownsizeBitmap);
+
+    if (Table->Table->GraphImpl == 4) {
+        return PerfectHashTableIndexImpl4EffectiveKeyChm01(Table->Table,
+                                                           DownsizedKey,
+                                                           (PULONG)Index);
     }
     return Table->Table->Vtbl->Index(Table->Table, DownsizedKey, (PULONG)Index);
 }

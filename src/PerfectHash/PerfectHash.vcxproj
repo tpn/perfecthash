@@ -274,6 +274,7 @@
     <ClCompile Include="PerfectHashConstants.c" />
     <ClCompile Include="PerfectHashTableCompile.c" />
     <ClCompile Include="PerfectHashTableCompileCompat.c" />
+    <ClCompile Include="PerfectHashTableCompileState.c" />
     <ClCompile Include="PerfectHashTableCreate.c" />
     <ClCompile Include="PerfectHashTableHash16Ex.c" />
     <ClCompile Include="PerfectHashTableHashEx.c" />

@@ -2292,8 +2292,54 @@ typedef struct _Struct_size_bytes_(Header.SizeOfStruct) _GRAPH_INFO_ON_DISK {
         GRAPH_DIMENSIONS Dimensions;
     };
 
+    //
+    // Additional CHM01 runtime metadata needed to faithfully reload tables
+    // produced by alternate graph implementations and downsized key paths.
+    //
+
+    union {
+        struct {
+            ULONG DownsizeMetadataValid:1;
+            //
+            // Non-trivial GraphImpl4 compact-key metadata is valid.  Full-width
+            // GraphImpl4 tables still persist GraphImplVersionValid below.
+            //
+            ULONG GraphImpl4MetadataValid:1;
+            ULONG GraphImplVersionValid:1;
+            ULONG Unused:29;
+        };
+        ULONG AsULong;
+    } RuntimeFlags;
+
+    ULONG GraphImpl;
+
+    //
+    // For non-GraphImpl4 tables, this is the outer 64-bit key downsize bitmap.
+    // For GraphImpl4 tables, this is the composed original-key-to-effective-key
+    // bitmap: outer 64-bit key downsize plus inner compact-key extraction.
+    // Callers that consume this field must preserve the GraphImpl4 distinction.
+    //
+
+    ULONGLONG DownsizeBitmap;
+    ULONGLONG DownsizeShiftedMask;
+    BYTE DownsizeTrailingZeros;
+    BYTE DownsizeContiguous;
+    BYTE DownsizePadding[2];
+
+    ULONG GraphImpl4EffectiveKeySizeInBytes;
+    ULONG GraphImpl4KeyDownsizeBitmap;
+    ULONG GraphImpl4KeyDownsizeShiftedMask;
+    BYTE GraphImpl4KeyDownsizeTrailingZeros;
+    BYTE GraphImpl4KeyDownsizeContiguous;
+    BYTE GraphImpl4Padding[2];
+
 } GRAPH_INFO_ON_DISK;
+C_ASSERT(sizeof(BOOLEAN) == sizeof(BYTE));
+C_ASSERT(sizeof(GRAPH_INFO_ON_DISK) == 296);
 C_ASSERT(sizeof(GRAPH_INFO_ON_DISK) <= PAGE_SIZE);
+C_ASSERT(FIELD_OFFSET(GRAPH_INFO_ON_DISK, RuntimeFlags) == 248);
+C_ASSERT((FIELD_OFFSET(GRAPH_INFO_ON_DISK, DownsizeBitmap) %
+          sizeof(ULONGLONG)) == 0);
 typedef GRAPH_INFO_ON_DISK *PGRAPH_INFO_ON_DISK;
 
 //

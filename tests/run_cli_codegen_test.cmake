@@ -15,6 +15,8 @@ if(NOT DEFINED TEST_CARGO)
   set(TEST_CARGO "")
 endif()
 
+include("${CMAKE_CURRENT_LIST_DIR}/nested_cmake_args.cmake")
+
 function(require_file path)
   if(NOT EXISTS "${path}")
     message(FATAL_ERROR "Expected file not found: ${path}")
@@ -42,6 +44,11 @@ endif()
 if(DEFINED TEST_FLAGS)
   string(REPLACE "|" ";" flags_list "${TEST_FLAGS}")
 endif()
+if(DEFINED TEST_SKIP_CREATE_RESULTS)
+  string(REPLACE "|" ";" skip_create_results "${TEST_SKIP_CREATE_RESULTS}")
+else()
+  set(skip_create_results "")
+endif()
 
 file(REMOVE_RECURSE "${test_output_native}")
 file(MAKE_DIRECTORY "${test_output_native}")
@@ -54,6 +61,12 @@ execute_process(
 )
 
 if(NOT result EQUAL 0)
+  if(NOT skip_create_results STREQUAL "" AND
+     "${result}" IN_LIST skip_create_results)
+    message(STATUS "SKIPPED: create command returned ${result}")
+    set(TEST_CODEGEN_SKIPPED TRUE)
+    return()
+  endif()
   message(STATUS "stdout: ${stdout}")
   message(STATUS "stderr: ${stderr}")
   message(FATAL_ERROR "Command failed with exit code ${result}")
@@ -71,8 +84,13 @@ get_filename_component(gen_dir "${gen_cmake}" DIRECTORY)
 set(build_dir "${test_output_native}/_build")
 file(MAKE_DIRECTORY "${build_dir}")
 
+set(configure_command "${CMAKE_COMMAND}" -S "${gen_dir}" -B "${build_dir}")
+list(APPEND configure_command
+     ${nested_cmake_generator_args}
+     ${nested_cmake_compiler_args})
+
 execute_process(
-  COMMAND "${CMAKE_COMMAND}" -S "${gen_dir}" -B "${build_dir}"
+  COMMAND ${configure_command}
   RESULT_VARIABLE result
   OUTPUT_VARIABLE stdout
   ERROR_VARIABLE stderr
@@ -122,6 +140,9 @@ require_file("${gen_dir}/${table_name}.h")
 require_file("${gen_dir}/${table_name}.cpp")
 require_file("${gen_dir}/${table_name}.def")
 require_file("${gen_dir}/${table_name}.pht1")
+# Windows alternate data stream checks live in the GraphImpl4-specific smoke
+# tests behind CMAKE_HOST_WIN32; the shared codegen smoke only requires files
+# that exist on every host filesystem.
 require_file("${gen_dir}/${table_name}.sln")
 require_file("${gen_dir}/${table_name}_StdAfx.c")
 require_file("${gen_dir}/${table_name}_StdAfx.h")
@@ -153,6 +174,16 @@ require_glob("${gen_dir}/*_Test.mk" "Test makefile fragment")
 require_glob("${gen_dir}/*_BenchmarkFull.mk" "BenchmarkFull makefile fragment")
 require_glob("${gen_dir}/*_BenchmarkIndex.mk" "BenchmarkIndex makefile fragment")
 
+file(READ "${gen_dir}/${table_name}_Python.py" generated_python)
+string(FIND "${generated_python}" "TABLE_DATA_TYPE =" python_table_data_type_pos)
+string(FIND "${generated_python}" "TABLE_DATA = [" python_table_data_pos)
+if(python_table_data_type_pos LESS 0 OR python_table_data_pos LESS 0)
+  message(FATAL_ERROR "Expected TABLE_DATA_TYPE and TABLE_DATA in generated Python file")
+endif()
+if(NOT python_table_data_type_pos LESS python_table_data_pos)
+  message(FATAL_ERROR "Expected TABLE_DATA_TYPE before TABLE_DATA in generated Python file")
+endif()
+
 if(NOT CMAKE_HOST_WIN32)
   set(make_build_dir "${test_output_native}/_build_make")
   file(MAKE_DIRECTORY "${make_build_dir}")
@@ -165,6 +196,8 @@ if(NOT CMAKE_HOST_WIN32)
   execute_process(
     COMMAND "${CMAKE_COMMAND}" -S "${gen_dir}" -B "${make_build_dir}"
             -G "Unix Makefiles" ${make_config_args}
+            ${nested_cmake_compiler_args}
+            ${nested_cmake_unix_make_args}
     RESULT_VARIABLE result
     OUTPUT_VARIABLE stdout
     ERROR_VARIABLE stderr
