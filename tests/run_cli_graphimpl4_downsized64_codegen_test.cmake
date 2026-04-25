@@ -68,7 +68,25 @@ if(TEST_CODEGEN_SKIPPED)
   return()
 endif()
 
+function(require_portable_downsize_macros path label)
+  file(READ "${path}" generated_text)
+  string(FIND "${generated_text}"
+         "_DOWNSIZE_KEY(Key) ((CPHDKEY)ExtractBits64_C(Key,"
+         has_portable_downsize)
+  if(has_portable_downsize LESS 0)
+    message(FATAL_ERROR "Expected portable ExtractBits64_C downsized-key macro in ${label}")
+  endif()
+  string(FIND "${generated_text}" "_ROTATE_KEY_LEFT RotateLeft64_C"
+         has_portable_left_rotate)
+  string(FIND "${generated_text}" "_ROTATE_KEY_RIGHT RotateRight64_C"
+         has_portable_right_rotate)
+  if(has_portable_left_rotate LESS 0 OR has_portable_right_rotate LESS 0)
+    message(FATAL_ERROR "Expected portable 64-bit rotate macros in ${label}")
+  endif()
+endfunction()
+
 require_file("${gen_dir}/${table_name}_DownsizedKeys.c")
+require_file("${gen_dir}/${table_name}.cpp")
 if(CMAKE_HOST_WIN32)
   require_file("${gen_dir}/${table_name}.pht1:Info")
 endif()
@@ -91,6 +109,10 @@ string(FIND "${generated_header_upper}" "${downsize_bitmap_upper}" has_header_do
 if(has_header_downsize_bitmap LESS 0)
   message(FATAL_ERROR "Expected sparse 64-bit downsize bitmap in generated header")
 endif()
+require_portable_downsize_macros("${gen_dir}/${table_name}.h"
+                                 "generated C header")
+require_portable_downsize_macros("${gen_dir}/${table_name}.cpp"
+                                 "generated C++ unity source")
 
 file(READ "${gen_dir}/${table_name}_RustLib.rs" generated_rust)
 string(FIND "${generated_rust}" "pub type TableDataType = ${expected_rust_table_type};" has_rust_table_type)

@@ -229,21 +229,23 @@ PrepareCHeaderFileChm01(
         OUTPUT_HEX64_RAW(Keys->DownsizeBitmap);
         OUTPUT_RAW("\n#define ");
         OUTPUT_STRING(Upper);
-        OUTPUT_RAW("_DOWNSIZE_KEY(Key) ((CPHDKEY)ExtractBits64(Key, 0x");
+        OUTPUT_RAW("_DOWNSIZE_KEY(Key) ((CPHDKEY)ExtractBits64_C(Key, 0x");
         OUTPUT_HEX64_RAW(Keys->DownsizeBitmap);
         OUTPUT_RAW("))\n");
 
         //
-        // Write the left and right key rotation macros.
+        // Write portable 64-bit rotation macros.  CompiledPerfectHash.h may
+        // map RotateLeft64/RotateRight64 to target-specific intrinsics; the
+        // generated project does not require those target flags.
         //
 
         OUTPUT_RAW("#define ");
         OUTPUT_STRING(Upper);
-        OUTPUT_RAW("_ROTATE_KEY_LEFT RotateLeft64\n");
+        OUTPUT_RAW("_ROTATE_KEY_LEFT RotateLeft64_C\n");
 
         OUTPUT_RAW("#define ");
         OUTPUT_STRING(Upper);
-        OUTPUT_RAW("_ROTATE_KEY_RIGHT RotateRight64\n\n");
+        OUTPUT_RAW("_ROTATE_KEY_RIGHT RotateRight64_C\n\n");
 
     } else {
 
