@@ -40,6 +40,9 @@ RotateLeft32_C(
     )
 {
     b &= 31;
+    if (b == 0) {
+        return a;
+    }
     return (a << b) | (a >> (32 - b));
 }
 
@@ -55,6 +58,9 @@ RotateRight32_C(
     )
 {
     b &= 31;
+    if (b == 0) {
+        return a;
+    }
     return (a >> b) | (a << (32 - b));
 }
 
@@ -70,6 +76,9 @@ RotateLeft64_C(
     )
 {
     b &= 63;
+    if (b == 0) {
+        return a;
+    }
     return (a << b) | (a >> (64 - b));
 }
 
@@ -85,6 +94,9 @@ RotateRight64_C(
     )
 {
     b &= 63;
+    if (b == 0) {
+        return a;
+    }
     return (a >> b) | (a << (64 - b));
 }
 

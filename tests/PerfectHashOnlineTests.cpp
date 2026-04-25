@@ -540,6 +540,21 @@ private:
   bool had_old_ = false;
 };
 
+TEST(CompiledPerfectHashPortableHelpers, ZeroRotateCountIsIdentity) {
+  constexpr ULONG value32 = 0x98000101ul;
+  constexpr ULONGLONG value64 = 0x9800010102040810ull;
+
+  EXPECT_EQ(RotateLeft32_C(value32, 0), value32);
+  EXPECT_EQ(RotateRight32_C(value32, 0), value32);
+  EXPECT_EQ(RotateLeft32_C(value32, 32), value32);
+  EXPECT_EQ(RotateRight32_C(value32, 32), value32);
+
+  EXPECT_EQ(RotateLeft64_C(value64, 0), value64);
+  EXPECT_EQ(RotateRight64_C(value64, 0), value64);
+  EXPECT_EQ(RotateLeft64_C(value64, 64), value64);
+  EXPECT_EQ(RotateRight64_C(value64, 64), value64);
+}
+
 TEST(GraphImpl4BitUtils, ContiguousBitmapDetection) {
   const ULONGLONG contiguous_composed_mask = 0x380ull;
   const ULONGLONG high_contiguous_mask = 0xffffffffffffff00ull;
