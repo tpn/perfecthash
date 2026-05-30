@@ -6,6 +6,7 @@ set(target PerfectHashCuda)
 ################################################################################
 set(Header_Files
     "Graph.cuh"
+    "Threshold2Bitset.cuh"
 )
 source_group("Header Files" FILES ${Header_Files})
 

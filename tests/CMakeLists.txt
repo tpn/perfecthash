@@ -102,6 +102,38 @@ add_test(
 )
 set_tests_properties(perfecthash.fast.unit PROPERTIES LABELS fast)
 
+if(PERFECTHASH_HAS_CUDA)
+    add_executable(perfecthash_cuda_threshold2_bitset_tests
+        PerfectHashCudaThreshold2BitsetTests.cu
+    )
+
+    perfecthash_apply_cuda_settings(perfecthash_cuda_threshold2_bitset_tests)
+
+    if(CUDAToolkit_FOUND)
+        target_link_libraries(
+            perfecthash_cuda_threshold2_bitset_tests
+            PRIVATE
+                CUDA::cudart
+        )
+    endif()
+
+    set_target_properties(perfecthash_cuda_threshold2_bitset_tests PROPERTIES
+        CUDA_STANDARD 17
+        CUDA_STANDARD_REQUIRED YES
+    )
+
+    add_test(
+        NAME perfecthash.cuda.threshold2_bitset
+        COMMAND $<TARGET_FILE:perfecthash_cuda_threshold2_bitset_tests>
+    )
+
+    set_tests_properties(
+        perfecthash.cuda.threshold2_bitset
+        PROPERTIES
+            LABELS "cuda"
+    )
+endif()
+
 set(TEST_KEYS_FILE "${PERFECTHASH_ROOT_DIR}/keys/HologramWorld-31016.keys")
 set(TEST_KEYS_DIR "${PERFECTHASH_ROOT_DIR}/keys")
 set(TEST_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/cli-out")

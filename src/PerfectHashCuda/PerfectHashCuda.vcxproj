@@ -114,6 +114,7 @@
     <ClInclude Include="..\..\include\PerfectHash\PerfectHash.h" />
     <ClInclude Include="..\..\include\PerfectHash\PerfectHashCuda.h" />
     <ClInclude Include="..\..\include\PerfectHash\PerfectHashErrors.h" />
+    <ClInclude Include="Threshold2Bitset.cuh" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -21,6 +21,8 @@ Abstract:
 #include <cooperative_groups.h>
 #include <cooperative_groups/reduce.h>
 
+#include "Threshold2Bitset.cuh"
+
 namespace cg = cooperative_groups;
 
 #define MAX_NUMBER_OF_SEEDS 8
