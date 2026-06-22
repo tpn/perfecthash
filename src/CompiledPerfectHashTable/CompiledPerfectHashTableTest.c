@@ -31,6 +31,70 @@
         NumberOfErrors++;          \
     }
 
+#ifdef CPH_HAS_INDEX32X8_ROUTINE
+extern
+VOID
+CPHCALLTYPE
+INDEX32X8_ROUTINE(
+    _In_ CPHKEY Key1,
+    _In_ CPHKEY Key2,
+    _In_ CPHKEY Key3,
+    _In_ CPHKEY Key4,
+    _In_ CPHKEY Key5,
+    _In_ CPHKEY Key6,
+    _In_ CPHKEY Key7,
+    _In_ CPHKEY Key8,
+    _Out_ PCPHINDEX Index1,
+    _Out_ PCPHINDEX Index2,
+    _Out_ PCPHINDEX Index3,
+    _Out_ PCPHINDEX Index4,
+    _Out_ PCPHINDEX Index5,
+    _Out_ PCPHINDEX Index6,
+    _Out_ PCPHINDEX Index7,
+    _Out_ PCPHINDEX Index8
+    );
+#endif
+
+#ifdef CPH_HAS_INDEX32X16_ROUTINE
+extern
+VOID
+CPHCALLTYPE
+INDEX32X16_ROUTINE(
+    _In_ CPHKEY Key1,
+    _In_ CPHKEY Key2,
+    _In_ CPHKEY Key3,
+    _In_ CPHKEY Key4,
+    _In_ CPHKEY Key5,
+    _In_ CPHKEY Key6,
+    _In_ CPHKEY Key7,
+    _In_ CPHKEY Key8,
+    _In_ CPHKEY Key9,
+    _In_ CPHKEY Key10,
+    _In_ CPHKEY Key11,
+    _In_ CPHKEY Key12,
+    _In_ CPHKEY Key13,
+    _In_ CPHKEY Key14,
+    _In_ CPHKEY Key15,
+    _In_ CPHKEY Key16,
+    _Out_ PCPHINDEX Index1,
+    _Out_ PCPHINDEX Index2,
+    _Out_ PCPHINDEX Index3,
+    _Out_ PCPHINDEX Index4,
+    _Out_ PCPHINDEX Index5,
+    _Out_ PCPHINDEX Index6,
+    _Out_ PCPHINDEX Index7,
+    _Out_ PCPHINDEX Index8,
+    _Out_ PCPHINDEX Index9,
+    _Out_ PCPHINDEX Index10,
+    _Out_ PCPHINDEX Index11,
+    _Out_ PCPHINDEX Index12,
+    _Out_ PCPHINDEX Index13,
+    _Out_ PCPHINDEX Index14,
+    _Out_ PCPHINDEX Index15,
+    _Out_ PCPHINDEX Index16
+    );
+#endif
+
 DECLARE_TEST_CPH_ROUTINE()
 /*++
 
@@ -102,6 +166,86 @@ Return Value:
     Value = LOOKUP_ROUTINE(Key);
     ASSERT(Value == 0);
 
+#ifdef CPH_HAS_INDEX32X8_ROUTINE
+    if (NUMBER_OF_KEYS >= 8) {
+        ULONG Lane;
+        CPHINDEX Indices[8];
+        const CPHKEY *VectorKeys = KEYS;
+
+        INDEX32X8_ROUTINE(
+            VectorKeys[0],
+            VectorKeys[1],
+            VectorKeys[2],
+            VectorKeys[3],
+            VectorKeys[4],
+            VectorKeys[5],
+            VectorKeys[6],
+            VectorKeys[7],
+            &Indices[0],
+            &Indices[1],
+            &Indices[2],
+            &Indices[3],
+            &Indices[4],
+            &Indices[5],
+            &Indices[6],
+            &Indices[7]
+        );
+
+        for (Lane = 0; Lane < 8; Lane++) {
+            Index = INDEX_ROUTINE(VectorKeys[Lane]);
+            ASSERT(Indices[Lane] == Index);
+        }
+    }
+#endif
+
+#ifdef CPH_HAS_INDEX32X16_ROUTINE
+    if (NUMBER_OF_KEYS >= 16) {
+        ULONG Lane;
+        CPHINDEX Indices[16];
+        const CPHKEY *VectorKeys = KEYS;
+
+        INDEX32X16_ROUTINE(
+            VectorKeys[0],
+            VectorKeys[1],
+            VectorKeys[2],
+            VectorKeys[3],
+            VectorKeys[4],
+            VectorKeys[5],
+            VectorKeys[6],
+            VectorKeys[7],
+            VectorKeys[8],
+            VectorKeys[9],
+            VectorKeys[10],
+            VectorKeys[11],
+            VectorKeys[12],
+            VectorKeys[13],
+            VectorKeys[14],
+            VectorKeys[15],
+            &Indices[0],
+            &Indices[1],
+            &Indices[2],
+            &Indices[3],
+            &Indices[4],
+            &Indices[5],
+            &Indices[6],
+            &Indices[7],
+            &Indices[8],
+            &Indices[9],
+            &Indices[10],
+            &Indices[11],
+            &Indices[12],
+            &Indices[13],
+            &Indices[14],
+            &Indices[15]
+        );
+
+        for (Lane = 0; Lane < 16; Lane++) {
+            Index = INDEX_ROUTINE(VectorKeys[Lane]);
+            ASSERT(Indices[Lane] == Index);
+        }
+    }
+#endif
+
     //
     // Loop through the entire key set and insert a rotated version of the key.
     //
@@ -164,4 +308,3 @@ Return Value:
 
     return NumberOfErrors;
 }
-
