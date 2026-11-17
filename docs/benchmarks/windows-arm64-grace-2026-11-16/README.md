@@ -43,6 +43,8 @@ Generated ARM64 benchmark routines run on a dedicated pinned worker, preserving 
 
 MultiplyShiftRX and Mulshrolate1RX resized to 131,072 vertices with 32-bit assigned data; the other generated tables use 65,536 vertices and 16-bit assigned data. All generated CPU validators pass before timing.
 
+The tables above use the non-inline `BenchmarkIndex` routine. The inline variant emitted into the generated C++ unity source now reads its key and stores its result through `volatile` locals on every platform, so the optimizer cannot hoist or drop the lookup. That adds a load and a store per call; inline results generated before this change are not comparable.
+
 ## Reproduction and validation
 
 Follow the native ARM64 setup in the root README, then run:
