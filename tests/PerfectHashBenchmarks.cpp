@@ -1178,6 +1178,21 @@ int RunBenchmark(const BenchmarkOptions &base,
                                  ? info.TargetFeatures
                                  : "<default>";
       if (verbose) {
+        const auto &flags = info.Flags;
+        std::cout << "  Active JIT backend: "
+                  << (flags.BackendLlvm ? "llvm" : flags.BackendRawDog ? "rawdog" : "unknown")
+                  << "\n";
+        std::cout << "  JIT compiled widths:"
+                  << (flags.Index32Compiled ? " 1" : "")
+                  << (flags.Index32x2Compiled ? " 2" : "")
+                  << (flags.Index32x4Compiled ? " 4" : "")
+                  << (flags.Index32x8Compiled ? " 8" : "")
+                  << (flags.Index32x16Compiled ? " 16" : "") << "\n";
+        std::cout << "  JIT vector widths:"
+                  << (flags.Index32x2Vector ? " 2" : "")
+                  << (flags.Index32x4Vector ? " 4" : "")
+                  << (flags.Index32x8Vector ? " 8" : "")
+                  << (flags.Index32x16Vector ? " 16" : "") << "\n";
         std::cout << "  JIT Target CPU: " << cpu << "\n";
         std::cout << "  JIT Target Features: " << features << "\n";
       }
@@ -1709,6 +1724,8 @@ int RunCompare(const BenchmarkOptions &base) {
                false,
                false,
                true);
+      addEntry("neon", "llvm", "x16", BenchmarkOptions::JitBackend::Llvm,
+               PerfectHashJitMaxIsaNeon, false, false, true, false, false);
     }
 
     if (isaAllowed(PerfectHashJitMaxIsaSve)) {
@@ -1785,21 +1802,15 @@ int RunCompare(const BenchmarkOptions &base) {
       options.hash_function_id == PerfectHashHashMulshrolate2RXFunctionId ||
       options.hash_function_id == PerfectHashHashMulshrolate3RXFunctionId;
 
-  addEntry("scalar",
-           "rawdog",
-           "x1",
-           BenchmarkOptions::JitBackend::RawDog,
-           scalarIsa,
-           false,
-           false,
-           false,
-           false,
-           false);
+  if (!arm64Compare || rawdog_vector_supported) {
+    addEntry("scalar", "rawdog", "x1", BenchmarkOptions::JitBackend::RawDog,
+             scalarIsa, false, false, false, false, false);
+  }
 
   if (rawdog_vector_supported) {
     if (arm64Compare) {
       if (isaAllowed(PerfectHashJitMaxIsaNeon)) {
-        addEntry("neon",
+        addEntry("batch",
                  "rawdog",
                  "x4",
                  BenchmarkOptions::JitBackend::RawDog,
@@ -1807,9 +1818,9 @@ int RunCompare(const BenchmarkOptions &base) {
                  true,
                  false,
                  false,
-                 true,
+                 false,
                  false);
-        addEntry("neon",
+        addEntry("batch",
                  "rawdog",
                  "x8",
                  BenchmarkOptions::JitBackend::RawDog,
@@ -1818,7 +1829,11 @@ int RunCompare(const BenchmarkOptions &base) {
                  true,
                  false,
                  false,
-                 true);
+                 false);
+#if defined(PH_WINDOWS)
+        addEntry("batch", "rawdog", "x16", BenchmarkOptions::JitBackend::RawDog,
+                 PerfectHashJitMaxIsaNeon, false, false, true, false, false);
+#endif
       }
     } else {
       if (isaAllowed(PerfectHashJitMaxIsaAvx)) {
@@ -1921,9 +1936,7 @@ int RunCompare(const BenchmarkOptions &base) {
   llvm_results.reserve(entries.size());
 
   auto build_key = [&](const CompareEntry &entry) {
-    std::string key(entry.label ? entry.label : "unknown");
-    key.push_back('|');
-    key.append(JitMaxIsaToString(entry.options.jit_max_isa));
+    std::string key(JitMaxIsaToString(entry.options.jit_max_isa));
     key.push_back('|');
     key.append(entry.index_label ? entry.index_label : "x1");
     return key;
@@ -1939,7 +1952,7 @@ int RunCompare(const BenchmarkOptions &base) {
   std::cout << "Comparison summary (PerfectHash lookup avg, ms)\n";
   std::cout << std::left << std::setw(10) << "Backend"
             << std::setw(10) << "Mode"
-            << std::setw(8) << "ISA"
+            << std::setw(8) << "ISA cap"
             << std::setw(8) << "Index"
             << std::right << std::setw(12) << "Avg ms"
             << std::setw(12) << "ns/op"
@@ -2006,7 +2019,7 @@ int RunCompare(const BenchmarkOptions &base) {
 
   for (const auto &entry : entries) {
     if (entry.options.index32x16 && !entry.result.index32x16_available) {
-      std::cout << "Note: AVX-512 x16 unavailable; fell back to scalar.\n";
+      std::cout << "Note: x16 unavailable; fell back to scalar.\n";
       break;
     }
   }

@@ -691,6 +691,7 @@ FinishedSolution:
 
     Table->Flags.UsedAvx2HashFunction = Graph->Flags.UsedAvx2HashFunction;
     Table->Flags.UsedAvx512HashFunction = Graph->Flags.UsedAvx512HashFunction;
+    Table->Flags.UsedNeonHashFunction = Graph->Flags.UsedNeonHashFunction;
     Table->Flags.UsedAvx2MemoryCoverageFunction =
         Graph->Flags.UsedAvx2MemoryCoverageFunction;
 

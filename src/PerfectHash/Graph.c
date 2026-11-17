@@ -266,6 +266,18 @@ GraphInitializeRoutines(
         }
     }
 
+#ifdef PH_HAS_ARM64_NEON
+    if (TableCreateFlags.HashAllKeysFirst &&
+        !TableCreateFlags.DoNotTryUseNeonHashFunction &&
+        (HashFunctionId == PerfectHashHashMultiplyShiftRFunctionId ||
+         HashFunctionId == PerfectHashHashMultiplyShiftRXFunctionId) &&
+        (Graph->Vtbl->HashKeys == GraphHashKeys ||
+         Graph->Vtbl->HashKeys == GraphHashKeys16) &&
+        GraphHasNeon()) {
+        Graph->Vtbl->HashKeys = GraphHashKeysMultiplyShift_NEON;
+    }
+#endif
+
 #if defined(_M_AMD64) || defined(_M_X64)
 
     //
@@ -4377,12 +4389,13 @@ Return Value:
         PERFECT_HASH_TABLE_CREATE_FLAGS ResizeFlags = TableCreateFlags;
 
         // Workers must not replace the shared LLVM execution engine here.
-        // Select the requested AVX routines or scalar fallback after resize;
+        // Select a native hash routine for the new vertex width after resize;
         // the old hash JIT stays alive until normal table cleanup.
         ResizeFlags.TryUseJitHashFunction = FALSE;
         Graph->Flags.UsingAssigned16 = FALSE;
         Graph->Flags.UsedAvx2HashFunction = FALSE;
         Graph->Flags.UsedAvx512HashFunction = FALSE;
+        Graph->Flags.UsedNeonHashFunction = FALSE;
         Graph->Flags.UsedAvx2MemoryCoverageFunction = FALSE;
         Graph->Vtbl->HashKeys = GraphHashKeys;
         Graph->Vtbl->AddKeys = GraphAddKeys;

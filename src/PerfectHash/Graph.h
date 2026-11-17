@@ -914,10 +914,11 @@ typedef union _GRAPH_FLAGS {
         ULONG DebugCudaChm02:1;
 
         //
-        // Unused bits.
+        // The solver hashed its keys using ARM64 NEON.
         //
 
-        ULONG Unused:9;
+        ULONG UsedNeonHashFunction:1;
+        ULONG Unused:8;
     };
     LONG AsLong;
     ULONG AsULong;
@@ -2152,6 +2153,13 @@ extern GRAPH_APPLY_USER_SEEDS GraphApplyUserSeeds;
 extern GRAPH_APPLY_SEED_MASKS GraphApplySeedMasks;
 extern GRAPH_APPLY_WEIGHTED_SEED_MASKS GraphApplyWeightedSeedMasks;
 extern GRAPH_POST_HASH_KEYS GraphPostHashKeys;
+
+#if (defined(_MSC_VER) && defined(_M_ARM64)) || \
+    (defined(__aarch64__) && defined(__ARM_NEON))
+#define PH_HAS_ARM64_NEON 1
+extern GRAPH_HASH_KEYS GraphHashKeysMultiplyShift_NEON;
+BOOL GraphHasNeon(VOID);
+#endif
 
 //
 // Private vtbl methods.

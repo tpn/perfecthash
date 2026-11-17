@@ -59,3 +59,49 @@ jobs:
           & "$root/build/examples/sqlite-online-jit/Release/sqlite-online-jit.exe" --backend rawdog-jit --dim-size 2000 --fact-size 20000 --iterations 2 --vector-width 16
           & "$root/build/examples/sqlite-online-jit/Release/sqlite-online-jit.exe" --backend llvm-jit --dim-size 2000 --fact-size 20000 --iterations 2 --vector-width 1
           & "$root/build/examples/sqlite-online-jit/Release/sqlite-online-jit.exe" --matrix --dim-size 512 --fact-size 4096 --iterations 1
+
+  arm64-jit:
+    runs-on: windows-11-arm
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Install native LLVM development package
+        shell: pwsh
+        run: |
+          $package = 'clang+llvm-23.1.6-aarch64-pc-windows-msvc'
+          $archive = "$env:RUNNER_TEMP/$package.tar.xz"
+          curl.exe -fL --retry 3 -o $archive "https://github.com/llvm/llvm-project/releases/download/llvmorg-23.1.6/$package.tar.xz"
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          if ((Get-FileHash $archive -Algorithm SHA256).Hash -ne 'fa5a25df6a1405fdfb9942f4d5cc73bfc3b8b31cfd43ee2fbd43bd2e3168be01') {
+            throw 'Unexpected LLVM archive checksum'
+          }
+          tar.exe -xf $archive -C $env:RUNNER_TEMP
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          "$env:RUNNER_TEMP/$package/bin" >> $env:GITHUB_PATH
+          "LLVM_DIR=$env:RUNNER_TEMP/$package/lib/cmake/llvm" >> $env:GITHUB_ENV
+      - name: Build native ARM64 tests and JIT backends
+        shell: pwsh
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}/Microsoft Visual Studio/Installer/vswhere.exe"
+          $vs = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.ARM64 -property installationPath
+          & "$vs/Common7/Tools/Launch-VsDevShell.ps1" -Arch arm64 -HostArch arm64 -SkipAutomaticLocation
+          cmake --preset ninja-multi -DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl "-DLLVM_DIR=$env:LLVM_DIR" -DPERFECTHASH_STATIC_LLVM=OFF
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          cmake --build build --config Release --target PerfectHashLLVM PerfectHashOnlineCore perfecthash_unit_tests perfecthash_online_jit_invalid_env --parallel
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          cmake -S examples/cpp-console-online-jit -B build/examples/arm-jit -G "Ninja Multi-Config" -DCMAKE_CXX_COMPILER=cl "-DPERFECTHASH_ROOT=$pwd" "-DPerfectHashOnlineJit_ROOT=$pwd/build"
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          cmake --build build/examples/arm-jit --config Release
+      - name: Run ARM64 unit tests and exercise both JITs
+        shell: pwsh
+        env:
+          PERFECT_HASH_ONLINE_MAX_CONCURRENCY: 1
+        run: |
+          ctest --test-dir build -C Release -R '^perfecthash_unit_tests\.' --no-tests=error --output-on-failure --timeout 180
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          foreach ($backend in 'rawdog-jit', 'llvm-jit') {
+            $output = & build/examples/arm-jit/Release/cpp-console-online-jit.exe --backend $backend --hash multiplyshiftr --vector-width 16
+            $output
+            if ($LASTEXITCODE -or !($output -match 'mode=jit\.')) { throw "$backend JIT did not run" }
+          }

@@ -15,7 +15,7 @@ Abstract:
 
 #include "stdafx.h"
 
-#if defined(PH_ONLINE_CORE_ONLY)
+#if defined(PH_ONLINE_CORE_ONLY) && !defined(PH_USE_LLVMLIB)
 
 PERFECT_HASH_TABLE_COMPILE_JIT PerfectHashTableCompileJit;
 PERFECT_HASH_TABLE_JIT_RUNDOWN PerfectHashTableJitRundown;
@@ -207,6 +207,14 @@ PerfectHashTableCompileJit(
     if (!ARGUMENT_PRESENT(PerfectHashLLVMFunctions.TableCompileJit)) {
         return PH_E_LLVM_BACKEND_NOT_FOUND;
     }
+
+#if defined(PH_HAS_RAWDOG_JIT)
+    // Only the host module can release a RawDog code allocation. The LLVM
+    // module treats an existing execution engine as an LLVM MCJIT instance.
+    if (Table && Table->Jit && Table->Jit->Flags.BackendRawDog) {
+        PerfectHashTableJitRundownRawDog(Table);
+    }
+#endif
 
 #if defined(PH_WINDOWS)
     __try {

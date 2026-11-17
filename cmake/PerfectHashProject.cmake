@@ -43,12 +43,6 @@ set_property(
     online-rawdog-and-llvm-jit
     online-llvm-jit
 )
-set(_perfecthash_static_llvm_default ON)
-if(APPLE)
-    set(_perfecthash_static_llvm_default OFF)
-endif()
-option(PERFECTHASH_STATIC_LLVM "Link LLVM statically when available" ${_perfecthash_static_llvm_default})
-
 string(TOLOWER "${PERFECTHASH_BUILD_PROFILE}" PERFECTHASH_BUILD_PROFILE_NORMALIZED)
 if(PERFECTHASH_BUILD_PROFILE_NORMALIZED STREQUAL "online-rawdog")
     message(WARNING
@@ -186,6 +180,12 @@ if(CMAKE_SYSTEM_PROCESSOR)
         set(PERFECTHASH_ARCH_ARM TRUE)
     endif()
 endif()
+
+set(_perfecthash_static_llvm_default ON)
+if(APPLE OR (MSVC AND PERFECTHASH_ARCH_ARM64))
+    set(_perfecthash_static_llvm_default OFF)
+endif()
+option(PERFECTHASH_STATIC_LLVM "Link LLVM statically when available" ${_perfecthash_static_llvm_default})
 
 if(PERFECTHASH_IS_LINUX)
     # Ensure installed binaries can find ../lib without LD_LIBRARY_PATH.

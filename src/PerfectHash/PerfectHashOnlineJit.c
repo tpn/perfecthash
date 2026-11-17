@@ -207,7 +207,7 @@ PhCompileOnlineJitBackend(
 {
     HRESULT Result;
     PERFECT_HASH_TABLE_COMPILE_FLAGS CompileFlags = {0};
-    PTABLE_INFO_ON_DISK TableInfo;
+    PERFECT_HASH_TABLE_JIT_INFO Info;
 
     if (!ARGUMENT_PRESENT(Context) ||
         !ARGUMENT_PRESENT(Table) ||
@@ -215,8 +215,6 @@ PhCompileOnlineJitBackend(
         !ARGUMENT_PRESENT(Table->Table->TableInfoOnDisk)) {
         return E_INVALIDARG;
     }
-
-    TableInfo = Table->Table->TableInfoOnDisk;
 
     CompileFlags.Jit = TRUE;
 
@@ -247,9 +245,31 @@ PhCompileOnlineJitBackend(
 
     CompileFlags.JitMaxIsa = (ULONG)JitMaxIsa;
 
-    return Context->Online->Vtbl->CompileTable(Context->Online,
-                                               Table->Table,
-                                               &CompileFlags);
+    Result = Context->Online->Vtbl->CompileTable(Context->Online,
+                                                 Table->Table,
+                                                 &CompileFlags);
+    if (FAILED(Result) || VectorWidth <= 1) {
+        return Result;
+    }
+
+    // A backend can compile the scalar index while omitting an unavailable
+    // batch width. Check its actual result before reporting that width.
+    Result = PhEnsureOnlineJitInterface(Table);
+    if (FAILED(Result)) {
+        return Result;
+    }
+    Result = Table->JitInterface->Vtbl->GetInfo(Table->JitInterface, &Info);
+    PhReleaseOnlineJitInterface(Table);
+    if (FAILED(Result)) {
+        return Result;
+    }
+    if ((CompileFlags.JitIndex32x2 && !Info.Flags.Index32x2Compiled) ||
+        (CompileFlags.JitIndex32x4 && !Info.Flags.Index32x4Compiled) ||
+        (CompileFlags.JitIndex32x8 && !Info.Flags.Index32x8Compiled) ||
+        (CompileFlags.JitIndex32x16 && !Info.Flags.Index32x16Compiled)) {
+        return PH_E_NOT_IMPLEMENTED;
+    }
+    return S_OK;
 }
 
 static
@@ -959,6 +979,11 @@ PhOnlineJitCompileTableEx(
 {
     HRESULT Result;
     HRESULT LastResult;
+    const PH_ONLINE_JIT_BACKEND Backends[] = {
+        PhOnlineJitBackendRawDogJit,
+        PhOnlineJitBackendLlvmJit,
+    };
+    ULONG BackendIndex;
     ULONG CandidateWidths[8] = {0};
     ULONG CandidateCount = 0;
     ULONG Index;
@@ -995,23 +1020,6 @@ PhOnlineJitCompileTableEx(
     }
     if (ARGUMENT_PRESENT(EffectiveVectorWidth)) {
         *EffectiveVectorWidth = VectorWidth;
-    }
-
-    if (Backend == PhOnlineJitBackendLlvmJit) {
-        Result = PhCompileOnlineJitBackend(Context,
-                                           Table,
-                                           Backend,
-                                           VectorWidth,
-                                           JitMaxIsa);
-        if (SUCCEEDED(Result)) {
-            if (ARGUMENT_PRESENT(EffectiveBackend)) {
-                *EffectiveBackend = PhOnlineJitBackendLlvmJit;
-            }
-            if (ARGUMENT_PRESENT(EffectiveVectorWidth)) {
-                *EffectiveVectorWidth = VectorWidth;
-            }
-        }
-        return Result;
     }
 
     switch (VectorWidth) {
@@ -1052,61 +1060,37 @@ PhOnlineJitCompileTableEx(
 
     LastResult = PH_E_NOT_IMPLEMENTED;
 
-    for (Index = 0; Index < CandidateCount; Index++) {
-        Result = PhCompileOnlineJitBackend(Context,
-                                           Table,
-                                           PhOnlineJitBackendRawDogJit,
-                                           CandidateWidths[Index],
-                                           JitMaxIsa);
-        if (SUCCEEDED(Result)) {
-            if (ARGUMENT_PRESENT(EffectiveBackend)) {
-                *EffectiveBackend = PhOnlineJitBackendRawDogJit;
-            }
-            if (ARGUMENT_PRESENT(EffectiveVectorWidth)) {
-                *EffectiveVectorWidth = CandidateWidths[Index];
-            }
-            return S_OK;
+    for (BackendIndex = 0; BackendIndex < ARRAYSIZE(Backends); BackendIndex++) {
+        PH_ONLINE_JIT_BACKEND CandidateBackend = Backends[BackendIndex];
+        if (Backend != PhOnlineJitBackendAuto && Backend != CandidateBackend) {
+            continue;
         }
-
-        if (Result != PH_E_NOT_IMPLEMENTED &&
-            Result != PH_E_INVARIANT_CHECK_FAILED) {
-            if (Backend == PhOnlineJitBackendRawDogJit) {
-                return Result;
+        for (Index = 0; Index < CandidateCount; Index++) {
+            Result = PhCompileOnlineJitBackend(Context,
+                                               Table,
+                                               CandidateBackend,
+                                               CandidateWidths[Index],
+                                               JitMaxIsa);
+            if (SUCCEEDED(Result)) {
+                if (ARGUMENT_PRESENT(EffectiveBackend)) {
+                    *EffectiveBackend = CandidateBackend;
+                }
+                if (ARGUMENT_PRESENT(EffectiveVectorWidth)) {
+                    *EffectiveVectorWidth = CandidateWidths[Index];
+                }
+                return S_OK;
             }
             LastResult = Result;
-            break;
-        }
-
-        LastResult = Result;
-    }
-
-    if (Backend == PhOnlineJitBackendRawDogJit) {
-        return LastResult;
-    }
-
-    for (Index = 0; Index < CandidateCount; Index++) {
-        Result = PhCompileOnlineJitBackend(Context,
-                                           Table,
-                                           PhOnlineJitBackendLlvmJit,
-                                           CandidateWidths[Index],
-                                           JitMaxIsa);
-        if (SUCCEEDED(Result)) {
-            if (ARGUMENT_PRESENT(EffectiveBackend)) {
-                *EffectiveBackend = PhOnlineJitBackendLlvmJit;
+            if (Result == PH_E_NOT_IMPLEMENTED ||
+                Result == PH_E_INVARIANT_CHECK_FAILED) {
+                continue;
             }
-            if (ARGUMENT_PRESENT(EffectiveVectorWidth)) {
-                *EffectiveVectorWidth = CandidateWidths[Index];
+            if (Backend == PhOnlineJitBackendAuto &&
+                CandidateBackend == PhOnlineJitBackendRawDogJit) {
+                break;
             }
-            return S_OK;
-        }
-
-        if (Result != PH_E_LLVM_BACKEND_NOT_FOUND &&
-            Result != PH_E_NOT_IMPLEMENTED &&
-            Result != PH_E_INVARIANT_CHECK_FAILED) {
             return Result;
         }
-
-        LastResult = Result;
     }
 
     return LastResult;

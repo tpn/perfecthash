@@ -43,6 +43,10 @@ set_target_properties(perfecthash_unit_tests PROPERTIES
 
 if(PERFECTHASH_HAS_RAWDOG_JIT)
     target_compile_definitions(perfecthash_unit_tests PRIVATE PH_HAS_RAWDOG_JIT)
+    if(TARGET PerfectHashLLVM)
+        # The backend-switch test loads this plugin at runtime.
+        add_dependencies(perfecthash_unit_tests PerfectHashLLVM)
+    endif()
 endif()
 
 add_executable(perfecthash_online_jit_invalid_env

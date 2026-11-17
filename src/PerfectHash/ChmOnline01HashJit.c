@@ -16,7 +16,7 @@ Abstract:
 #include "stdafx.h"
 #include "ChmOnline01.h"
 
-#if defined(PH_ONLINE_CORE_ONLY)
+#if defined(PH_ONLINE_CORE_ONLY) && !defined(PH_USE_LLVMLIB)
 
 PERFECT_HASH_TABLE_COMPILE_HASH_JIT PerfectHashTableCompileHashJit;
 PERFECT_HASH_TABLE_HASH_JIT_RUNDOWN PerfectHashTableHashJitRundown;

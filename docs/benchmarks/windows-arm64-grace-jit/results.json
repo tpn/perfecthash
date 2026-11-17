@@ -1,0 +1,3683 @@
+{
+  "affinity": 4,
+  "qpc_hz": 10000000,
+  "key_count": 31016,
+  "loops": 50,
+  "iterations": 5,
+  "lookup": [
+    {
+      "repeat": 1,
+      "backend": "rawdog",
+      "bits": 32,
+      "lanes": 16,
+      "lookup_ms": 5.12822,
+      "compile_ms": 0.0634
+    },
+    {
+      "repeat": 1,
+      "backend": "rawdog",
+      "bits": 32,
+      "lanes": 8,
+      "lookup_ms": 3.38124,
+      "compile_ms": 0.0719
+    },
+    {
+      "repeat": 1,
+      "backend": "rawdog",
+      "bits": 16,
+      "lanes": 16,
+      "lookup_ms": 4.31314,
+      "compile_ms": 0.1002
+    },
+    {
+      "repeat": 1,
+      "backend": "native",
+      "bits": 32,
+      "lanes": 1,
+      "lookup_ms": 11.1953,
+      "compile_ms": null
+    },
+    {
+      "repeat": 1,
+      "backend": "llvm",
+      "bits": 16,
+      "lanes": 1,
+      "lookup_ms": 4.48734,
+      "compile_ms": 13.037
+    },
+    {
+      "repeat": 1,
+      "backend": "llvm",
+      "bits": 16,
+      "lanes": 8,
+      "lookup_ms": 2.61018,
+      "compile_ms": 14.3424
+    },
+    {
+      "repeat": 1,
+      "backend": "llvm",
+      "bits": 32,
+      "lanes": 8,
+      "lookup_ms": 2.83572,
+      "compile_ms": 13.9047
+    },
+    {
+      "repeat": 1,
+      "backend": "llvm",
+      "bits": 16,
+      "lanes": 4,
+      "lookup_ms": 2.96906,
+      "compile_ms": 12.4567
+    },
+    {
+      "repeat": 1,
+      "backend": "rawdog",
+      "bits": 32,
+      "lanes": 1,
+      "lookup_ms": 5.9335,
+      "compile_ms": 0.0448
+    },
+    {
+      "repeat": 1,
+      "backend": "llvm",
+      "bits": 32,
+      "lanes": 4,
+      "lookup_ms": 3.11816,
+      "compile_ms": 13.0035
+    },
+    {
+      "repeat": 1,
+      "backend": "rawdog",
+      "bits": 16,
+      "lanes": 1,
+      "lookup_ms": 5.63592,
+      "compile_ms": 0.0829
+    },
+    {
+      "repeat": 1,
+      "backend": "rawdog",
+      "bits": 32,
+      "lanes": 4,
+      "lookup_ms": 3.55998,
+      "compile_ms": 0.0729
+    },
+    {
+      "repeat": 1,
+      "backend": "rawdog",
+      "bits": 16,
+      "lanes": 4,
+      "lookup_ms": 3.41592,
+      "compile_ms": 0.1096
+    },
+    {
+      "repeat": 1,
+      "backend": "llvm",
+      "bits": 32,
+      "lanes": 1,
+      "lookup_ms": 4.6253,
+      "compile_ms": 10.9912
+    },
+    {
+      "repeat": 1,
+      "backend": "llvm",
+      "bits": 32,
+      "lanes": 16,
+      "lookup_ms": 3.0427,
+      "compile_ms": 15.563
+    },
+    {
+      "repeat": 1,
+      "backend": "llvm",
+      "bits": 16,
+      "lanes": 16,
+      "lookup_ms": 2.8495,
+      "compile_ms": 15.7401
+    },
+    {
+      "repeat": 1,
+      "backend": "native",
+      "bits": 16,
+      "lanes": 1,
+      "lookup_ms": 6.95406,
+      "compile_ms": null
+    },
+    {
+      "repeat": 1,
+      "backend": "rawdog",
+      "bits": 16,
+      "lanes": 8,
+      "lookup_ms": 3.2503,
+      "compile_ms": 0.1154
+    },
+    {
+      "repeat": 2,
+      "backend": "rawdog",
+      "bits": 32,
+      "lanes": 4,
+      "lookup_ms": 3.68764,
+      "compile_ms": 0.0757
+    },
+    {
+      "repeat": 2,
+      "backend": "llvm",
+      "bits": 32,
+      "lanes": 16,
+      "lookup_ms": 3.09168,
+      "compile_ms": 17.4769
+    },
+    {
+      "repeat": 2,
+      "backend": "rawdog",
+      "bits": 16,
+      "lanes": 1,
+      "lookup_ms": 5.58836,
+      "compile_ms": 0.0878
+    },
+    {
+      "repeat": 2,
+      "backend": "rawdog",
+      "bits": 32,
+      "lanes": 1,
+      "lookup_ms": 5.85492,
+      "compile_ms": 0.034
+    },
+    {
+      "repeat": 2,
+      "backend": "llvm",
+      "bits": 16,
+      "lanes": 16,
+      "lookup_ms": 3.01136,
+      "compile_ms": 17.1392
+    },
+    {
+      "repeat": 2,
+      "backend": "rawdog",
+      "bits": 32,
+      "lanes": 8,
+      "lookup_ms": 3.4027,
+      "compile_ms": 0.0648
+    },
+    {
+      "repeat": 2,
+      "backend": "rawdog",
+      "bits": 16,
+      "lanes": 4,
+      "lookup_ms": 3.4684,
+      "compile_ms": 0.1098
+    },
+    {
+      "repeat": 2,
+      "backend": "llvm",
+      "bits": 16,
+      "lanes": 8,
+      "lookup_ms": 2.59376,
+      "compile_ms": 13.9549
+    },
+    {
+      "repeat": 2,
+      "backend": "native",
+      "bits": 16,
+      "lanes": 1,
+      "lookup_ms": 6.97294,
+      "compile_ms": null
+    },
+    {
+      "repeat": 2,
+      "backend": "rawdog",
+      "bits": 16,
+      "lanes": 16,
+      "lookup_ms": 4.54112,
+      "compile_ms": 0.1058
+    },
+    {
+      "repeat": 2,
+      "backend": "rawdog",
+      "bits": 32,
+      "lanes": 16,
+      "lookup_ms": 5.16182,
+      "compile_ms": 0.0661
+    },
+    {
+      "repeat": 2,
+      "backend": "llvm",
+      "bits": 16,
+      "lanes": 1,
+      "lookup_ms": 4.52094,
+      "compile_ms": 10.6274
+    },
+    {
+      "repeat": 2,
+      "backend": "llvm",
+      "bits": 32,
+      "lanes": 4,
+      "lookup_ms": 3.05748,
+      "compile_ms": 13.5794
+    },
+    {
+      "repeat": 2,
+      "backend": "llvm",
+      "bits": 16,
+      "lanes": 4,
+      "lookup_ms": 2.9046,
+      "compile_ms": 15.5584
+    },
+    {
+      "repeat": 2,
+      "backend": "native",
+      "bits": 32,
+      "lanes": 1,
+      "lookup_ms": 11.1335,
+      "compile_ms": null
+    },
+    {
+      "repeat": 2,
+      "backend": "llvm",
+      "bits": 32,
+      "lanes": 1,
+      "lookup_ms": 4.66408,
+      "compile_ms": 12.0869
+    },
+    {
+      "repeat": 2,
+      "backend": "llvm",
+      "bits": 32,
+      "lanes": 8,
+      "lookup_ms": 2.76502,
+      "compile_ms": 14.2825
+    },
+    {
+      "repeat": 2,
+      "backend": "rawdog",
+      "bits": 16,
+      "lanes": 8,
+      "lookup_ms": 3.27364,
+      "compile_ms": 0.111
+    },
+    {
+      "repeat": 3,
+      "backend": "native",
+      "bits": 32,
+      "lanes": 1,
+      "lookup_ms": 11.0943,
+      "compile_ms": null
+    },
+    {
+      "repeat": 3,
+      "backend": "rawdog",
+      "bits": 16,
+      "lanes": 8,
+      "lookup_ms": 3.18768,
+      "compile_ms": 0.1235
+    },
+    {
+      "repeat": 3,
+      "backend": "rawdog",
+      "bits": 16,
+      "lanes": 4,
+      "lookup_ms": 3.49344,
+      "compile_ms": 0.1265
+    },
+    {
+      "repeat": 3,
+      "backend": "rawdog",
+      "bits": 16,
+      "lanes": 1,
+      "lookup_ms": 5.70004,
+      "compile_ms": 0.082
+    },
+    {
+      "repeat": 3,
+      "backend": "llvm",
+      "bits": 32,
+      "lanes": 1,
+      "lookup_ms": 4.7074,
+      "compile_ms": 11.5656
+    },
+    {
+      "repeat": 3,
+      "backend": "rawdog",
+      "bits": 32,
+      "lanes": 16,
+      "lookup_ms": 4.43046,
+      "compile_ms": 0.083
+    },
+    {
+      "repeat": 3,
+      "backend": "llvm",
+      "bits": 32,
+      "lanes": 8,
+      "lookup_ms": 2.7602,
+      "compile_ms": 14.1623
+    },
+    {
+      "repeat": 3,
+      "backend": "llvm",
+      "bits": 32,
+      "lanes": 16,
+      "lookup_ms": 3.0506,
+      "compile_ms": 16.066
+    },
+    {
+      "repeat": 3,
+      "backend": "native",
+      "bits": 16,
+      "lanes": 1,
+      "lookup_ms": 6.98038,
+      "compile_ms": null
+    },
+    {
+      "repeat": 3,
+      "backend": "llvm",
+      "bits": 16,
+      "lanes": 8,
+      "lookup_ms": 2.79026,
+      "compile_ms": 14.2525
+    },
+    {
+      "repeat": 3,
+      "backend": "rawdog",
+      "bits": 32,
+      "lanes": 4,
+      "lookup_ms": 3.72648,
+      "compile_ms": 0.1065
+    },
+    {
+      "repeat": 3,
+      "backend": "llvm",
+      "bits": 16,
+      "lanes": 16,
+      "lookup_ms": 3.30072,
+      "compile_ms": 19.9701
+    },
+    {
+      "repeat": 3,
+      "backend": "rawdog",
+      "bits": 16,
+      "lanes": 16,
+      "lookup_ms": 4.41466,
+      "compile_ms": 0.1104
+    },
+    {
+      "repeat": 3,
+      "backend": "rawdog",
+      "bits": 32,
+      "lanes": 8,
+      "lookup_ms": 3.44612,
+      "compile_ms": 0.0795
+    },
+    {
+      "repeat": 3,
+      "backend": "llvm",
+      "bits": 16,
+      "lanes": 4,
+      "lookup_ms": 2.81882,
+      "compile_ms": 13.0918
+    },
+    {
+      "repeat": 3,
+      "backend": "llvm",
+      "bits": 16,
+      "lanes": 1,
+      "lookup_ms": 4.64728,
+      "compile_ms": 10.8361
+    },
+    {
+      "repeat": 3,
+      "backend": "rawdog",
+      "bits": 32,
+      "lanes": 1,
+      "lookup_ms": 5.8039,
+      "compile_ms": 0.0478
+    },
+    {
+      "repeat": 3,
+      "backend": "llvm",
+      "bits": 32,
+      "lanes": 4,
+      "lookup_ms": 2.89986,
+      "compile_ms": 12.5777
+    }
+  ],
+  "solve": [
+    {
+      "repeat": 1,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 102,
+      "hash_us": 10,
+      "solve_us": 1202
+    },
+    {
+      "repeat": 1,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 444,
+      "hash_us": 44,
+      "solve_us": 1250
+    },
+    {
+      "repeat": 1,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 107,
+      "hash_us": 10,
+      "solve_us": 1295
+    },
+    {
+      "repeat": 1,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 371,
+      "hash_us": 37,
+      "solve_us": 1305
+    },
+    {
+      "repeat": 1,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 1768,
+      "hash_us": 176,
+      "solve_us": 9071
+    },
+    {
+      "repeat": 1,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 4558,
+      "hash_us": 455,
+      "solve_us": 7818
+    },
+    {
+      "repeat": 1,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 105,
+      "hash_us": 10,
+      "solve_us": 1353
+    },
+    {
+      "repeat": 1,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 321,
+      "hash_us": 32,
+      "solve_us": 1351
+    },
+    {
+      "repeat": 2,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 428,
+      "hash_us": 42,
+      "solve_us": 2565
+    },
+    {
+      "repeat": 2,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 111,
+      "hash_us": 11,
+      "solve_us": 1264
+    },
+    {
+      "repeat": 2,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 372,
+      "hash_us": 37,
+      "solve_us": 1320
+    },
+    {
+      "repeat": 2,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 119,
+      "hash_us": 11,
+      "solve_us": 1452
+    },
+    {
+      "repeat": 2,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 347,
+      "hash_us": 34,
+      "solve_us": 1243
+    },
+    {
+      "repeat": 2,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 724,
+      "hash_us": 72,
+      "solve_us": 8377
+    },
+    {
+      "repeat": 2,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 320,
+      "hash_us": 32,
+      "solve_us": 1435
+    },
+    {
+      "repeat": 2,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 102,
+      "hash_us": 10,
+      "solve_us": 10663
+    },
+    {
+      "repeat": 3,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 656,
+      "hash_us": 65,
+      "solve_us": 8039
+    },
+    {
+      "repeat": 3,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 416,
+      "hash_us": 41,
+      "solve_us": 1240
+    },
+    {
+      "repeat": 3,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 107,
+      "hash_us": 10,
+      "solve_us": 1316
+    },
+    {
+      "repeat": 3,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 390,
+      "hash_us": 39,
+      "solve_us": 1430
+    },
+    {
+      "repeat": 3,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 107,
+      "hash_us": 10,
+      "solve_us": 1203
+    },
+    {
+      "repeat": 3,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 3962,
+      "hash_us": 396,
+      "solve_us": 7912
+    },
+    {
+      "repeat": 3,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 1196,
+      "hash_us": 119,
+      "solve_us": 8492
+    },
+    {
+      "repeat": 3,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 392,
+      "hash_us": 39,
+      "solve_us": 1658
+    },
+    {
+      "repeat": 4,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 445,
+      "hash_us": 44,
+      "solve_us": 1181
+    },
+    {
+      "repeat": 4,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 117,
+      "hash_us": 11,
+      "solve_us": 1127
+    },
+    {
+      "repeat": 4,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 1193,
+      "hash_us": 119,
+      "solve_us": 8501
+    },
+    {
+      "repeat": 4,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 99,
+      "hash_us": 9,
+      "solve_us": 1313
+    },
+    {
+      "repeat": 4,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 346,
+      "hash_us": 34,
+      "solve_us": 5285
+    },
+    {
+      "repeat": 4,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 103,
+      "hash_us": 10,
+      "solve_us": 2476
+    },
+    {
+      "repeat": 4,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 4009,
+      "hash_us": 400,
+      "solve_us": 8404
+    },
+    {
+      "repeat": 4,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 1869,
+      "hash_us": 186,
+      "solve_us": 8480
+    },
+    {
+      "repeat": 5,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 723,
+      "hash_us": 72,
+      "solve_us": 4671
+    },
+    {
+      "repeat": 5,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 3782,
+      "hash_us": 378,
+      "solve_us": 10276
+    },
+    {
+      "repeat": 5,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 1369,
+      "hash_us": 136,
+      "solve_us": 8859
+    },
+    {
+      "repeat": 5,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 373,
+      "hash_us": 37,
+      "solve_us": 1320
+    },
+    {
+      "repeat": 5,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 122,
+      "hash_us": 12,
+      "solve_us": 8085
+    },
+    {
+      "repeat": 5,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 337,
+      "hash_us": 33,
+      "solve_us": 1169
+    },
+    {
+      "repeat": 5,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 1893,
+      "hash_us": 189,
+      "solve_us": 8405
+    },
+    {
+      "repeat": 5,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 5366,
+      "hash_us": 536,
+      "solve_us": 8383
+    },
+    {
+      "repeat": 6,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 5328,
+      "hash_us": 532,
+      "solve_us": 7726
+    },
+    {
+      "repeat": 6,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 109,
+      "hash_us": 10,
+      "solve_us": 2490
+    },
+    {
+      "repeat": 6,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 381,
+      "hash_us": 38,
+      "solve_us": 1329
+    },
+    {
+      "repeat": 6,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 98,
+      "hash_us": 9,
+      "solve_us": 1338
+    },
+    {
+      "repeat": 6,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 337,
+      "hash_us": 33,
+      "solve_us": 1212
+    },
+    {
+      "repeat": 6,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 1209,
+      "hash_us": 120,
+      "solve_us": 7875
+    },
+    {
+      "repeat": 6,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 325,
+      "hash_us": 32,
+      "solve_us": 1346
+    },
+    {
+      "repeat": 6,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 1894,
+      "hash_us": 189,
+      "solve_us": 8046
+    },
+    {
+      "repeat": 7,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 106,
+      "hash_us": 10,
+      "solve_us": 1191
+    },
+    {
+      "repeat": 7,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 9375,
+      "hash_us": 937,
+      "solve_us": 7731
+    },
+    {
+      "repeat": 7,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 1444,
+      "hash_us": 144,
+      "solve_us": 8027
+    },
+    {
+      "repeat": 7,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 3066,
+      "hash_us": 306,
+      "solve_us": 7868
+    },
+    {
+      "repeat": 7,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 92,
+      "hash_us": 9,
+      "solve_us": 1193
+    },
+    {
+      "repeat": 7,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 338,
+      "hash_us": 33,
+      "solve_us": 1144
+    },
+    {
+      "repeat": 7,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 766,
+      "hash_us": 76,
+      "solve_us": 8924
+    },
+    {
+      "repeat": 7,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 1837,
+      "hash_us": 183,
+      "solve_us": 9392
+    },
+    {
+      "repeat": 8,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 4781,
+      "hash_us": 478,
+      "solve_us": 8584
+    },
+    {
+      "repeat": 8,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 111,
+      "hash_us": 11,
+      "solve_us": 1115
+    },
+    {
+      "repeat": 8,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 4030,
+      "hash_us": 403,
+      "solve_us": 9287
+    },
+    {
+      "repeat": 8,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 99,
+      "hash_us": 9,
+      "solve_us": 1387
+    },
+    {
+      "repeat": 8,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 339,
+      "hash_us": 33,
+      "solve_us": 1259
+    },
+    {
+      "repeat": 8,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 92,
+      "hash_us": 9,
+      "solve_us": 1175
+    },
+    {
+      "repeat": 8,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 318,
+      "hash_us": 31,
+      "solve_us": 1554
+    },
+    {
+      "repeat": 8,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 1774,
+      "hash_us": 177,
+      "solve_us": 7908
+    },
+    {
+      "repeat": 9,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 1850,
+      "hash_us": 185,
+      "solve_us": 8001
+    },
+    {
+      "repeat": 9,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 442,
+      "hash_us": 44,
+      "solve_us": 2892
+    },
+    {
+      "repeat": 9,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 102,
+      "hash_us": 10,
+      "solve_us": 1895
+    },
+    {
+      "repeat": 9,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 4928,
+      "hash_us": 492,
+      "solve_us": 9833
+    },
+    {
+      "repeat": 9,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 106,
+      "hash_us": 10,
+      "solve_us": 1190
+    },
+    {
+      "repeat": 9,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 4970,
+      "hash_us": 497,
+      "solve_us": 8905
+    },
+    {
+      "repeat": 9,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 1293,
+      "hash_us": 129,
+      "solve_us": 8205
+    },
+    {
+      "repeat": 9,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 5104,
+      "hash_us": 510,
+      "solve_us": 7866
+    },
+    {
+      "repeat": 10,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 4069,
+      "hash_us": 406,
+      "solve_us": 7761
+    },
+    {
+      "repeat": 10,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 105,
+      "hash_us": 10,
+      "solve_us": 1238
+    },
+    {
+      "repeat": 10,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 3972,
+      "hash_us": 397,
+      "solve_us": 7019
+    },
+    {
+      "repeat": 10,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 1181,
+      "hash_us": 118,
+      "solve_us": 6022
+    },
+    {
+      "repeat": 10,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 2504,
+      "hash_us": 250,
+      "solve_us": 8037
+    },
+    {
+      "repeat": 10,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 1331,
+      "hash_us": 133,
+      "solve_us": 7939
+    },
+    {
+      "repeat": 10,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 319,
+      "hash_us": 31,
+      "solve_us": 1326
+    },
+    {
+      "repeat": 10,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 113,
+      "hash_us": 11,
+      "solve_us": 1240
+    },
+    {
+      "repeat": 11,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 1263,
+      "hash_us": 126,
+      "solve_us": 7920
+    },
+    {
+      "repeat": 11,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 441,
+      "hash_us": 44,
+      "solve_us": 1254
+    },
+    {
+      "repeat": 11,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 96,
+      "hash_us": 9,
+      "solve_us": 1303
+    },
+    {
+      "repeat": 11,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 375,
+      "hash_us": 37,
+      "solve_us": 1303
+    },
+    {
+      "repeat": 11,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 100,
+      "hash_us": 10,
+      "solve_us": 1162
+    },
+    {
+      "repeat": 11,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 337,
+      "hash_us": 33,
+      "solve_us": 2438
+    },
+    {
+      "repeat": 11,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 111,
+      "hash_us": 11,
+      "solve_us": 3966
+    },
+    {
+      "repeat": 11,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 318,
+      "hash_us": 31,
+      "solve_us": 1346
+    },
+    {
+      "repeat": 12,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 4579,
+      "hash_us": 457,
+      "solve_us": 8226
+    },
+    {
+      "repeat": 12,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 1447,
+      "hash_us": 144,
+      "solve_us": 7512
+    },
+    {
+      "repeat": 12,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 2888,
+      "hash_us": 288,
+      "solve_us": 6078
+    },
+    {
+      "repeat": 12,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 121,
+      "hash_us": 12,
+      "solve_us": 1269
+    },
+    {
+      "repeat": 12,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 345,
+      "hash_us": 34,
+      "solve_us": 1254
+    },
+    {
+      "repeat": 12,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 763,
+      "hash_us": 76,
+      "solve_us": 8282
+    },
+    {
+      "repeat": 12,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 319,
+      "hash_us": 31,
+      "solve_us": 1237
+    },
+    {
+      "repeat": 12,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 793,
+      "hash_us": 79,
+      "solve_us": 10954
+    },
+    {
+      "repeat": 13,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 114,
+      "hash_us": 11,
+      "solve_us": 10210
+    },
+    {
+      "repeat": 13,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 431,
+      "hash_us": 43,
+      "solve_us": 1466
+    },
+    {
+      "repeat": 13,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 119,
+      "hash_us": 11,
+      "solve_us": 1609
+    },
+    {
+      "repeat": 13,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 386,
+      "hash_us": 38,
+      "solve_us": 1271
+    },
+    {
+      "repeat": 13,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 117,
+      "hash_us": 11,
+      "solve_us": 1208
+    },
+    {
+      "repeat": 13,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 335,
+      "hash_us": 33,
+      "solve_us": 1275
+    },
+    {
+      "repeat": 13,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 1317,
+      "hash_us": 131,
+      "solve_us": 8221
+    },
+    {
+      "repeat": 13,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 3018,
+      "hash_us": 301,
+      "solve_us": 8512
+    },
+    {
+      "repeat": 14,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 5071,
+      "hash_us": 507,
+      "solve_us": 9668
+    },
+    {
+      "repeat": 14,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 630,
+      "hash_us": 63,
+      "solve_us": 7685
+    },
+    {
+      "repeat": 14,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 4534,
+      "hash_us": 453,
+      "solve_us": 8693
+    },
+    {
+      "repeat": 14,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 98,
+      "hash_us": 9,
+      "solve_us": 1635
+    },
+    {
+      "repeat": 14,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 333,
+      "hash_us": 33,
+      "solve_us": 3301
+    },
+    {
+      "repeat": 14,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 97,
+      "hash_us": 9,
+      "solve_us": 2449
+    },
+    {
+      "repeat": 14,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 2217,
+      "hash_us": 221,
+      "solve_us": 9834
+    },
+    {
+      "repeat": 14,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 834,
+      "hash_us": 83,
+      "solve_us": 9573
+    },
+    {
+      "repeat": 15,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 93,
+      "hash_us": 9,
+      "solve_us": 8507
+    },
+    {
+      "repeat": 15,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 432,
+      "hash_us": 43,
+      "solve_us": 1150
+    },
+    {
+      "repeat": 15,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 127,
+      "hash_us": 12,
+      "solve_us": 1239
+    },
+    {
+      "repeat": 15,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 387,
+      "hash_us": 38,
+      "solve_us": 1344
+    },
+    {
+      "repeat": 15,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 116,
+      "hash_us": 11,
+      "solve_us": 1119
+    },
+    {
+      "repeat": 15,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 347,
+      "hash_us": 34,
+      "solve_us": 1228
+    },
+    {
+      "repeat": 15,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 102,
+      "hash_us": 10,
+      "solve_us": 1343
+    },
+    {
+      "repeat": 15,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 331,
+      "hash_us": 33,
+      "solve_us": 2901
+    },
+    {
+      "repeat": 16,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 432,
+      "hash_us": 43,
+      "solve_us": 1151
+    },
+    {
+      "repeat": 16,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 123,
+      "hash_us": 12,
+      "solve_us": 1164
+    },
+    {
+      "repeat": 16,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 386,
+      "hash_us": 38,
+      "solve_us": 1348
+    },
+    {
+      "repeat": 16,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 135,
+      "hash_us": 13,
+      "solve_us": 1508
+    },
+    {
+      "repeat": 16,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 349,
+      "hash_us": 34,
+      "solve_us": 2862
+    },
+    {
+      "repeat": 16,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 1205,
+      "hash_us": 120,
+      "solve_us": 7871
+    },
+    {
+      "repeat": 16,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 2612,
+      "hash_us": 261,
+      "solve_us": 7790
+    },
+    {
+      "repeat": 16,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 1223,
+      "hash_us": 122,
+      "solve_us": 8291
+    },
+    {
+      "repeat": 17,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 100,
+      "hash_us": 10,
+      "solve_us": 1178
+    },
+    {
+      "repeat": 17,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 6511,
+      "hash_us": 651,
+      "solve_us": 7414
+    },
+    {
+      "repeat": 17,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 106,
+      "hash_us": 10,
+      "solve_us": 1322
+    },
+    {
+      "repeat": 17,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 5003,
+      "hash_us": 500,
+      "solve_us": 8373
+    },
+    {
+      "repeat": 17,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 124,
+      "hash_us": 12,
+      "solve_us": 1232
+    },
+    {
+      "repeat": 17,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 4582,
+      "hash_us": 458,
+      "solve_us": 8042
+    },
+    {
+      "repeat": 17,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 1304,
+      "hash_us": 130,
+      "solve_us": 8116
+    },
+    {
+      "repeat": 17,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 318,
+      "hash_us": 31,
+      "solve_us": 1337
+    },
+    {
+      "repeat": 18,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 3827,
+      "hash_us": 382,
+      "solve_us": 7738
+    },
+    {
+      "repeat": 18,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 1729,
+      "hash_us": 172,
+      "solve_us": 8055
+    },
+    {
+      "repeat": 18,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 4300,
+      "hash_us": 430,
+      "solve_us": 9532
+    },
+    {
+      "repeat": 18,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 1747,
+      "hash_us": 174,
+      "solve_us": 7904
+    },
+    {
+      "repeat": 18,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 340,
+      "hash_us": 34,
+      "solve_us": 1225
+    },
+    {
+      "repeat": 18,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 648,
+      "hash_us": 64,
+      "solve_us": 7679
+    },
+    {
+      "repeat": 18,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 320,
+      "hash_us": 32,
+      "solve_us": 1262
+    },
+    {
+      "repeat": 18,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 106,
+      "hash_us": 10,
+      "solve_us": 1438
+    },
+    {
+      "repeat": 19,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 106,
+      "hash_us": 10,
+      "solve_us": 1189
+    },
+    {
+      "repeat": 19,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 4223,
+      "hash_us": 422,
+      "solve_us": 7939
+    },
+    {
+      "repeat": 19,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 2460,
+      "hash_us": 246,
+      "solve_us": 7998
+    },
+    {
+      "repeat": 19,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 373,
+      "hash_us": 37,
+      "solve_us": 1296
+    },
+    {
+      "repeat": 19,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 1717,
+      "hash_us": 171,
+      "solve_us": 7991
+    },
+    {
+      "repeat": 19,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 333,
+      "hash_us": 33,
+      "solve_us": 1227
+    },
+    {
+      "repeat": 19,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 93,
+      "hash_us": 9,
+      "solve_us": 1318
+    },
+    {
+      "repeat": 19,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 327,
+      "hash_us": 32,
+      "solve_us": 1286
+    },
+    {
+      "repeat": 20,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 435,
+      "hash_us": 43,
+      "solve_us": 1249
+    },
+    {
+      "repeat": 20,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 96,
+      "hash_us": 9,
+      "solve_us": 1189
+    },
+    {
+      "repeat": 20,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 376,
+      "hash_us": 37,
+      "solve_us": 1282
+    },
+    {
+      "repeat": 20,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 125,
+      "hash_us": 12,
+      "solve_us": 1487
+    },
+    {
+      "repeat": 20,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 5533,
+      "hash_us": 553,
+      "solve_us": 8240
+    },
+    {
+      "repeat": 20,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 1719,
+      "hash_us": 171,
+      "solve_us": 8025
+    },
+    {
+      "repeat": 20,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 3142,
+      "hash_us": 314,
+      "solve_us": 8425
+    },
+    {
+      "repeat": 20,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 737,
+      "hash_us": 73,
+      "solve_us": 8360
+    },
+    {
+      "repeat": 21,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 123,
+      "hash_us": 12,
+      "solve_us": 1237
+    },
+    {
+      "repeat": 21,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 5469,
+      "hash_us": 546,
+      "solve_us": 7933
+    },
+    {
+      "repeat": 21,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 1992,
+      "hash_us": 199,
+      "solve_us": 8215
+    },
+    {
+      "repeat": 21,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 4665,
+      "hash_us": 466,
+      "solve_us": 8090
+    },
+    {
+      "repeat": 21,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 98,
+      "hash_us": 9,
+      "solve_us": 1222
+    },
+    {
+      "repeat": 21,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 4619,
+      "hash_us": 461,
+      "solve_us": 8014
+    },
+    {
+      "repeat": 21,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 117,
+      "hash_us": 11,
+      "solve_us": 2532
+    },
+    {
+      "repeat": 21,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 4058,
+      "hash_us": 405,
+      "solve_us": 8059
+    },
+    {
+      "repeat": 22,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 2434,
+      "hash_us": 243,
+      "solve_us": 7727
+    },
+    {
+      "repeat": 22,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 662,
+      "hash_us": 66,
+      "solve_us": 8005
+    },
+    {
+      "repeat": 22,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 376,
+      "hash_us": 37,
+      "solve_us": 1259
+    },
+    {
+      "repeat": 22,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 108,
+      "hash_us": 10,
+      "solve_us": 1312
+    },
+    {
+      "repeat": 22,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 340,
+      "hash_us": 34,
+      "solve_us": 2533
+    },
+    {
+      "repeat": 22,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 110,
+      "hash_us": 11,
+      "solve_us": 1210
+    },
+    {
+      "repeat": 22,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 322,
+      "hash_us": 32,
+      "solve_us": 1952
+    },
+    {
+      "repeat": 22,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 1755,
+      "hash_us": 175,
+      "solve_us": 7908
+    },
+    {
+      "repeat": 23,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 1136,
+      "hash_us": 113,
+      "solve_us": 7788
+    },
+    {
+      "repeat": 23,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 5986,
+      "hash_us": 598,
+      "solve_us": 7551
+    },
+    {
+      "repeat": 23,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 1785,
+      "hash_us": 178,
+      "solve_us": 8455
+    },
+    {
+      "repeat": 23,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 379,
+      "hash_us": 37,
+      "solve_us": 1375
+    },
+    {
+      "repeat": 23,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 1646,
+      "hash_us": 164,
+      "solve_us": 7560
+    },
+    {
+      "repeat": 23,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 925,
+      "hash_us": 92,
+      "solve_us": 7986
+    },
+    {
+      "repeat": 23,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 102,
+      "hash_us": 10,
+      "solve_us": 1466
+    },
+    {
+      "repeat": 23,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 317,
+      "hash_us": 31,
+      "solve_us": 1268
+    },
+    {
+      "repeat": 24,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 429,
+      "hash_us": 42,
+      "solve_us": 1232
+    },
+    {
+      "repeat": 24,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 97,
+      "hash_us": 9,
+      "solve_us": 1361
+    },
+    {
+      "repeat": 24,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 382,
+      "hash_us": 38,
+      "solve_us": 1304
+    },
+    {
+      "repeat": 24,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 129,
+      "hash_us": 12,
+      "solve_us": 1292
+    },
+    {
+      "repeat": 24,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 337,
+      "hash_us": 33,
+      "solve_us": 2450
+    },
+    {
+      "repeat": 24,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 712,
+      "hash_us": 71,
+      "solve_us": 7997
+    },
+    {
+      "repeat": 24,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 321,
+      "hash_us": 32,
+      "solve_us": 1317
+    },
+    {
+      "repeat": 24,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 109,
+      "hash_us": 10,
+      "solve_us": 1492
+    },
+    {
+      "repeat": 25,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 129,
+      "hash_us": 12,
+      "solve_us": 1260
+    },
+    {
+      "repeat": 25,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 6479,
+      "hash_us": 647,
+      "solve_us": 7649
+    },
+    {
+      "repeat": 25,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 118,
+      "hash_us": 11,
+      "solve_us": 1308
+    },
+    {
+      "repeat": 25,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 374,
+      "hash_us": 37,
+      "solve_us": 1601
+    },
+    {
+      "repeat": 25,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 116,
+      "hash_us": 11,
+      "solve_us": 1171
+    },
+    {
+      "repeat": 25,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 417,
+      "hash_us": 41,
+      "solve_us": 1188
+    },
+    {
+      "repeat": 25,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 126,
+      "hash_us": 12,
+      "solve_us": 1241
+    },
+    {
+      "repeat": 25,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 331,
+      "hash_us": 33,
+      "solve_us": 1259
+    },
+    {
+      "repeat": 26,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 444,
+      "hash_us": 44,
+      "solve_us": 1128
+    },
+    {
+      "repeat": 26,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 101,
+      "hash_us": 10,
+      "solve_us": 1210
+    },
+    {
+      "repeat": 26,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 5870,
+      "hash_us": 587,
+      "solve_us": 8629
+    },
+    {
+      "repeat": 26,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 112,
+      "hash_us": 11,
+      "solve_us": 1286
+    },
+    {
+      "repeat": 26,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 349,
+      "hash_us": 34,
+      "solve_us": 1196
+    },
+    {
+      "repeat": 26,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 120,
+      "hash_us": 12,
+      "solve_us": 1098
+    },
+    {
+      "repeat": 26,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 4891,
+      "hash_us": 489,
+      "solve_us": 8149
+    },
+    {
+      "repeat": 26,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 112,
+      "hash_us": 11,
+      "solve_us": 1363
+    },
+    {
+      "repeat": 27,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 104,
+      "hash_us": 10,
+      "solve_us": 1198
+    },
+    {
+      "repeat": 27,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 5728,
+      "hash_us": 572,
+      "solve_us": 8012
+    },
+    {
+      "repeat": 27,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 1443,
+      "hash_us": 144,
+      "solve_us": 8282
+    },
+    {
+      "repeat": 27,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 387,
+      "hash_us": 38,
+      "solve_us": 1458
+    },
+    {
+      "repeat": 27,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 98,
+      "hash_us": 9,
+      "solve_us": 8673
+    },
+    {
+      "repeat": 27,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 342,
+      "hash_us": 34,
+      "solve_us": 1129
+    },
+    {
+      "repeat": 27,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 120,
+      "hash_us": 12,
+      "solve_us": 1292
+    },
+    {
+      "repeat": 27,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 5200,
+      "hash_us": 520,
+      "solve_us": 7913
+    },
+    {
+      "repeat": 28,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 5142,
+      "hash_us": 514,
+      "solve_us": 7821
+    },
+    {
+      "repeat": 28,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 1143,
+      "hash_us": 114,
+      "solve_us": 7802
+    },
+    {
+      "repeat": 28,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 376,
+      "hash_us": 37,
+      "solve_us": 1331
+    },
+    {
+      "repeat": 28,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 113,
+      "hash_us": 11,
+      "solve_us": 4598
+    },
+    {
+      "repeat": 28,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 3986,
+      "hash_us": 398,
+      "solve_us": 7585
+    },
+    {
+      "repeat": 28,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 1722,
+      "hash_us": 172,
+      "solve_us": 8168
+    },
+    {
+      "repeat": 28,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 322,
+      "hash_us": 32,
+      "solve_us": 1408
+    },
+    {
+      "repeat": 28,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 112,
+      "hash_us": 11,
+      "solve_us": 1237
+    },
+    {
+      "repeat": 29,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 119,
+      "hash_us": 11,
+      "solve_us": 9305
+    },
+    {
+      "repeat": 29,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 1894,
+      "hash_us": 189,
+      "solve_us": 10212
+    },
+    {
+      "repeat": 29,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 123,
+      "hash_us": 12,
+      "solve_us": 1254
+    },
+    {
+      "repeat": 29,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 390,
+      "hash_us": 39,
+      "solve_us": 1414
+    },
+    {
+      "repeat": 29,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 104,
+      "hash_us": 10,
+      "solve_us": 1160
+    },
+    {
+      "repeat": 29,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 348,
+      "hash_us": 34,
+      "solve_us": 1261
+    },
+    {
+      "repeat": 29,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 1263,
+      "hash_us": 126,
+      "solve_us": 8543
+    },
+    {
+      "repeat": 29,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 320,
+      "hash_us": 32,
+      "solve_us": 1299
+    },
+    {
+      "repeat": 30,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 4630,
+      "hash_us": 463,
+      "solve_us": 7720
+    },
+    {
+      "repeat": 30,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 1748,
+      "hash_us": 174,
+      "solve_us": 7777
+    },
+    {
+      "repeat": 30,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 379,
+      "hash_us": 37,
+      "solve_us": 1461
+    },
+    {
+      "repeat": 30,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 1398,
+      "hash_us": 139,
+      "solve_us": 7989
+    },
+    {
+      "repeat": 30,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 350,
+      "hash_us": 35,
+      "solve_us": 1138
+    },
+    {
+      "repeat": 30,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 93,
+      "hash_us": 9,
+      "solve_us": 1185
+    },
+    {
+      "repeat": 30,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 5092,
+      "hash_us": 509,
+      "solve_us": 7901
+    },
+    {
+      "repeat": 30,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 1429,
+      "hash_us": 142,
+      "solve_us": 7982
+    },
+    {
+      "repeat": 31,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 108,
+      "hash_us": 10,
+      "solve_us": 1243
+    },
+    {
+      "repeat": 31,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 425,
+      "hash_us": 42,
+      "solve_us": 1235
+    },
+    {
+      "repeat": 31,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 1289,
+      "hash_us": 128,
+      "solve_us": 8308
+    },
+    {
+      "repeat": 31,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 385,
+      "hash_us": 38,
+      "solve_us": 1215
+    },
+    {
+      "repeat": 31,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 236,
+      "hash_us": 23,
+      "solve_us": 1083
+    },
+    {
+      "repeat": 31,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 339,
+      "hash_us": 33,
+      "solve_us": 1227
+    },
+    {
+      "repeat": 31,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 100,
+      "hash_us": 10,
+      "solve_us": 1293
+    },
+    {
+      "repeat": 31,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 4214,
+      "hash_us": 421,
+      "solve_us": 8220
+    },
+    {
+      "repeat": 32,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 429,
+      "hash_us": 42,
+      "solve_us": 1219
+    },
+    {
+      "repeat": 32,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 91,
+      "hash_us": 9,
+      "solve_us": 1075
+    },
+    {
+      "repeat": 32,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 393,
+      "hash_us": 39,
+      "solve_us": 1632
+    },
+    {
+      "repeat": 32,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 111,
+      "hash_us": 11,
+      "solve_us": 1308
+    },
+    {
+      "repeat": 32,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 353,
+      "hash_us": 35,
+      "solve_us": 1212
+    },
+    {
+      "repeat": 32,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 107,
+      "hash_us": 10,
+      "solve_us": 1133
+    },
+    {
+      "repeat": 32,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 318,
+      "hash_us": 31,
+      "solve_us": 1272
+    },
+    {
+      "repeat": 32,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 96,
+      "hash_us": 9,
+      "solve_us": 1291
+    },
+    {
+      "repeat": 33,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 114,
+      "hash_us": 11,
+      "solve_us": 1168
+    },
+    {
+      "repeat": 33,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 5874,
+      "hash_us": 587,
+      "solve_us": 7384
+    },
+    {
+      "repeat": 33,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 2856,
+      "hash_us": 285,
+      "solve_us": 8059
+    },
+    {
+      "repeat": 33,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 379,
+      "hash_us": 37,
+      "solve_us": 1318
+    },
+    {
+      "repeat": 33,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 1163,
+      "hash_us": 116,
+      "solve_us": 7827
+    },
+    {
+      "repeat": 33,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 4585,
+      "hash_us": 458,
+      "solve_us": 9256
+    },
+    {
+      "repeat": 33,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 118,
+      "hash_us": 11,
+      "solve_us": 1410
+    },
+    {
+      "repeat": 33,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 330,
+      "hash_us": 33,
+      "solve_us": 1318
+    },
+    {
+      "repeat": 34,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 5953,
+      "hash_us": 595,
+      "solve_us": 7430
+    },
+    {
+      "repeat": 34,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 99,
+      "hash_us": 9,
+      "solve_us": 1198
+    },
+    {
+      "repeat": 34,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 386,
+      "hash_us": 38,
+      "solve_us": 1472
+    },
+    {
+      "repeat": 34,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 115,
+      "hash_us": 11,
+      "solve_us": 1327
+    },
+    {
+      "repeat": 34,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 5943,
+      "hash_us": 594,
+      "solve_us": 3566
+    },
+    {
+      "repeat": 34,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 107,
+      "hash_us": 10,
+      "solve_us": 1164
+    },
+    {
+      "repeat": 34,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 319,
+      "hash_us": 31,
+      "solve_us": 1529
+    },
+    {
+      "repeat": 34,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 1276,
+      "hash_us": 127,
+      "solve_us": 7959
+    },
+    {
+      "repeat": 35,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 107,
+      "hash_us": 10,
+      "solve_us": 1211
+    },
+    {
+      "repeat": 35,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 431,
+      "hash_us": 43,
+      "solve_us": 1260
+    },
+    {
+      "repeat": 35,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 2618,
+      "hash_us": 261,
+      "solve_us": 6112
+    },
+    {
+      "repeat": 35,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 388,
+      "hash_us": 38,
+      "solve_us": 1331
+    },
+    {
+      "repeat": 35,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 1192,
+      "hash_us": 119,
+      "solve_us": 7483
+    },
+    {
+      "repeat": 35,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 336,
+      "hash_us": 33,
+      "solve_us": 1177
+    },
+    {
+      "repeat": 35,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 104,
+      "hash_us": 10,
+      "solve_us": 1311
+    },
+    {
+      "repeat": 35,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 5513,
+      "hash_us": 551,
+      "solve_us": 7718
+    },
+    {
+      "repeat": 36,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 433,
+      "hash_us": 43,
+      "solve_us": 1190
+    },
+    {
+      "repeat": 36,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 1307,
+      "hash_us": 130,
+      "solve_us": 8029
+    },
+    {
+      "repeat": 36,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 504,
+      "hash_us": 50,
+      "solve_us": 1386
+    },
+    {
+      "repeat": 36,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 109,
+      "hash_us": 10,
+      "solve_us": 1297
+    },
+    {
+      "repeat": 36,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 346,
+      "hash_us": 34,
+      "solve_us": 1226
+    },
+    {
+      "repeat": 36,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 123,
+      "hash_us": 12,
+      "solve_us": 1186
+    },
+    {
+      "repeat": 36,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 318,
+      "hash_us": 31,
+      "solve_us": 1365
+    },
+    {
+      "repeat": 36,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 891,
+      "hash_us": 89,
+      "solve_us": 8254
+    },
+    {
+      "repeat": 37,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 1739,
+      "hash_us": 173,
+      "solve_us": 7600
+    },
+    {
+      "repeat": 37,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 3291,
+      "hash_us": 329,
+      "solve_us": 7763
+    },
+    {
+      "repeat": 37,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 114,
+      "hash_us": 11,
+      "solve_us": 1315
+    },
+    {
+      "repeat": 37,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 5073,
+      "hash_us": 507,
+      "solve_us": 8171
+    },
+    {
+      "repeat": 37,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 1817,
+      "hash_us": 181,
+      "solve_us": 7822
+    },
+    {
+      "repeat": 37,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 4615,
+      "hash_us": 461,
+      "solve_us": 7444
+    },
+    {
+      "repeat": 37,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 1851,
+      "hash_us": 185,
+      "solve_us": 7146
+    },
+    {
+      "repeat": 37,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 320,
+      "hash_us": 32,
+      "solve_us": 1237
+    },
+    {
+      "repeat": 38,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 442,
+      "hash_us": 44,
+      "solve_us": 1176
+    },
+    {
+      "repeat": 38,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 92,
+      "hash_us": 9,
+      "solve_us": 1152
+    },
+    {
+      "repeat": 38,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 389,
+      "hash_us": 38,
+      "solve_us": 1334
+    },
+    {
+      "repeat": 38,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 122,
+      "hash_us": 12,
+      "solve_us": 1269
+    },
+    {
+      "repeat": 38,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 340,
+      "hash_us": 34,
+      "solve_us": 1210
+    },
+    {
+      "repeat": 38,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 111,
+      "hash_us": 11,
+      "solve_us": 1215
+    },
+    {
+      "repeat": 38,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 320,
+      "hash_us": 32,
+      "solve_us": 1431
+    },
+    {
+      "repeat": 38,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 1262,
+      "hash_us": 126,
+      "solve_us": 9622
+    },
+    {
+      "repeat": 39,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 108,
+      "hash_us": 10,
+      "solve_us": 1180
+    },
+    {
+      "repeat": 39,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 429,
+      "hash_us": 42,
+      "solve_us": 1237
+    },
+    {
+      "repeat": 39,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 861,
+      "hash_us": 86,
+      "solve_us": 5301
+    },
+    {
+      "repeat": 39,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 371,
+      "hash_us": 37,
+      "solve_us": 1241
+    },
+    {
+      "repeat": 39,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 98,
+      "hash_us": 9,
+      "solve_us": 1134
+    },
+    {
+      "repeat": 39,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 6365,
+      "hash_us": 636,
+      "solve_us": 7495
+    },
+    {
+      "repeat": 39,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 1346,
+      "hash_us": 134,
+      "solve_us": 7861
+    },
+    {
+      "repeat": 39,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 4400,
+      "hash_us": 440,
+      "solve_us": 7683
+    },
+    {
+      "repeat": 40,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 5479,
+      "hash_us": 547,
+      "solve_us": 7571
+    },
+    {
+      "repeat": 40,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 102,
+      "hash_us": 10,
+      "solve_us": 1356
+    },
+    {
+      "repeat": 40,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 5505,
+      "hash_us": 550,
+      "solve_us": 7884
+    },
+    {
+      "repeat": 40,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 1848,
+      "hash_us": 184,
+      "solve_us": 7899
+    },
+    {
+      "repeat": 40,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 351,
+      "hash_us": 35,
+      "solve_us": 1239
+    },
+    {
+      "repeat": 40,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 1226,
+      "hash_us": 122,
+      "solve_us": 7974
+    },
+    {
+      "repeat": 40,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 5603,
+      "hash_us": 560,
+      "solve_us": 7891
+    },
+    {
+      "repeat": 40,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 107,
+      "hash_us": 10,
+      "solve_us": 1345
+    },
+    {
+      "repeat": 41,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 127,
+      "hash_us": 12,
+      "solve_us": 1078
+    },
+    {
+      "repeat": 41,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 6156,
+      "hash_us": 615,
+      "solve_us": 8848
+    },
+    {
+      "repeat": 41,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 135,
+      "hash_us": 13,
+      "solve_us": 2573
+    },
+    {
+      "repeat": 41,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 389,
+      "hash_us": 38,
+      "solve_us": 2048
+    },
+    {
+      "repeat": 41,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 113,
+      "hash_us": 11,
+      "solve_us": 1161
+    },
+    {
+      "repeat": 41,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 332,
+      "hash_us": 33,
+      "solve_us": 1202
+    },
+    {
+      "repeat": 41,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 753,
+      "hash_us": 75,
+      "solve_us": 7753
+    },
+    {
+      "repeat": 41,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 320,
+      "hash_us": 32,
+      "solve_us": 1282
+    },
+    {
+      "repeat": 42,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 437,
+      "hash_us": 43,
+      "solve_us": 1176
+    },
+    {
+      "repeat": 42,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 1224,
+      "hash_us": 122,
+      "solve_us": 7821
+    },
+    {
+      "repeat": 42,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 379,
+      "hash_us": 37,
+      "solve_us": 1348
+    },
+    {
+      "repeat": 42,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 112,
+      "hash_us": 11,
+      "solve_us": 1299
+    },
+    {
+      "repeat": 42,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 6873,
+      "hash_us": 687,
+      "solve_us": 8269
+    },
+    {
+      "repeat": 42,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 99,
+      "hash_us": 9,
+      "solve_us": 8003
+    },
+    {
+      "repeat": 42,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 320,
+      "hash_us": 32,
+      "solve_us": 1341
+    },
+    {
+      "repeat": 42,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 109,
+      "hash_us": 10,
+      "solve_us": 8069
+    },
+    {
+      "repeat": 43,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 108,
+      "hash_us": 10,
+      "solve_us": 1205
+    },
+    {
+      "repeat": 43,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 425,
+      "hash_us": 42,
+      "solve_us": 1240
+    },
+    {
+      "repeat": 43,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 1226,
+      "hash_us": 122,
+      "solve_us": 7838
+    },
+    {
+      "repeat": 43,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 377,
+      "hash_us": 37,
+      "solve_us": 1368
+    },
+    {
+      "repeat": 43,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 108,
+      "hash_us": 10,
+      "solve_us": 1167
+    },
+    {
+      "repeat": 43,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 346,
+      "hash_us": 34,
+      "solve_us": 1206
+    },
+    {
+      "repeat": 43,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 718,
+      "hash_us": 71,
+      "solve_us": 8154
+    },
+    {
+      "repeat": 43,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 340,
+      "hash_us": 34,
+      "solve_us": 1279
+    },
+    {
+      "repeat": 44,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 437,
+      "hash_us": 43,
+      "solve_us": 1232
+    },
+    {
+      "repeat": 44,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 110,
+      "hash_us": 11,
+      "solve_us": 1187
+    },
+    {
+      "repeat": 44,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 375,
+      "hash_us": 37,
+      "solve_us": 1326
+    },
+    {
+      "repeat": 44,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 129,
+      "hash_us": 12,
+      "solve_us": 1495
+    },
+    {
+      "repeat": 44,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 4362,
+      "hash_us": 436,
+      "solve_us": 7521
+    },
+    {
+      "repeat": 44,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 1194,
+      "hash_us": 119,
+      "solve_us": 7984
+    },
+    {
+      "repeat": 44,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 318,
+      "hash_us": 31,
+      "solve_us": 1405
+    },
+    {
+      "repeat": 44,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 127,
+      "hash_us": 12,
+      "solve_us": 1205
+    },
+    {
+      "repeat": 45,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 1173,
+      "hash_us": 117,
+      "solve_us": 7644
+    },
+    {
+      "repeat": 45,
+      "hash": "MultiplyShiftR",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 438,
+      "hash_us": 43,
+      "solve_us": 1235
+    },
+    {
+      "repeat": 45,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 1268,
+      "hash_us": 126,
+      "solve_us": 8012
+    },
+    {
+      "repeat": 45,
+      "hash": "MultiplyShiftR",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 5594,
+      "hash_us": 559,
+      "solve_us": 8199
+    },
+    {
+      "repeat": 45,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 109,
+      "hash_us": 10,
+      "solve_us": 1143
+    },
+    {
+      "repeat": 45,
+      "hash": "MultiplyShiftRX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 348,
+      "hash_us": 34,
+      "solve_us": 1255
+    },
+    {
+      "repeat": 45,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 115,
+      "hash_us": 11,
+      "solve_us": 1318
+    },
+    {
+      "repeat": 45,
+      "hash": "MultiplyShiftRX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 324,
+      "hash_us": 32,
+      "solve_us": 1374
+    }
+  ]
+}

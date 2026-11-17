@@ -751,10 +751,6 @@ CreateRawDogCode(
         return Result;
     }
 
-#if defined(__GNUC__)
-    __builtin___clear_cache((char *)Code, (char *)Code + CodeSize);
-#endif
-
     Success = VirtualProtect(Code,
                              AllocSize,
                              PAGE_EXECUTE_READ,
@@ -764,6 +760,16 @@ CreateRawDogCode(
         VirtualFree(Code, 0, MEM_RELEASE);
         return PH_E_SYSTEM_CALL_FAILED;
     }
+
+#if defined(PH_WINDOWS)
+    if (!FlushInstructionCache(GetCurrentProcess(), Code, CodeSize)) {
+        SYS_ERROR(FlushInstructionCache);
+        VirtualFree(Code, 0, MEM_RELEASE);
+        return PH_E_SYSTEM_CALL_FAILED;
+    }
+#elif defined(__GNUC__)
+    __builtin___clear_cache((char *)Code, (char *)Code + CodeSize);
+#endif
 
     *CodeOut = Code;
     return S_OK;
@@ -780,6 +786,51 @@ FreeRawDogCode(
         *CodePointer = NULL;
     }
 }
+
+#if defined(PH_WINDOWS) && defined(PH_RAWDOG_ARM64)
+static
+HRESULT
+RegisterRawDogBatchUnwind(
+    PBYTE Code,
+    SIZE_T CodeSize,
+    ULONG FrameBytes,
+    PRUNTIME_FUNCTION Entry
+    )
+{
+    const ULONG *Words = (const ULONG *)Code;
+    SIZE_T Count = CodeSize / sizeof(*Words);
+    ULONG SaveFpLr, RestoreFpLr;
+    SIZE_T End;
+
+    // The packed Windows ARM64 unwind format describes the canonical pair:
+    // stp fp,lr,[sp,#-FrameBytes]!; mov fp,sp ... ldp fp,lr,[sp],#FrameBytes; ret.
+    // Check the frame instructions before registering them. The literal pool
+    // after RET is data and must be outside the unwind range.
+    SaveFpLr = 0xa9807bfdu | (((0u - FrameBytes / 8) & 0x7f) << 15);
+    RestoreFpLr = 0xa8c07bfdu | ((FrameBytes / 8) << 15);
+    if (Count < 4 || Words[0] != SaveFpLr || Words[1] != 0x910003fdu) {
+        return PH_E_INVARIANT_CHECK_FAILED;
+    }
+    for (End = 3; End < Count; End++) {
+        if (Words[End] == 0xd65f03c0u) {
+            break;
+        }
+    }
+    if (End == Count || End + 1 > 0x7ff || Words[End-1] != RestoreFpLr) {
+        return PH_E_INVARIANT_CHECK_FAILED;
+    }
+
+    Entry->Flag = 1;
+    Entry->CR = 3;
+    Entry->FrameSize = FrameBytes / 16;
+    Entry->FunctionLength = (ULONG)(End + 1);
+    if (!RtlAddFunctionTable(Entry, 1, (ULONG_PTR)Code)) {
+        Entry->UnwindData = 0;
+        return PH_E_SYSTEM_CALL_FAILED;
+    }
+    return S_OK;
+}
+#endif
 
 static
 HRESULT
@@ -2222,7 +2273,6 @@ CompileChm01IndexVectorJitRawDog(
     RAW_DOG_PATCH_ENTRY Entries[10];
     ULONG EntryCount = 0;
     BOOLEAN UseAssigned16;
-    PERFECT_HASH_JIT_MAX_ISA_ID MaxIsa = PerfectHashJitMaxIsaAuto;
     PBYTE SourceCode = NULL;
     SIZE_T CodeSize = 0;
     PBYTE Code;
@@ -2230,17 +2280,13 @@ CompileChm01IndexVectorJitRawDog(
 
     if (!CompileIndex32x4 && !CompileIndex32x8 && !CompileIndex32x16) {
         if (ARGUMENT_PRESENT(UsedIsa)) {
-            *UsedIsa = MaxIsa;
+            *UsedIsa = PerfectHashJitMaxIsaAuto;
         }
         return S_OK;
     }
 
-    //
-    // Arm64 Index32x16 RawDog code paths are not stable yet; fail fast so
-    // callers can skip unsupported configurations instead of crashing.
-    //
-
-    if (CompileIndex32x16) {
+    // These multi-key blobs use scalar instructions.
+    if (CompileFlags->JitVectorIndex32x4 || CompileFlags->JitVectorIndex32x8) {
         return PH_E_NOT_IMPLEMENTED;
     }
 
@@ -2545,11 +2591,14 @@ CompileChm01IndexVectorJitRawDog(
         }
 
         Jit->Index32x4Function = Code;
-        Jit->Flags.Index32x4Compiled = TRUE;
-        Jit->Flags.Index32x4Vector = TRUE;
-        if (MaxIsa == PerfectHashJitMaxIsaAuto) {
-            MaxIsa = PerfectHashJitMaxIsaNeon;
+#if defined(PH_WINDOWS)
+        Result = RegisterRawDogBatchUnwind(Code, CodeSize, 64,
+                                           &Jit->RawDogBatchUnwind[0]);
+        if (FAILED(Result)) {
+            return Result;
         }
+#endif
+        Jit->Flags.Index32x4Compiled = TRUE;
     }
 
     if (CompileIndex32x16) {
@@ -2639,9 +2688,14 @@ CompileChm01IndexVectorJitRawDog(
         }
 
         Jit->Index32x16Function = Code;
+#if defined(PH_WINDOWS)
+        Result = RegisterRawDogBatchUnwind(Code, CodeSize, 80,
+                                           &Jit->RawDogBatchUnwind[2]);
+        if (FAILED(Result)) {
+            return Result;
+        }
+#endif
         Jit->Flags.Index32x16Compiled = TRUE;
-        Jit->Flags.Index32x16Vector = TRUE;
-        MaxIsa = PerfectHashJitMaxIsaNeon;
     }
 
     if (CompileIndex32x8) {
@@ -2731,15 +2785,18 @@ CompileChm01IndexVectorJitRawDog(
         }
 
         Jit->Index32x8Function = Code;
-        Jit->Flags.Index32x8Compiled = TRUE;
-        Jit->Flags.Index32x8Vector = TRUE;
-        if (MaxIsa == PerfectHashJitMaxIsaAuto) {
-            MaxIsa = PerfectHashJitMaxIsaNeon;
+#if defined(PH_WINDOWS)
+        Result = RegisterRawDogBatchUnwind(Code, CodeSize, 48,
+                                           &Jit->RawDogBatchUnwind[1]);
+        if (FAILED(Result)) {
+            return Result;
         }
+#endif
+        Jit->Flags.Index32x8Compiled = TRUE;
     }
 
     if (ARGUMENT_PRESENT(UsedIsa)) {
-        *UsedIsa = MaxIsa;
+        *UsedIsa = PerfectHashJitMaxIsaAuto;
     }
 
     return S_OK;
@@ -4618,6 +4675,14 @@ PerfectHashTableJitRundownRawDog(
 
     Table->Flags.JitEnabled = FALSE;
 
+#if defined(PH_WINDOWS) && defined(PH_RAWDOG_ARM64)
+    for (ULONG Slot = 0; Slot < ARRAYSIZE(Jit->RawDogBatchUnwind); Slot++) {
+        PRUNTIME_FUNCTION Entry = &Jit->RawDogBatchUnwind[Slot];
+        if (Entry->UnwindData) {
+            RtlDeleteFunctionTable(Entry);
+        }
+    }
+#endif
     FreeRawDogCode(&Jit->Index32Function);
     FreeRawDogCode(&Jit->Index32x4Function);
     FreeRawDogCode(&Jit->Index32x8Function);

@@ -10,6 +10,11 @@
 #include <unordered_set>
 #include <vector>
 
+#if defined(PH_LINUX) && defined(__aarch64__)
+#include <asm/hwcap.h>
+#include <sys/auxv.h>
+#endif
+
 namespace {
 
 struct PerfectHashTableShim {
@@ -385,6 +390,7 @@ TEST_F(PerfectHashOnlineTests, UnsolvedTableDoesNotReturnAHandle) {
   flags.NoFileIo = TRUE;
   flags.Quiet = TRUE;
   flags.DoNotTryUseHash16Impl = TRUE;
+  flags.HashAllKeysFirst = TRUE;
   PERFECT_HASH_TABLE_CREATE_PARAMETER params[2] = {};
   params[0].Id = TableCreateParameterSeedsId;
   params[0].AsValueArray.Values = seeds;
@@ -486,6 +492,56 @@ TEST_F(PerfectHashOnlineTests, SkipGraphVerificationReturnsUsableTable) {
   }
 
   shim->Vtbl->Release(table);
+}
+
+TEST_F(PerfectHashOnlineTests, NeonHashAllKeysHandlesWidthsTailsAndFallback) {
+  bool hasNeon = false;
+#if defined(PH_WINDOWS) && defined(_M_ARM64)
+  hasNeon = IsProcessorFeaturePresent(PF_ARM_NEON_INSTRUCTIONS_AVAILABLE);
+#elif defined(PH_LINUX) && defined(__aarch64__) && defined(__ARM_NEON)
+  hasNeon = (getauxval(AT_HWCAP) & HWCAP_ASIMD) != 0;
+#elif defined(PH_MAC) && defined(__aarch64__) && defined(__ARM_NEON)
+  hasNeon = true;
+#endif
+
+  for (auto hash : {PerfectHashHashMultiplyShiftRFunctionId,
+                    PerfectHashHashMultiplyShiftRXFunctionId,
+                    PerfectHashHashMulshrolate1RXFunctionId}) {
+    for (bool assigned16 : {false, true}) {
+      for (ULONG tail = 0; tail < 4; ++tail) {
+        auto keys = MakePseudoRandomKeys(100 + tail, 0x31415926u);
+        PERFECT_HASH_TABLE_CREATE_FLAGS createFlags = {};
+        createFlags.HashAllKeysFirst = TRUE;
+        createFlags.Quiet = TRUE;
+        createFlags.DoNotTryUseHash16Impl = !assigned16;
+        for (bool disableNeon : {false, true}) {
+          SCOPED_TRACE(::testing::Message() << "hash " << hash << ", width "
+              << (assigned16 ? 16 : 32) << ", tail " << tail
+              << ", disableNeon " << disableNeon);
+          createFlags.DoNotTryUseNeonHashFunction = disableNeon;
+          PPERFECT_HASH_TABLE table = nullptr;
+          ASSERT_GE(online_->Vtbl->CreateTableFromKeys(
+              online_, PerfectHashChm01AlgorithmId, hash, PerfectHashAndMaskFunctionId,
+              sizeof(ULONG), keys.size(), keys.data(), nullptr, &createFlags,
+              nullptr, &table), 0);
+          ASSERT_NE(table, nullptr);
+          auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
+          PERFECT_HASH_TABLE_FLAGS flags = {};
+          EXPECT_GE(shim->Vtbl->GetFlags(table, sizeof(flags), &flags), 0);
+          EXPECT_EQ(flags.AssignedElementSizeInBits << 3, assigned16 ? 16u : 32u);
+          EXPECT_EQ(!!flags.UsedNeonHashFunction, hasNeon && !disableNeon &&
+                    hash != PerfectHashHashMulshrolate1RXFunctionId);
+          std::unordered_set<ULONG> seen;
+          for (ULONG key : keys) {
+            ULONG index = 0;
+            EXPECT_GE(shim->Vtbl->Index(table, key, &index), 0);
+            EXPECT_TRUE(seen.insert(index).second);
+          }
+          shim->Vtbl->Release(table);
+        }
+      }
+    }
+  }
 }
 
 TEST_F(PerfectHashOnlineTests, CreateTableFromUnsortedKeysReturnsUniqueIndexes) {
@@ -4335,7 +4391,12 @@ TEST_F(PerfectHashOnlineTests, JitInterfaceIndex32x16MatchesSlowIndex) {
   ASSERT_NE(shim->Vtbl->SlowIndex, nullptr);
 
   PERFECT_HASH_TABLE_COMPILE_FLAGS compileFlags = {0};
+  compileFlags.JitBackendLlvm = TRUE;
   compileFlags.JitIndex32x16 = TRUE;
+  const bool arm64 = PerfectHashGetCurrentCpuArch() == PerfectHashArm64CpuArchId;
+  if (arm64) {
+    compileFlags.JitMaxIsa = PerfectHashJitMaxIsaNeon;
+  }
 
   HRESULT result = online_->Vtbl->CompileTable(online_, table, &compileFlags);
   if (result < 0) {
@@ -4363,6 +4424,9 @@ TEST_F(PerfectHashOnlineTests, JitInterfaceIndex32x16MatchesSlowIndex) {
   if (!info.Flags.Index32x16Compiled) {
     jit->Vtbl->Release(jit);
     shim->Vtbl->Release(table);
+    if (arm64) {
+      FAIL() << "LLVM did not compile the requested ARM64 x16 index.";
+    }
     GTEST_SKIP() << "JIT Index32x16 not supported on this host.";
   }
 

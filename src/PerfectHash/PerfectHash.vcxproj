@@ -248,6 +248,7 @@
     <ClCompile Include="dllmain.c" />
     <ClCompile Include="ExtractArg.c" />
     <ClCompile Include="Graph.c" />
+    <ClCompile Include="GraphNeon.c" />
     <ClCompile Include="GraphImpl1.c" />
     <ClCompile Include="GuardedList.c" />
     <ClCompile Include="PerfectHashContextBulkCreate.c" />

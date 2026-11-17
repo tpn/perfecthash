@@ -196,8 +196,28 @@ ctest --test-dir build -C Release --output-on-failure --timeout 300
 Adjust the Visual Studio path for your installed version/edition. Install CMake,
 Ninja, Python, and native ARM64 Rust/Cargo first; the code-generation tests compile
 and validate the emitted C, C++, Python, Rust, and, when available, CUDA outputs.
-The default build works without LLVM; JIT-specific tests are skipped when their
-backend is unavailable.
+For both JITs on Windows ARM64, extract the **clang+llvm AArch64 Windows MSVC
+development archive** from an LLVM release. The following configuration was
+tested with LLVM 23.1.6. Run it in the native developer shell above and adjust
+the archive location for your machine.
+
+```powershell
+$llvm = 'D:/src/clang+llvm-23.1.6-aarch64-pc-windows-msvc'
+$env:PATH = "$llvm/bin;$env:PATH"
+cmake --preset ninja-multi -DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl "-DLLVM_DIR=$llvm/lib/cmake/llvm" -DPERFECTHASH_STATIC_LLVM=OFF
+cmake --build --preset ninja-release --parallel
+```
+
+RawDog uses `clang` and `llvm-objcopy` at build time. The LLVM backend uses
+`LLVM-C.dll` at runtime, so keep the archive's `bin` directory on `PATH` when
+running the examples, tests or benchmarks. A build without the optional tools
+continues to support native lookup.
+
+The ARM64 solver can hash four keys at a time using NEON for MultiplyShiftR
+and MultiplyShiftRX with `HashAllKeysFirst`. Use
+`--DoNotTryUseNeonHashFunction` for a scalar comparison and check
+`UsedNeonHashFunction` in the resulting CSV. Lookups in an already solved
+table use the backend and batch width chosen by the caller.
 
 You can also download the latest binaries from the [Releases](https://github.com/tpn/perfecthash/releases/)
 page.  The `PGO` zip files refer to profile-guided optimization builds, and are

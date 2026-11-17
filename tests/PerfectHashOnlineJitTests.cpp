@@ -3,6 +3,7 @@
 #include <PerfectHash/PerfectHashOnlineJit.h>
 #include <PerfectHash/PerfectHash.h>
 
+#include <array>
 #include <cstdint>
 #include <cstdlib>
 #include <memory>
@@ -89,6 +90,113 @@ std::vector<uint64_t> MakeNonDownsized64Keys(size_t count) {
 }
 
 }  // namespace
+
+#if defined(PH_HAS_RAWDOG_JIT) && (defined(_M_ARM64) || defined(__aarch64__))
+TEST(PerfectHashOnlineJitTests, Arm64RawDogStrictWidthsMatchScalar) {
+  ScopedEnvVar concurrency_cap("PERFECT_HASH_ONLINE_MAX_CONCURRENCY", "4");
+  const std::array<uint32_t, 16> keys = {
+      1, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53};
+  PH_ONLINE_JIT_CONTEXT *raw_context = nullptr;
+  ASSERT_GE(PhOnlineJitOpen(&raw_context), 0);
+  std::unique_ptr<PH_ONLINE_JIT_CONTEXT, decltype(&PhOnlineJitClose)> context(
+      raw_context, &PhOnlineJitClose);
+
+  for (auto hash : {PhOnlineJitHashMultiplyShiftR, PhOnlineJitHashMultiplyShiftRX,
+                    PhOnlineJitHashMulshrolate1RX, PhOnlineJitHashMulshrolate2RX,
+                    PhOnlineJitHashMulshrolate3RX}) {
+    SCOPED_TRACE(hash);
+    PH_ONLINE_JIT_TABLE *raw_table = nullptr;
+    ASSERT_GE(PhOnlineJitCreateTable32(context.get(), hash, keys.data(),
+                                       keys.size(), &raw_table), 0);
+    std::unique_ptr<PH_ONLINE_JIT_TABLE, decltype(&PhOnlineJitReleaseTable)>
+        table(raw_table, &PhOnlineJitReleaseTable);
+    std::array<uint32_t, 16> expected;
+    for (size_t i = 0; i < keys.size(); ++i) {
+      ASSERT_GE(PhOnlineJitIndex32(table.get(), keys[i], &expected[i]), 0);
+    }
+
+    for (uint32_t width : {1u, 4u, 8u, 16u}) {
+      SCOPED_TRACE(width);
+      PH_ONLINE_JIT_BACKEND backend = PhOnlineJitBackendAuto;
+      uint32_t effective_width = 0;
+      ASSERT_GE(PhOnlineJitCompileTableEx(
+                    context.get(), table.get(), PhOnlineJitBackendRawDogJit,
+                    width, PhOnlineJitMaxIsaAuto,
+                    PH_ONLINE_JIT_COMPILE_FLAG_STRICT_VECTOR_WIDTH,
+                    &backend, &effective_width), 0);
+      ASSERT_EQ(backend, PhOnlineJitBackendRawDogJit);
+      ASSERT_EQ(effective_width, width);
+
+      std::array<uint32_t, 16> actual = {};
+      for (size_t i = 0; i < keys.size(); i += width) {
+        if (width == 1) {
+          ASSERT_GE(PhOnlineJitIndex32(table.get(), keys[i], &actual[i]), 0);
+        } else {
+          const auto index = width == 4 ? PhOnlineJitIndex32x4 :
+                             width == 8 ? PhOnlineJitIndex32x8 : PhOnlineJitIndex32x16;
+          ASSERT_GE(index(table.get(), &keys[i], &actual[i]), 0);
+        }
+      }
+      EXPECT_EQ(actual, expected);
+    }
+  }
+}
+#endif
+
+#if defined(PH_HAS_LLVM) && defined(PH_HAS_RAWDOG_JIT)
+TEST(PerfectHashOnlineJitTests, SwitchBackendsAndReportCompiledWidth) {
+  ScopedEnvVar concurrency_cap("PERFECT_HASH_ONLINE_MAX_CONCURRENCY", "4");
+  std::array<uint32_t, 16> keys = {
+      1, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53};
+  PH_ONLINE_JIT_CONTEXT *raw_context = nullptr;
+  ASSERT_GE(PhOnlineJitOpen(&raw_context), 0);
+  std::unique_ptr<PH_ONLINE_JIT_CONTEXT, decltype(&PhOnlineJitClose)> context(
+      raw_context, &PhOnlineJitClose);
+  PH_ONLINE_JIT_TABLE *raw_table = nullptr;
+  ASSERT_GE(PhOnlineJitCreateTable32(context.get(), PhOnlineJitHashMultiplyShiftR,
+                                     keys.data(), keys.size(), &raw_table), 0);
+  std::unique_ptr<PH_ONLINE_JIT_TABLE, decltype(&PhOnlineJitReleaseTable)>
+      table(raw_table, &PhOnlineJitReleaseTable);
+  std::array<uint32_t, 16> expected;
+  for (size_t i = 0; i < keys.size(); ++i) {
+    ASSERT_GE(PhOnlineJitIndex32(table.get(), keys[i], &expected[i]), 0);
+  }
+
+  PH_ONLINE_JIT_BACKEND effective_backend = PhOnlineJitBackendAuto;
+  uint32_t effective_width = 0;
+  auto compile = [&](PH_ONLINE_JIT_BACKEND backend, uint32_t width,
+                     PH_ONLINE_JIT_MAX_ISA isa, uint32_t flags) {
+    return PhOnlineJitCompileTableEx(context.get(), table.get(), backend, width,
+                                     isa, flags, &effective_backend, &effective_width);
+  };
+  for (auto backend : {PhOnlineJitBackendRawDogJit, PhOnlineJitBackendLlvmJit,
+                       PhOnlineJitBackendRawDogJit}) {
+    ASSERT_GE(compile(backend, 1, PhOnlineJitMaxIsaAuto,
+                      PH_ONLINE_JIT_COMPILE_FLAG_STRICT_VECTOR_WIDTH), 0);
+    ASSERT_EQ(effective_backend, backend);
+    ASSERT_EQ(effective_width, 1u);
+    for (size_t i = 0; i < keys.size(); ++i) {
+      uint32_t index = 0;
+      ASSERT_GE(PhOnlineJitIndex32(table.get(), keys[i], &index), 0);
+      EXPECT_EQ(index, expected[i]);
+    }
+  }
+
+  // LLVM can build scalar indices under this cap, but its x16 entry
+  // requires AVX-512 on x86 or an ARM64-compatible maximum ISA.
+  ASSERT_EQ(compile(PhOnlineJitBackendLlvmJit, 16, PhOnlineJitMaxIsaAvx2,
+                    PH_ONLINE_JIT_COMPILE_FLAG_STRICT_VECTOR_WIDTH),
+            PH_E_NOT_IMPLEMENTED);
+  ASSERT_GE(compile(PhOnlineJitBackendLlvmJit, 16, PhOnlineJitMaxIsaAvx2, 0), 0);
+  ASSERT_EQ(effective_backend, PhOnlineJitBackendLlvmJit);
+  ASSERT_EQ(effective_width, 8u);
+  std::array<uint32_t, 16> actual = {};
+  for (size_t i = 0; i < keys.size(); i += effective_width) {
+    ASSERT_GE(PhOnlineJitIndex32x8(table.get(), &keys[i], &actual[i]), 0);
+  }
+  EXPECT_EQ(actual, expected);
+}
+#endif
 
 TEST(PerfectHashOnlineJitTests, CreateTable64AndIndex64) {
   ScopedEnvVar concurrency_cap("PERFECT_HASH_ONLINE_MAX_CONCURRENCY", "4");

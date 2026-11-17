@@ -3199,7 +3199,8 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         ULONGLONG TryUseAvx512HashFunction:1;
 
         //
-        // When set, tries to use the hash JIT interface for hashing keys.
+        // When set, tries to use the hash JIT interface for hashing keys
+        // during a single-worker solve.
         //
         // N.B. Only applies when HashAllKeysFirst is set.
         //
@@ -3287,10 +3288,11 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         ULONGLONG CompareGpuAndCpuGraphs:1;
 
         //
-        // Unused bits.
+        // Disable ARM64 NEON for the HashAllKeysFirst solver.
         //
 
-        ULONGLONG Unused:22;
+        ULONGLONG DoNotTryUseNeonHashFunction:1;
+        ULONGLONG Unused:21;
     };
 
     LONGLONG AsLongLong;
@@ -4642,10 +4644,11 @@ typedef union _PERFECT_HASH_TABLE_FLAGS {
         ULONG AssignedElementSizeInBits:4;
 
         //
-        // Unused bits.
+        // The winning graph hashed its keys using ARM64 NEON.
         //
 
-        ULONG Unused:19;
+        ULONG UsedNeonHashFunction:1;
+        ULONG Unused:18;
     };
 
     LONG AsLong;

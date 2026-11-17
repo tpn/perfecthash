@@ -330,11 +330,58 @@ static PERFECT_HASH_TABLE_HASH_JIT_INTERFACE_VTBL
 #include <llvm-c/ExecutionEngine.h>
 #include <llvm-c/Target.h>
 #include <llvm-c/TargetMachine.h>
+#include <llvm/Config/llvm-config.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #define PH_JIT_VECTOR_MAX_LANES 16
+
+static
+BOOLEAN
+CanCompileJit32x16(
+    _In_ PERFECT_HASH_JIT_MAX_ISA_ID MaxIsa,
+    _In_opt_ const char *HostFeatures
+    )
+{
+    if (PerfectHashGetCurrentCpuArch() == PerfectHashArm64CpuArchId) {
+        // LLVM legalizes fixed-width vectors to the selected ARM64 ISA.
+        return (MaxIsa == PerfectHashJitMaxIsaAuto ||
+                MaxIsa == PerfectHashJitMaxIsaNeon ||
+                MaxIsa == PerfectHashJitMaxIsaSve ||
+                MaxIsa == PerfectHashJitMaxIsaSve2);
+    }
+
+    return ((MaxIsa == PerfectHashJitMaxIsaAuto ||
+             MaxIsa == PerfectHashJitMaxIsaAvx512) &&
+            HostFeatures && strstr(HostFeatures, "+avx512f") != NULL);
+}
+
+static
+VOID
+SetJitFunctionTargets(
+    _In_ LLVMModuleRef Module,
+    _In_ const char *Cpu,
+    _In_ const char *Features
+    )
+{
+    LLVMValueRef Function;
+
+    // MCJIT creates its own target machine. Record the selected ISA in the
+    // module as well so it applies to the code that actually runs.
+    for (Function = LLVMGetFirstFunction(Module);
+         Function;
+         Function = LLVMGetNextFunction(Function)) {
+        if (*Cpu) {
+            LLVMAddTargetDependentFunctionAttr(Function, "target-cpu", Cpu);
+        }
+        if (*Features) {
+            LLVMAddTargetDependentFunctionAttr(Function,
+                                               "target-features",
+                                               Features);
+        }
+    }
+}
 
 static
 const char *
@@ -490,35 +537,51 @@ BuildConstIntLike(
 }
 
 static
-char *
+HRESULT
 BuildClampedHostFeatures(
     _In_opt_ const char *HostFeatures,
-    _In_ PERFECT_HASH_JIT_MAX_ISA_ID MaxIsa
+    _In_ PERFECT_HASH_JIT_MAX_ISA_ID MaxIsa,
+    _Outptr_result_maybenull_ char **ClampedFeatures
     )
 {
     BOOLEAN DisableAvx2;
     BOOLEAN DisableAvx512;
     BOOLEAN DisableSve;
     BOOLEAN DisableSve2;
+    const char *FinalDisable = "";
     size_t Length;
     char *Buffer;
     char *Cursor;
     char *Next;
 
-    if (!HostFeatures || *HostFeatures == '\0') {
-        return NULL;
-    }
-
+    *ClampedFeatures = NULL;
     if (MaxIsa == PerfectHashJitMaxIsaAuto ||
-        MaxIsa == PerfectHashJitMaxIsaAvx512 ||
-        MaxIsa == PerfectHashJitMaxIsaSve2) {
-        return NULL;
+        MaxIsa == PerfectHashJitMaxIsaAvx512) {
+        return S_OK;
     }
 
+    // Apply the upper bound last: the CPU model or another enabled feature
+    // can imply the extension even when LLVM omits it from the host list.
+    if (PerfectHashGetCurrentCpuArch() == PerfectHashArm64CpuArchId) {
+        if (MaxIsa == PerfectHashJitMaxIsaNeon) {
+            FinalDisable = "-sme,-sve";
+        } else if (MaxIsa == PerfectHashJitMaxIsaSve) {
+            FinalDisable = "-sme,-sve2";
+        } else if (MaxIsa == PerfectHashJitMaxIsaSve2) {
+#if LLVM_VERSION_MAJOR >= 16
+            FinalDisable = "-sme,-sve2p1";
+#else
+            FinalDisable = "-sme";
+#endif
+        }
+    }
+    if (!HostFeatures) {
+        HostFeatures = "";
+    }
     Length = strlen(HostFeatures);
-    Buffer = (char *)malloc(Length + 1);
+    Buffer = (char *)malloc(Length + strlen(FinalDisable) + 2);
     if (!Buffer) {
-        return NULL;
+        return E_OUTOFMEMORY;
     }
 
     memcpy(Buffer, HostFeatures, Length + 1);
@@ -554,6 +617,13 @@ BuildClampedHostFeatures(
                        TokenLength >= 4 &&
                        strncmp(Cursor + 1, "sve", 3) == 0) {
                 Cursor[0] = '-';
+            } else if (*FinalDisable && TokenLength >= 4 &&
+                       strncmp(Cursor + 1, "sme", 3) == 0) {
+                Cursor[0] = '-';
+            } else if (MaxIsa == PerfectHashJitMaxIsaSve2 &&
+                       TokenLength >= 6 &&
+                       strncmp(Cursor + 1, "sve2p", 5) == 0) {
+                Cursor[0] = '-';
             }
         }
 
@@ -564,7 +634,14 @@ BuildClampedHostFeatures(
         Cursor = Next + 1;
     }
 
-    return Buffer;
+    if (*FinalDisable) {
+        if (Length) {
+            Buffer[Length++] = ',';
+        }
+        strcpy(Buffer + Length, FinalDisable);
+    }
+    *ClampedFeatures = Buffer;
+    return S_OK;
 }
 
 FORCEINLINE
@@ -3922,7 +3999,6 @@ CompileChm01IndexJit(
     BOOLEAN CompileVectorIndex64x2;
     BOOLEAN CompileVectorIndex64x4;
     BOOLEAN CompileVectorIndex64x8;
-    BOOLEAN HostHasAvx512;
     HRESULT Result = S_OK;
     PTABLE_INFO_ON_DISK TableInfo;
     PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId;
@@ -4079,22 +4155,20 @@ CompileChm01IndexJit(
     HostCpuFeatures = LLVMGetHostCPUFeatures();
     TargetCpu = HostCpuName ? HostCpuName : "";
     TargetFeatures = HostCpuFeatures ? HostCpuFeatures : "";
-    HostHasAvx512 = (HostCpuFeatures &&
-                     strstr(HostCpuFeatures, "+avx512f") != NULL);
 
     if (JitMaxIsa != PerfectHashJitMaxIsaAuto) {
-        ClampedFeatures = BuildClampedHostFeatures(HostCpuFeatures, JitMaxIsa);
+        Result = BuildClampedHostFeatures(HostCpuFeatures,
+                                          JitMaxIsa,
+                                          &ClampedFeatures);
+        if (FAILED(Result)) {
+            goto Error;
+        }
         if (ClampedFeatures) {
             TargetFeatures = ClampedFeatures;
         }
     }
 
-    if (JitMaxIsa != PerfectHashJitMaxIsaAuto &&
-        JitMaxIsa != PerfectHashJitMaxIsaAvx512) {
-        HostHasAvx512 = FALSE;
-    }
-
-    if (CompileIndex32x16 && !HostHasAvx512) {
+    if (CompileIndex32x16 && !CanCompileJit32x16(JitMaxIsa, HostCpuFeatures)) {
         CompileIndex32x16 = FALSE;
         CompileVectorIndex32x16 = FALSE;
     }
@@ -4381,6 +4455,7 @@ CompileChm01IndexJit(
         }
     }
 
+    SetJitFunctionTargets(Module, TargetCpu, TargetFeatures);
     DumpJitModuleIfEnabled(Module, TargetMachine);
 
     if (LLVMVerifyModule(Module,
@@ -4631,7 +4706,6 @@ CompileChm01HashJit(
     BOOLEAN CompileVectorHash16Ex32x4;
     BOOLEAN CompileVectorHash16Ex32x8;
     BOOLEAN CompileVectorHash16Ex32x16;
-    BOOLEAN HostHasAvx512;
     HRESULT Result = S_OK;
     PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId;
     PRTL Rtl;
@@ -4723,27 +4797,23 @@ CompileChm01HashJit(
     HostCpuFeatures = LLVMGetHostCPUFeatures();
     TargetCpu = HostCpuName ? HostCpuName : "";
     TargetFeatures = HostCpuFeatures ? HostCpuFeatures : "";
-    HostHasAvx512 = (HostCpuFeatures &&
-                     strstr(HostCpuFeatures, "+avx512f") != NULL);
 
     JitMaxIsa = (PERFECT_HASH_JIT_MAX_ISA_ID)CompileFlags->JitMaxIsa;
     if (JitMaxIsa != PerfectHashJitMaxIsaAuto) {
-        ClampedFeatures = BuildClampedHostFeatures(HostCpuFeatures, JitMaxIsa);
+        Result = BuildClampedHostFeatures(HostCpuFeatures,
+                                          JitMaxIsa,
+                                          &ClampedFeatures);
+        if (FAILED(Result)) {
+            goto Error;
+        }
         if (ClampedFeatures) {
             TargetFeatures = ClampedFeatures;
         }
     }
 
-    if (JitMaxIsa != PerfectHashJitMaxIsaAuto &&
-        JitMaxIsa != PerfectHashJitMaxIsaAvx512) {
-        HostHasAvx512 = FALSE;
-    }
-
-    if (CompileHashEx32x16 && !HostHasAvx512) {
+    if (!CanCompileJit32x16(JitMaxIsa, HostCpuFeatures)) {
         CompileHashEx32x16 = FALSE;
         CompileVectorHashEx32x16 = FALSE;
-    }
-    if (CompileHash16Ex32x16 && !HostHasAvx512) {
         CompileHash16Ex32x16 = FALSE;
         CompileVectorHash16Ex32x16 = FALSE;
     }
@@ -4980,6 +5050,7 @@ CompileChm01HashJit(
         }
     }
 
+    SetJitFunctionTargets(Module, TargetCpu, TargetFeatures);
     DumpJitModuleIfEnabled(Module, TargetMachine);
 
     if (LLVMVerifyModule(Module,

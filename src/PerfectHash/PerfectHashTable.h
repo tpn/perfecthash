@@ -411,6 +411,10 @@ typedef struct _PERFECT_HASH_TABLE_JIT {
     CHAR TargetCpu[PERFECT_HASH_JIT_CPU_NAME_MAX_CHARS];
     CHAR TargetFeatures[PERFECT_HASH_JIT_CPU_FEATURES_MAX_CHARS];
     PERFECT_HASH_TABLE_JIT_INTERFACE Interface;
+#if defined(PH_WINDOWS) && defined(_M_ARM64)
+    // One OS function table per separately allocated RawDog batch routine.
+    RUNTIME_FUNCTION RawDogBatchUnwind[3];
+#endif
 } PERFECT_HASH_TABLE_JIT;
 typedef PERFECT_HASH_TABLE_JIT *PPERFECT_HASH_TABLE_JIT;
 
