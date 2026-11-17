@@ -76,16 +76,12 @@ jobs:
           prefix="$RUNNER_TEMP/perfecthash-installed"
           build_dir="${{ matrix.build_dir }}"
           micromamba run -n "${{ matrix.env_name }}" cmake --install "$build_dir" --config Release --prefix "$prefix"
-          mapfile -t core < <(find "$prefix" -type f -name libPerfectHashOnlineCore.so)
-          [[ ${#core[@]} == 1 ]]
-          # Bind the test client to installed Core. Core must find the sibling LLVM plugin itself.
-          micromamba run -n "${{ matrix.env_name }}" env -u LD_LIBRARY_PATH LD_PRELOAD="${core[0]}" \
-            LD_DEBUG=files LD_DEBUG_OUTPUT="$RUNNER_TEMP/jit-loader" \
-            "$build_dir/bin/Release/perfecthash_arm64_online_core_tests" --gtest_color=no \
-            --gtest_filter='*Arm64*StrictWidthsMatchScalar:*SwitchBackendsAndReportCompiledWidth' \
-            | tee "$RUNNER_TEMP/installed-jit.log"
-          grep -Fxq '[  PASSED  ] 3 tests.' "$RUNNER_TEMP/installed-jit.log"
-          grep -Fq "calling init: ${core[0]%/*}/libPerfectHashLLVM.so" "$RUNNER_TEMP"/jit-loader.*
+          client="$RUNNER_TEMP/perfecthash-client"
+          micromamba run -n "${{ matrix.env_name }}" cmake -S tests/installed-online-jit -B "$client" \
+            -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$prefix"
+          micromamba run -n "${{ matrix.env_name }}" cmake --build "$client"
+          micromamba run -n "${{ matrix.env_name }}" env -u LD_LIBRARY_PATH ctest \
+            --test-dir "$client" --no-tests=error --output-on-failure
 
       - name: Examples (RawDog JIT + LLVM JIT + sqlite-online-jit)
         shell: bash -l {0}

@@ -127,15 +127,21 @@ set(
 if(PERFECTHASH_ENABLE_INSTALL)
     install(DIRECTORY "${PERFECTHASH_ROOT_DIR}/include/" DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
-    if(PERFECTHASH_EXPORT_TARGETS)
+    foreach(ph_install_target IN LISTS PERFECTHASH_EXPORT_TARGETS)
+        set(ph_archive_dir "${CMAKE_INSTALL_LIBDIR}")
+        if(MSVC AND (ph_install_target STREQUAL "PerfectHashOnlineStatic" OR
+                     ph_install_target STREQUAL "PerfectHashOnlineCoreStatic"))
+            # These archives share their names with the DLL import libraries.
+            set(ph_archive_dir "${CMAKE_INSTALL_LIBDIR}/static")
+        endif()
         install(
-            TARGETS ${PERFECTHASH_EXPORT_TARGETS}
+            TARGETS ${ph_install_target}
             EXPORT PerfectHashTargets
             RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
             LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            ARCHIVE DESTINATION "${ph_archive_dir}"
         )
-    endif()
+    endforeach()
 
     configure_package_config_file(
         "${CMAKE_CURRENT_SOURCE_DIR}/cmake/PerfectHashConfig.cmake.in"

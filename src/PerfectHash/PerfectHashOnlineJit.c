@@ -966,7 +966,7 @@ PhOnlineJitCompileTableEx(
     switch (VectorWidth) {
         case 0:
         case 1:
-            CandidateWidths[CandidateCount++] = VectorWidth;
+            CandidateWidths[CandidateCount++] = 1;
             break;
         case 2:
             CandidateWidths[CandidateCount++] = 2;

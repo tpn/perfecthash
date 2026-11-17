@@ -209,8 +209,12 @@ cmake --build --preset ninja-release --parallel
 ```
 
 RawDog uses `clang` and `llvm-objcopy` at build time. The LLVM backend uses
-`LLVM-C.dll` at runtime, so keep the archive's `bin` directory on `PATH` when
-running the examples, tests or benchmarks. A build without the optional tools
+`LLVM-C.dll` at runtime, so keep the absolute path to the archive's `bin`
+directory on `PATH` when running the examples, tests or benchmarks.
+Windows loads `PerfectHashLLVM.dll` from the directory containing the
+PerfectHash host DLL. When linking Online or OnlineCore statically into an
+executable, deploy `PerfectHashLLVM.dll` and its `PerfectHash.dll` dependency
+beside the executable. A build without the optional tools
 continues to support native lookup.
 
 Windows ARM64 RawDog provides scalar and 4-, 8-, and 16-key batch lookup for

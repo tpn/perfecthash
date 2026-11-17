@@ -3745,6 +3745,30 @@ BuildChm01Index8Function(
 
 _Must_inspect_result_
 static
+LLVMBool
+CreateOptimizedMcjitEngine(
+    _Out_ LLVMExecutionEngineRef *Engine,
+    _Inout_ LLVMModuleRef *Module,
+    _Outptr_result_maybenull_ char **ErrorMessage
+    )
+{
+    struct LLVMMCJITCompilerOptions Options = { 0 };
+    LLVMModuleRef OwnedModule = *Module;
+
+    // OptLevel is the first field. LLVM supplies defaults for omitted fields
+    // and takes ownership as soon as it accepts this options prefix, even if
+    // it subsequently fails to create the engine.
+    Options.OptLevel = 3;
+    *Module = NULL;
+    return LLVMCreateMCJITCompilerForModule(Engine,
+                                            OwnedModule,
+                                            &Options,
+                                            sizeof(Options.OptLevel),
+                                            ErrorMessage);
+}
+
+_Must_inspect_result_
+static
 HRESULT
 CompileChm01IndexJit(
     _In_ PPERFECT_HASH_TABLE Table,
@@ -3808,7 +3832,6 @@ CompileChm01IndexJit(
     LLVMExecutionEngineRef Engine = NULL;
     LLVMTargetMachineRef TargetMachine = NULL;
     LLVMTargetDataRef TargetData = NULL;
-    struct LLVMMCJITCompilerOptions McjitOptions;
 
     CHM01_JIT_CONTEXT JitContext;
     LLVMValueRef DownsizeFunction = NULL;
@@ -4241,21 +4264,12 @@ CompileChm01IndexJit(
     SetJitFunctionTargets(Module, TargetCpu, TargetFeatures);
     DumpJitModuleIfEnabled(Module, TargetMachine);
 
-    if (LLVMVerifyModule(Module,
-                         LLVMReturnStatusAction,
-                         &ErrorMessage) != 0) {
+    if (LLVMVerifyModule(Module, LLVMReturnStatusAction, NULL) != 0) {
         Result = PH_E_TABLE_COMPILATION_FAILED;
         goto Error;
     }
 
-    LLVMInitializeMCJITCompilerOptions(&McjitOptions,
-                                       sizeof(McjitOptions));
-    McjitOptions.OptLevel = 3;
-    if (LLVMCreateMCJITCompilerForModule(&Engine,
-                                         Module,
-                                         &McjitOptions,
-                                         sizeof(McjitOptions),
-                                         &ErrorMessage) != 0) {
+    if (CreateOptimizedMcjitEngine(&Engine, &Module, &ErrorMessage)) {
         Result = PH_E_TABLE_COMPILATION_FAILED;
         goto Error;
     }
@@ -4397,7 +4411,6 @@ CompileChm01IndexJit(
     Jit->Context = Context;
     Engine = NULL;
     Context = NULL;
-    Module = NULL;
 
     Result = S_OK;
 
@@ -4509,7 +4522,6 @@ CompileChm01HashJit(
     LLVMExecutionEngineRef Engine = NULL;
     LLVMTargetMachineRef TargetMachine = NULL;
     LLVMTargetDataRef TargetData = NULL;
-    struct LLVMMCJITCompilerOptions McjitOptions;
 
     CHM01_JIT_CONTEXT JitContext;
     LLVMValueRef HashFunction = NULL;
@@ -4836,21 +4848,12 @@ CompileChm01HashJit(
     SetJitFunctionTargets(Module, TargetCpu, TargetFeatures);
     DumpJitModuleIfEnabled(Module, TargetMachine);
 
-    if (LLVMVerifyModule(Module,
-                         LLVMReturnStatusAction,
-                         &ErrorMessage) != 0) {
+    if (LLVMVerifyModule(Module, LLVMReturnStatusAction, NULL) != 0) {
         Result = PH_E_TABLE_COMPILATION_FAILED;
         goto Error;
     }
 
-    LLVMInitializeMCJITCompilerOptions(&McjitOptions,
-                                       sizeof(McjitOptions));
-    McjitOptions.OptLevel = 3;
-    if (LLVMCreateMCJITCompilerForModule(&Engine,
-                                         Module,
-                                         &McjitOptions,
-                                         sizeof(McjitOptions),
-                                         &ErrorMessage) != 0) {
+    if (CreateOptimizedMcjitEngine(&Engine, &Module, &ErrorMessage)) {
         Result = PH_E_TABLE_COMPILATION_FAILED;
         goto Error;
     }
@@ -5012,7 +5015,6 @@ CompileChm01HashJit(
     HashJit->Context = Context;
     Engine = NULL;
     Context = NULL;
-    Module = NULL;
 
     Result = S_OK;
 

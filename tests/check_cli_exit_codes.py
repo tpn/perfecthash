@@ -1,22 +1,44 @@
+import csv
+import signal
 import struct
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
+PH_E_SYSTEM_CALL_FAILED = 0xE0040224
+PH_E_DUPLICATE_KEYS_DETECTED = 0xE0040211
+PH_E_CTRL_C_PRESSED = 0xE0040352
+PH_I_SOLVE_TIMEOUT_EXPIRED = 0x60040088
 
-def check(exe, source, output, expect_success):
+
+def command(exe, source, output, *flags):
     output.mkdir()
-    result = subprocess.run(
-        [exe, source, output, "Chm01", "MultiplyShiftR", "And", "1",
-         "--NoFileIo", "--Quiet"],
-        capture_output=True, text=True, timeout=30,
-    )
-    if (result.returncode == 0) != expect_success:
+    return [exe, source, output, "Chm01", "MultiplyShiftR", "And", "1",
+            "--NoFileIo", "--Quiet", *flags]
+
+
+def check_status(result, expected_hresult):
+    expected = expected_hresult if sys.platform == "win32" else expected_hresult & 0xff
+    if result.returncode != expected:
         raise AssertionError(
-            f"{exe} {source} returned {result.returncode}\n"
-            f"{result.stdout}\n{result.stderr}"
+            f"{result.args} returned {result.returncode:#x}, expected {expected:#x}"
         )
+
+
+def check(exe, source, output, expected_hresult, *flags):
+    result = subprocess.run(command(exe, source, output, *flags), timeout=30)
+    check_status(result, expected_hresult)
+
+
+def check_rows(output, expected):
+    report, = output.glob("*.csv")
+    with report.open(newline="") as stream:
+        rows = [(row["KeysName"], row["TableCreateResult"])
+                for row in csv.DictReader(stream)]
+    if rows != expected:
+        raise AssertionError(f"{report} contained {rows!r}, expected {expected!r}")
 
 
 create, bulk_create = sys.argv[1:]
@@ -25,9 +47,54 @@ with tempfile.TemporaryDirectory() as tmp:
     keys = root / "keys"
     keys.mkdir()
     path = keys / "Test.keys"
-    check(create, path, root / "missing", False)
+    check(create, path, root / "missing", PH_E_SYSTEM_CALL_FAILED)
     path.write_bytes(struct.pack("<4I", 1, 1, 3, 5))
-    check(bulk_create, keys, root / "duplicate", False)
+    check(bulk_create, keys, root / "duplicate", PH_E_DUPLICATE_KEYS_DETECTED)
+    if any((root / "duplicate").glob("*.csv")):
+        raise AssertionError("An invalid first input left an incomplete bulk report")
     path.write_bytes(struct.pack("<4I", 1, 3, 5, 7))
-    check(create, path, root / "create", True)
-    check(bulk_create, keys, root / "bulk", True)
+    check(create, path, root / "create", 0)
+    check(bulk_create, keys, root / "bulk", 0)
+
+    # Equal multipliers and shifts select identical vertices on every attempt.
+    bad_seeds = ("--DoNotTryUseHash16Impl", "--Seeds=1,1,0x1010")
+    for exe, source, name in ((create, path, "single"), (bulk_create, keys, "batch")):
+        fixed = root / f"{name}-fixed"
+        check(exe, source, fixed, 0, *bad_seeds, "--FixedAttempts=1")
+        check_rows(fixed, [("Test", "PH_I_CREATE_TABLE_ROUTINE_FAILED_TO_FIND_SOLUTION")])
+        timed = root / f"{name}-timed"
+        check(exe, source, timed, PH_I_SOLVE_TIMEOUT_EXPIRED, *bad_seeds,
+              "--MaxSolveTimeInSeconds=1")
+        check_rows(timed, [("Test", "PH_I_SOLVE_TIMEOUT_EXPIRED")])
+        silent = root / f"{name}-no-report"
+        check(exe, source, silent, PH_I_SOLVE_TIMEOUT_EXPIRED, *bad_seeds,
+              "--MaxSolveTimeInSeconds=1", "--DisableCsvOutputFile")
+        if any(silent.glob("*.csv")):
+            raise AssertionError(f"{exe} produced a report with CSV output disabled")
+
+    if sys.platform != "win32":
+        # The report is created after the executable has installed its SIGINT handler.
+        interrupted = root / "interrupt"
+        args = command(bulk_create, keys, interrupted, *bad_seeds, "--MaxSolveTimeInSeconds=10")
+        with subprocess.Popen(args) as proc:
+            try:
+                deadline = time.monotonic() + 5
+                while not any(interrupted.glob("*.csv")):
+                    if proc.poll() is not None or time.monotonic() >= deadline:
+                        raise AssertionError("Bulk create did not start its report")
+                    time.sleep(0.01)
+                proc.send_signal(signal.SIGINT)
+                proc.wait(timeout=15)
+                check_status(proc, PH_E_CTRL_C_PRESSED)
+            finally:
+                if proc.poll() is None:
+                    proc.kill()
+
+    # Assign contents in native directory order, which can differ by filesystem.
+    (keys / "Other.keys").touch()
+    first, second = keys.iterdir()
+    first.write_bytes(struct.pack("<4I", 1, 3, 5, 7))
+    second.write_bytes(struct.pack("<4I", 1, 1, 3, 5))
+    mixed = root / "mixed"
+    check(bulk_create, keys, mixed, PH_E_DUPLICATE_KEYS_DETECTED)
+    check_rows(mixed, [(first.stem, "S_OK")])

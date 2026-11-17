@@ -117,17 +117,17 @@ static void VerifyArm64BatchWidths(PH_ONLINE_JIT_BACKEND requested) {
       ASSERT_GE(PhOnlineJitIndex32(table.get(), keys[i], &expected[i]), 0);
     }
 
-    for (uint32_t width : {1u, 4u, 8u, 16u}) {
-      SCOPED_TRACE(width);
+    for (uint32_t requested_width : {0u, 1u, 4u, 8u, 16u}) {
+      SCOPED_TRACE(requested_width);
       PH_ONLINE_JIT_BACKEND backend = PhOnlineJitBackendAuto;
-      uint32_t effective_width = 0;
+      uint32_t width = 0;
       ASSERT_GE(PhOnlineJitCompileTableEx(
                     context.get(), table.get(), requested,
-                    width, PhOnlineJitMaxIsaAuto,
+                    requested_width, PhOnlineJitMaxIsaAuto,
                     PH_ONLINE_JIT_COMPILE_FLAG_STRICT_VECTOR_WIDTH,
-                    &backend, &effective_width), 0);
+                    &backend, &width), 0);
       ASSERT_EQ(backend, requested);
-      ASSERT_EQ(effective_width, width);
+      ASSERT_EQ(width, requested_width ? requested_width : 1u);
 
       std::array<uint32_t, 16> actual = {};
       for (size_t i = 0; i < keys.size(); i += width) {

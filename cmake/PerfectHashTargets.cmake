@@ -58,7 +58,14 @@ function(perfecthash_apply_common_settings target)
                 $<$<NOT:$<CONFIG:Debug>>:msvcrt>)
         endif()
         set(ph_asm_output_dir "${CMAKE_CURRENT_BINARY_DIR}/asm/${target}")
-        file(MAKE_DIRECTORY "${ph_asm_output_dir}")
+        if(CMAKE_CONFIGURATION_TYPES)
+            foreach(config IN LISTS CMAKE_CONFIGURATION_TYPES)
+                file(MAKE_DIRECTORY "${ph_asm_output_dir}/${config}")
+            endforeach()
+            string(APPEND ph_asm_output_dir "/$<CONFIG>")
+        else()
+            file(MAKE_DIRECTORY "${ph_asm_output_dir}")
+        endif()
         target_compile_options(
             ${target}
             PRIVATE

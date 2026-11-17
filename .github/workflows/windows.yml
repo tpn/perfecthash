@@ -88,7 +88,18 @@ jobs:
           & "$vs/Common7/Tools/Launch-VsDevShell.ps1" -Arch arm64 -HostArch arm64 -SkipAutomaticLocation
           cmake --preset ninja-multi -DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl "-DLLVM_DIR=$env:LLVM_DIR" -DPERFECTHASH_STATIC_LLVM=OFF
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
-          cmake --build build --config Release --target perfecthash_arm64_online_core_tests perfecthash_unit_tests perfecthash_online_jit_invalid_env --parallel
+          cmake --build build --config Release --parallel
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          $prefix = "$env:RUNNER_TEMP/perfecthash-installed"
+          $client = "$env:RUNNER_TEMP/perfecthash-client"
+          cmake --install build --config Release --prefix $prefix
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          cmake -S tests/installed-online-jit -B $client -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl "-DCMAKE_PREFIX_PATH=$prefix"
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          cmake --build $client
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          $env:PATH = "$prefix/bin;$env:PATH"
+          ctest --test-dir $client --no-tests=error --output-on-failure
       - name: Run ARM64 unit tests and exercise both JITs
         shell: pwsh
         env:

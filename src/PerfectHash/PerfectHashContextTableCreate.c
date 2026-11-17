@@ -155,7 +155,7 @@ Return Value:
     ULONGLONG RowBufferSize = 0;
     ULONG BytesWritten = 0;
     ULONG KeySizeInBytes = 0;
-    LARGE_INTEGER EmptyEndOfFile = { 0 };
+    LARGE_INTEGER CompletedCsvEndOfFile = { 0 };
     PLARGE_INTEGER EndOfFile;
     PPERFECT_HASH_KEYS Keys = NULL;
     PPERFECT_HASH_TABLE Table = NULL;
@@ -470,9 +470,10 @@ Return Value:
     if (Result != S_OK) {
 
         Coverage = &EmptyCoverage;
-        // Informational solve outcomes are recorded in the CSV. The command
-        // completed successfully even when a fixed attempt budget ran out.
-        Result = S_OK;
+        if (Result == PH_I_CREATE_TABLE_ROUTINE_FAILED_TO_FIND_SOLUTION &&
+            Context->State.FixedAttemptsReached) {
+            Result = S_OK;
+        }
 
     } else {
 
@@ -544,6 +545,7 @@ Return Value:
         WRITE_TABLE_CREATE_CSV_ROW();
     }
     _No_competing_thread_end_
+    CompletedCsvEndOfFile = CsvFile->NumberOfBytesWritten;
 
     //
     // We're done, finish up.
@@ -581,7 +583,7 @@ End:
                                                  RowBufferSize);
         if (FAILED(CleanupResult)) {
             SYS_ERROR(VirtualFree);
-            if (SUCCEEDED(Result)) {
+            if (Result == S_OK) {
                 Result = PH_E_SYSTEM_CALL_FAILED;
             }
         }
@@ -595,12 +597,12 @@ End:
     }
 
     //
-    // Close the .csv file.  If we encountered an error, use 0 as end-of-file,
-    // which will cause the Close() call to reset it to its original state.
+    // Keep a completed row even when it reports an unsuccessful solve.
+    // Before a row completes, zero restores the file to its original size.
     //
 
     if (Result != S_OK) {
-        EndOfFile = &EmptyEndOfFile;
+        EndOfFile = &CompletedCsvEndOfFile;
     } else {
         EndOfFile = NULL;
     }
@@ -609,7 +611,7 @@ End:
         CleanupResult = CsvFile->Vtbl->Close(CsvFile, EndOfFile);
         if (FAILED(CleanupResult)) {
             PH_ERROR(PerfectHashTableCreate_CloseCsvFile, CleanupResult);
-            if (SUCCEEDED(Result)) {
+            if (Result == S_OK) {
                 Result = CleanupResult;
             }
         }

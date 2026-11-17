@@ -156,6 +156,7 @@ source_group("Resource Files" FILES ${Resource_Files})
 set(Source_Files
     "BitManipulation.c"
     "ChmOnline01Stub.c"
+    "PerfectHashLLVMLoader.c"
     "PerfectHashTableJitInterface.c"
     "ChmOnline01HashJit.c"
     "Chm01Shared.c"
@@ -5238,7 +5239,7 @@ if(PERFECTHASH_HAS_LLVM)
     foreach(ph_library ${online_target} ${online_static_target} ${online_core_target} ${online_core_static_target})
         add_dependencies(${ph_library} ${llvm_target})
     endforeach()
-    if(PERFECTHASH_IS_LINUX)
+    if(PERFECTHASH_IS_LINUX OR PERFECTHASH_IS_MAC)
         # With a static archive, dlopen runs from the consumer binary. Resolve
         # the plugin directory from the active build or imported package target.
         foreach(ph_archive ${online_static_target} ${online_core_static_target})
@@ -5248,14 +5249,18 @@ if(PERFECTHASH_HAS_LLVM)
     endif()
 endif()
 
-if(PERFECTHASH_IS_LINUX)
-    # dlopen resolves the LLVM plugin relative to the calling library's
-    # RUNPATH. The plugin and its PerfectHash dependency are installed as
+if(PERFECTHASH_IS_LINUX OR PERFECTHASH_IS_MAC)
+    if(PERFECTHASH_IS_MAC)
+        set(ph_sibling_rpath "@loader_path")
+    else()
+        set(ph_sibling_rpath "$ORIGIN")
+    endif()
+    # The LLVM plugin, calling libraries and PerfectHash are installed as
     # siblings, including under multiarch lib directories.
     foreach(ph_library ${target} ${online_target} ${online_core_target} ${llvm_target})
         if(TARGET ${ph_library})
-            set_property(TARGET ${ph_library} APPEND PROPERTY BUILD_RPATH "$ORIGIN")
-            set_property(TARGET ${ph_library} PROPERTY INSTALL_RPATH "$ORIGIN")
+            set_property(TARGET ${ph_library} APPEND PROPERTY BUILD_RPATH "${ph_sibling_rpath}")
+            set_property(TARGET ${ph_library} PROPERTY INSTALL_RPATH "${ph_sibling_rpath}")
         endif()
     endforeach()
 endif()
@@ -5406,7 +5411,7 @@ foreach(ph_online_target ${online_target} ${online_static_target})
     else()
         target_compile_definitions(
             ${ph_online_target}
-            PRIVATE
+            PUBLIC
             "PERFECT_HASH_ONLINE_RAWDOG_STATIC"
             "PERFECT_HASH_ONLINE_JIT_STATIC"
         )
@@ -5463,7 +5468,7 @@ foreach(ph_online_target ${online_core_target} ${online_core_static_target})
     else()
         target_compile_definitions(
             ${ph_online_target}
-            PRIVATE
+            PUBLIC
             "PERFECT_HASH_ONLINE_RAWDOG_STATIC"
             "PERFECT_HASH_ONLINE_JIT_STATIC"
         )
