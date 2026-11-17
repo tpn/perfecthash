@@ -3712,10 +3712,17 @@ typedef union _PERFECT_HASH_TABLE_COMPILE_FLAGS {
         ULONG JitMaxIsa:3;
 
         //
+        // Install the new index JIT only if every requested 32-bit batch
+        // width is available. A failed compile preserves the previous index.
+        //
+
+        ULONG JitRequireRequestedWidth:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:3;
+        ULONG Unused:2;
     };
 
     LONG AsLong;

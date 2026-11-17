@@ -5234,6 +5234,18 @@ if(PERFECTHASH_HAS_LLVM)
     add_library(${llvm_target} SHARED ${LLVM_SOURCE_FILES})
 endif()
 
+if(PERFECTHASH_IS_LINUX)
+    # dlopen resolves the LLVM plugin relative to the calling library's
+    # RUNPATH. The plugin and its PerfectHash dependency are installed as
+    # siblings, including under multiarch lib directories.
+    foreach(ph_library ${target} ${online_target} ${online_core_target} ${llvm_target})
+        if(TARGET ${ph_library})
+            set_property(TARGET ${ph_library} APPEND PROPERTY BUILD_RPATH "$ORIGIN")
+            set_property(TARGET ${ph_library} PROPERTY INSTALL_RPATH "$ORIGIN")
+        endif()
+    endforeach()
+endif()
+
 if(PERFECTHASH_ENABLE_EMBEDDED_ERROR_STRINGS)
     foreach(ph_error_target
             ${target}

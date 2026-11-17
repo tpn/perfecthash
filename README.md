@@ -199,7 +199,7 @@ and validate the emitted C, C++, Python, Rust, and, when available, CUDA outputs
 For both JITs on Windows ARM64, extract the **clang+llvm AArch64 Windows MSVC
 development archive** from an LLVM release. The following configuration was
 tested with LLVM 23.1.6. Run it in the native developer shell above and adjust
-the archive location for your machine.
+the archive location for your machine. [LLVM 23.1.6 release](https://github.com/llvm/llvm-project/releases/tag/llvmorg-23.1.6)
 
 ```powershell
 $llvm = 'D:/src/clang+llvm-23.1.6-aarch64-pc-windows-msvc'
@@ -213,11 +213,16 @@ RawDog uses `clang` and `llvm-objcopy` at build time. The LLVM backend uses
 running the examples, tests or benchmarks. A build without the optional tools
 continues to support native lookup.
 
+Windows ARM64 RawDog provides scalar and 4-, 8-, and 16-key batch lookup for
+MultiplyShiftR, MultiplyShiftRX, and Mulshrolate1RX through Mulshrolate3RX.
+LLVM also supports Mulshrolate4RX and can generate SIMD lookup kernels.
+
 The ARM64 solver can hash four keys at a time using NEON for MultiplyShiftR
 and MultiplyShiftRX with `HashAllKeysFirst`. Use
 `--DoNotTryUseNeonHashFunction` for a scalar comparison and check
 `UsedNeonHashFunction` in the resulting CSV. Lookups in an already solved
 table use the backend and batch width chosen by the caller.
+[Grace lookup and solver benchmarks](docs/benchmarks/windows-arm64-grace-jit/README.md)
 
 You can also download the latest binaries from the [Releases](https://github.com/tpn/perfecthash/releases/)
 page.  The `PGO` zip files refer to profile-guided optimization builds, and are

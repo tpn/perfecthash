@@ -86,6 +86,17 @@ if(PERFECTHASH_HAS_RAWDOG_JIT)
 endif()
 
 include(GoogleTest)
+if((WIN32 OR PERFECTHASH_IS_LINUX) AND PERFECTHASH_ARCH_ARM64 AND PERFECTHASH_HAS_RAWDOG_JIT AND TARGET PerfectHashLLVM)
+    # Exercise the slim API through the shared library used by installed Core clients.
+    add_executable(perfecthash_arm64_online_core_tests PerfectHashOnlineJitTests.cpp)
+    target_link_libraries(perfecthash_arm64_online_core_tests PRIVATE PerfectHashOnlineCore GTest::gtest_main)
+    target_compile_features(perfecthash_arm64_online_core_tests PRIVATE cxx_std_17)
+    perfecthash_apply_common_definitions(perfecthash_arm64_online_core_tests)
+    target_compile_definitions(perfecthash_arm64_online_core_tests PRIVATE PH_HAS_RAWDOG_JIT)
+    add_dependencies(perfecthash_arm64_online_core_tests PerfectHashLLVM)
+    add_test(NAME perfecthash_unit_tests.Arm64OnlineCoreJit COMMAND perfecthash_arm64_online_core_tests)
+endif()
+
 gtest_discover_tests(perfecthash_unit_tests
     TEST_PREFIX "perfecthash_unit_tests."
 )

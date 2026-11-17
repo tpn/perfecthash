@@ -31,9 +31,10 @@ The runner checks the active backend, compiled width and vector flags.
 | LLVM, 32-bit | 3.01 | 1.97 | **1.78** | 1.97 |
 
 At width eight, LLVM handled **2.7×** as many keys per second as native scalar
-lookup with 16-bit assigned data and **4.0×** with 32-bit data. The timed
-region includes the public lookup call, writing the indices and consuming
-the results. A batch amortizes interface calls over multiple keys, so the
+lookup with 16-bit assigned data and **4.0×** with 32-bit data. The harness
+calls the COM table's `Index` method for individual keys and the JIT
+interface's `Index32xN` methods for batches. The timed region includes
+writing and consuming the indices. A batch amortizes interface calls over multiple keys, so the
 ratios measure the complete lookup path. The native results reproduce the
 earlier 4.5 and 7.1 ns/key measurements. [Earlier Grace baseline](../windows-arm64-grace-2026-11-16/README.md)
 

@@ -6,6 +6,7 @@
 #include <array>
 #include <cstdint>
 #include <cstdlib>
+#include <future>
 #include <memory>
 #include <string>
 #include <unordered_set>
@@ -91,8 +92,9 @@ std::vector<uint64_t> MakeNonDownsized64Keys(size_t count) {
 
 }  // namespace
 
-#if defined(PH_HAS_RAWDOG_JIT) && (defined(_M_ARM64) || defined(__aarch64__))
-TEST(PerfectHashOnlineJitTests, Arm64RawDogStrictWidthsMatchScalar) {
+#if (defined(PH_HAS_RAWDOG_JIT) || defined(PH_HAS_LLVM)) && \
+    (defined(_M_ARM64) || defined(__aarch64__))
+static void VerifyArm64BatchWidths(PH_ONLINE_JIT_BACKEND requested) {
   ScopedEnvVar concurrency_cap("PERFECT_HASH_ONLINE_MAX_CONCURRENCY", "4");
   const std::array<uint32_t, 16> keys = {
       1, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53};
@@ -120,11 +122,11 @@ TEST(PerfectHashOnlineJitTests, Arm64RawDogStrictWidthsMatchScalar) {
       PH_ONLINE_JIT_BACKEND backend = PhOnlineJitBackendAuto;
       uint32_t effective_width = 0;
       ASSERT_GE(PhOnlineJitCompileTableEx(
-                    context.get(), table.get(), PhOnlineJitBackendRawDogJit,
+                    context.get(), table.get(), requested,
                     width, PhOnlineJitMaxIsaAuto,
                     PH_ONLINE_JIT_COMPILE_FLAG_STRICT_VECTOR_WIDTH,
                     &backend, &effective_width), 0);
-      ASSERT_EQ(backend, PhOnlineJitBackendRawDogJit);
+      ASSERT_EQ(backend, requested);
       ASSERT_EQ(effective_width, width);
 
       std::array<uint32_t, 16> actual = {};
@@ -141,6 +143,16 @@ TEST(PerfectHashOnlineJitTests, Arm64RawDogStrictWidthsMatchScalar) {
     }
   }
 }
+#ifdef PH_HAS_RAWDOG_JIT
+TEST(PerfectHashOnlineJitTests, Arm64RawDogStrictWidthsMatchScalar) {
+  VerifyArm64BatchWidths(PhOnlineJitBackendRawDogJit);
+}
+#endif
+#ifdef PH_HAS_LLVM
+TEST(PerfectHashOnlineJitTests, Arm64LlvmStrictWidthsMatchScalar) {
+  VerifyArm64BatchWidths(PhOnlineJitBackendLlvmJit);
+}
+#endif
 #endif
 
 #if defined(PH_HAS_LLVM) && defined(PH_HAS_RAWDOG_JIT)
@@ -182,19 +194,53 @@ TEST(PerfectHashOnlineJitTests, SwitchBackendsAndReportCompiledWidth) {
     }
   }
 
-  // LLVM can build scalar indices under this cap, but its x16 entry
-  // requires AVX-512 on x86 or an ARM64-compatible maximum ISA.
+  const auto strict = PH_ONLINE_JIT_COMPILE_FLAG_STRICT_VECTOR_WIDTH;
+  ASSERT_GE(compile(PhOnlineJitBackendLlvmJit, 8, PhOnlineJitMaxIsaAuto, strict), 0);
+  auto check_x8 = [&]() {
+    std::array<uint32_t, 16> actual = {};
+    for (size_t i = 0; i < keys.size(); i += 8) {
+      ASSERT_GE(PhOnlineJitIndex32x8(table.get(), &keys[i], &actual[i]), 0);
+    }
+    EXPECT_EQ(actual, expected);
+  };
+
+  // An unsupported request for either backend must keep the existing
+  // x8 routine and its executable pages available.
+  ASSERT_EQ(compile(PhOnlineJitBackendRawDogJit, 2, PhOnlineJitMaxIsaAuto,
+                    strict), PH_E_NOT_IMPLEMENTED);
+  check_x8();
   ASSERT_EQ(compile(PhOnlineJitBackendLlvmJit, 16, PhOnlineJitMaxIsaAvx2,
-                    PH_ONLINE_JIT_COMPILE_FLAG_STRICT_VECTOR_WIDTH),
-            PH_E_NOT_IMPLEMENTED);
+                    strict), PH_E_NOT_IMPLEMENTED);
+  check_x8();
+#if defined(_M_ARM64) || defined(__aarch64__)
+  ASSERT_GE(compile(PhOnlineJitBackendRawDogJit, 8, PhOnlineJitMaxIsaAuto, strict), 0);
+  ASSERT_EQ(compile(PhOnlineJitBackendLlvmJit, 16, PhOnlineJitMaxIsaAvx2,
+                    strict), PH_E_NOT_IMPLEMENTED);
+  check_x8();
+#endif
   ASSERT_GE(compile(PhOnlineJitBackendLlvmJit, 16, PhOnlineJitMaxIsaAvx2, 0), 0);
   ASSERT_EQ(effective_backend, PhOnlineJitBackendLlvmJit);
   ASSERT_EQ(effective_width, 8u);
-  std::array<uint32_t, 16> actual = {};
-  for (size_t i = 0; i < keys.size(); i += effective_width) {
-    ASSERT_GE(PhOnlineJitIndex32x8(table.get(), &keys[i], &actual[i]), 0);
-  }
-  EXPECT_EQ(actual, expected);
+  check_x8();
+
+  // Concurrent compiles either complete or return PH_E_TABLE_LOCKED. Query
+  // the final x8 binding once both compilers have finished.
+  auto recompile = [&]() {
+    for (int pass = 0; pass < 8; ++pass) {
+      auto result = PhOnlineJitCompileTableEx(
+          context.get(), table.get(), PhOnlineJitBackendLlvmJit, 8,
+          PhOnlineJitMaxIsaAuto, strict, nullptr, nullptr);
+      if (result < 0 && result != PH_E_TABLE_LOCKED) {
+        return false;
+      }
+    }
+    return true;
+  };
+  auto first = std::async(std::launch::async, recompile);
+  auto second = std::async(std::launch::async, recompile);
+  EXPECT_TRUE(first.get());
+  EXPECT_TRUE(second.get());
+  check_x8();
 }
 #endif
 

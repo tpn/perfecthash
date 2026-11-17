@@ -88,20 +88,10 @@ jobs:
           & "$vs/Common7/Tools/Launch-VsDevShell.ps1" -Arch arm64 -HostArch arm64 -SkipAutomaticLocation
           cmake --preset ninja-multi -DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl "-DLLVM_DIR=$env:LLVM_DIR" -DPERFECTHASH_STATIC_LLVM=OFF
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
-          cmake --build build --config Release --target PerfectHashLLVM PerfectHashOnlineCore perfecthash_unit_tests perfecthash_online_jit_invalid_env --parallel
-          if ($LASTEXITCODE) { exit $LASTEXITCODE }
-          cmake -S examples/cpp-console-online-jit -B build/examples/arm-jit -G "Ninja Multi-Config" -DCMAKE_CXX_COMPILER=cl "-DPERFECTHASH_ROOT=$pwd" "-DPerfectHashOnlineJit_ROOT=$pwd/build"
-          if ($LASTEXITCODE) { exit $LASTEXITCODE }
-          cmake --build build/examples/arm-jit --config Release
+          cmake --build build --config Release --target perfecthash_arm64_online_core_tests perfecthash_unit_tests perfecthash_online_jit_invalid_env --parallel
       - name: Run ARM64 unit tests and exercise both JITs
         shell: pwsh
         env:
           PERFECT_HASH_ONLINE_MAX_CONCURRENCY: 1
         run: |
           ctest --test-dir build -C Release -R '^perfecthash_unit_tests\.' --no-tests=error --output-on-failure --timeout 180
-          if ($LASTEXITCODE) { exit $LASTEXITCODE }
-          foreach ($backend in 'rawdog-jit', 'llvm-jit') {
-            $output = & build/examples/arm-jit/Release/cpp-console-online-jit.exe --backend $backend --hash multiplyshiftr --vector-width 16
-            $output
-            if ($LASTEXITCODE -or !($output -match 'mode=jit\.')) { throw "$backend JIT did not run" }
-          }

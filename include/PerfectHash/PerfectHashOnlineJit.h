@@ -16,6 +16,11 @@ Abstract:
     a 32-bit runtime table representation. Full-width 64-bit JIT index support
     is not exposed via this minimal wrapper surface.
 
+    Lookups on a stable table may run concurrently. Finish all lookups
+    before compiling or releasing that table, since recompilation can
+    replace its executable code. Concurrent compiles on one table can
+    return PH_E_TABLE_LOCKED. Finish all compiles before releasing it.
+
 --*/
 
 #pragma once
@@ -90,6 +95,8 @@ typedef enum PH_ONLINE_JIT_MAX_ISA {
     PhOnlineJitMaxIsaSve2,
 } PH_ONLINE_JIT_MAX_ISA;
 
+// Require the requested batch width. A failed compile keeps the table's
+// previous index implementation available to subsequent lookups.
 #define PH_ONLINE_JIT_COMPILE_FLAG_STRICT_VECTOR_WIDTH (1u << 0)
 #define PH_ONLINE_JIT_CUDA_SOURCE_FLAG_OMIT_KERNELS    (1u << 0)
 #define PH_ONLINE_JIT_CUDA_SOURCE_FLAG_OMIT_TABLE_DATA (1u << 1)

@@ -28,55 +28,25 @@ struct PH_ONLINE_JIT_CONTEXT {
 
 struct PH_ONLINE_JIT_TABLE {
     PPERFECT_HASH_TABLE Table;
-    PPERFECT_HASH_TABLE_JIT_INTERFACE JitInterface;
 };
 
+// The table owns this interface and its executable code. Callers quiesce
+// lookups before recompiling or releasing the table (see the public API).
 static
 HRESULT
-PhReleaseOnlineJitInterface(
-    _Inout_ PH_ONLINE_JIT_TABLE *Table
+PhGetOnlineJitInterface(
+    _In_ PH_ONLINE_JIT_TABLE *Table,
+    _Out_ PPERFECT_HASH_TABLE_JIT_INTERFACE *Interface
     )
 {
-    if (!ARGUMENT_PRESENT(Table)) {
+    if (!Table->Table) {
         return E_INVALIDARG;
     }
-
-    if (Table->JitInterface) {
-        Table->JitInterface->Vtbl->Release(Table->JitInterface);
-        Table->JitInterface = NULL;
+    if (!Table->Table->Jit || !Table->Table->Jit->Flags.Valid) {
+        return E_NOINTERFACE;
     }
-
+    *Interface = &Table->Table->Jit->Interface;
     return S_OK;
-}
-
-static
-HRESULT
-PhEnsureOnlineJitInterface(
-    _Inout_ PH_ONLINE_JIT_TABLE *Table
-    )
-{
-    HRESULT Result;
-
-    if (!ARGUMENT_PRESENT(Table) ||
-        !ARGUMENT_PRESENT(Table->Table)) {
-        return E_INVALIDARG;
-    }
-
-    if (ARGUMENT_PRESENT(Table->JitInterface)) {
-        return S_OK;
-    }
-
-    Result = Table->Table->Vtbl->QueryInterface(
-        Table->Table,
-#ifdef __cplusplus
-        IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
-#else
-        &IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
-#endif
-        (void **)&Table->JitInterface
-    );
-
-    return Result;
 }
 
 static
@@ -207,7 +177,6 @@ PhCompileOnlineJitBackend(
 {
     HRESULT Result;
     PERFECT_HASH_TABLE_COMPILE_FLAGS CompileFlags = {0};
-    PERFECT_HASH_TABLE_JIT_INFO Info;
 
     if (!ARGUMENT_PRESENT(Context) ||
         !ARGUMENT_PRESENT(Table) ||
@@ -245,31 +214,10 @@ PhCompileOnlineJitBackend(
 
     CompileFlags.JitMaxIsa = (ULONG)JitMaxIsa;
 
-    Result = Context->Online->Vtbl->CompileTable(Context->Online,
-                                                 Table->Table,
-                                                 &CompileFlags);
-    if (FAILED(Result) || VectorWidth <= 1) {
-        return Result;
-    }
-
-    // A backend can compile the scalar index while omitting an unavailable
-    // batch width. Check its actual result before reporting that width.
-    Result = PhEnsureOnlineJitInterface(Table);
-    if (FAILED(Result)) {
-        return Result;
-    }
-    Result = Table->JitInterface->Vtbl->GetInfo(Table->JitInterface, &Info);
-    PhReleaseOnlineJitInterface(Table);
-    if (FAILED(Result)) {
-        return Result;
-    }
-    if ((CompileFlags.JitIndex32x2 && !Info.Flags.Index32x2Compiled) ||
-        (CompileFlags.JitIndex32x4 && !Info.Flags.Index32x4Compiled) ||
-        (CompileFlags.JitIndex32x8 && !Info.Flags.Index32x8Compiled) ||
-        (CompileFlags.JitIndex32x16 && !Info.Flags.Index32x16Compiled)) {
-        return PH_E_NOT_IMPLEMENTED;
-    }
-    return S_OK;
+    CompileFlags.JitRequireRequestedWidth = TRUE;
+    return Context->Online->Vtbl->CompileTable(Context->Online,
+                                               Table->Table,
+                                               &CompileFlags);
 }
 
 static
@@ -996,13 +944,6 @@ PhOnlineJitCompileTableEx(
         return E_INVALIDARG;
     }
 
-    //
-    // Force lazy re-acquisition on subsequent vector index requests after
-    // every compile path.
-    //
-
-    PhReleaseOnlineJitInterface(Table);
-
     if (!IsValidPerfectHashJitMaxIsaId((PERFECT_HASH_JIT_MAX_ISA_ID)JitMaxIsa)) {
         return E_INVALIDARG;
     }
@@ -1345,12 +1286,11 @@ PhOnlineJitIndex32x2(
         return E_INVALIDARG;
     }
 
-    Result = PhEnsureOnlineJitInterface(Table);
+    Result = PhGetOnlineJitInterface(Table, &Jit);
     if (FAILED(Result)) {
         return Result;
     }
 
-    Jit = Table->JitInterface;
     return Jit->Vtbl->Index32x2(
         Jit,
         (ULONG)Keys[0],
@@ -1432,12 +1372,11 @@ PhOnlineJitIndex32x4(
         return E_INVALIDARG;
     }
 
-    Result = PhEnsureOnlineJitInterface(Table);
+    Result = PhGetOnlineJitInterface(Table, &Jit);
     if (FAILED(Result)) {
         return Result;
     }
 
-    Jit = Table->JitInterface;
     return Jit->Vtbl->Index32x4(
         Jit,
         (ULONG)Keys[0],
@@ -1468,12 +1407,11 @@ PhOnlineJitIndex32x8(
         return E_INVALIDARG;
     }
 
-    Result = PhEnsureOnlineJitInterface(Table);
+    Result = PhGetOnlineJitInterface(Table, &Jit);
     if (FAILED(Result)) {
         return Result;
     }
 
-    Jit = Table->JitInterface;
     return Jit->Vtbl->Index32x8(
         Jit,
         (ULONG)Keys[0],
@@ -1512,12 +1450,11 @@ PhOnlineJitIndex32x16(
         return E_INVALIDARG;
     }
 
-    Result = PhEnsureOnlineJitInterface(Table);
+    Result = PhGetOnlineJitInterface(Table, &Jit);
     if (FAILED(Result)) {
         return Result;
     }
 
-    Jit = Table->JitInterface;
     return Jit->Vtbl->Index32x16(
         Jit,
         (ULONG)Keys[0],
@@ -1564,8 +1501,6 @@ PhOnlineJitReleaseTable(
     if (!Table) {
         return;
     }
-
-    PhReleaseOnlineJitInterface(Table);
 
     if (Table->Table) {
         Table->Table->Vtbl->Release(Table->Table);
