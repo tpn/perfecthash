@@ -83,12 +83,12 @@ jobs:
       - name: Render output package list
         shell: bash -l {0}
         run: |
-          conda build conda/recipe --output
+          conda-build conda/recipe --output
 
       - name: Build conda packages (linux multi-output)
         shell: bash -l {0}
         run: |
-          conda build conda/recipe --output-folder conda/out --no-anaconda-upload
+          conda-build conda/recipe --output-folder conda/out --no-anaconda-upload
 
       - name: Upload package artifacts
         uses: actions/upload-artifact@v4
