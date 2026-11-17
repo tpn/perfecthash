@@ -5179,7 +5179,6 @@ Abstract:
 //
 #define PH_E_LLVM_BACKEND_NOT_FOUND      ((HRESULT)0xE004041CL)
 
-
 //
 // MessageId: PH_E_TRY_USE_JIT_HASH_FUNC_FLAG_REQUIRE_HASH_ALL_KEYS_FIRST
 //
@@ -5188,3 +5187,85 @@ Abstract:
 // ---HashAllKeysFirst is required when specifying --TryUseJitHashFunction.
 //
 #define PH_E_TRY_USE_JIT_HASH_FUNC_FLAG_REQUIRE_HASH_ALL_KEYS_FIRST ((HRESULT)0xE004041DL)
+
+//
+// MessageId: PH_E_SOLVE_TIMEOUT_EXPIRED
+//
+// MessageText:
+//
+// The online table solve timeout expired before a solution was found.
+//
+#define PH_E_SOLVE_TIMEOUT_EXPIRED       ((HRESULT)0xE004041EL)
+
+// Failure counterparts for informational online solve outcomes.
+//
+// MessageId: PH_E_ONLINE_CREATE_TABLE_ROUTINE_RECEIVED_SHUTDOWN_EVENT
+//
+// MessageText:
+//
+// Create table routine received shutdown event.
+//
+#define PH_E_ONLINE_CREATE_TABLE_ROUTINE_RECEIVED_SHUTDOWN_EVENT ((HRESULT)0xE0040080L)
+
+//
+// MessageId: PH_E_ONLINE_CREATE_TABLE_ROUTINE_FAILED_TO_FIND_SOLUTION
+//
+// MessageText:
+//
+// Create table routine failed to find perfect hash solution.
+//
+#define PH_E_ONLINE_CREATE_TABLE_ROUTINE_FAILED_TO_FIND_SOLUTION ((HRESULT)0xE0040081L)
+
+//
+// MessageId: PH_E_ONLINE_MAXIMUM_NUMBER_OF_TABLE_RESIZE_EVENTS_REACHED
+//
+// MessageText:
+//
+// The maximum number of table resize events was reached before a perfect hash table solution could be found.
+//
+#define PH_E_ONLINE_MAXIMUM_NUMBER_OF_TABLE_RESIZE_EVENTS_REACHED ((HRESULT)0xE0040082L)
+
+//
+// MessageId: PH_E_ONLINE_REQUESTED_NUMBER_OF_TABLE_ELEMENTS_TOO_LARGE
+//
+// MessageText:
+//
+// The requested number of table elements was too large.
+//
+#define PH_E_ONLINE_REQUESTED_NUMBER_OF_TABLE_ELEMENTS_TOO_LARGE ((HRESULT)0xE0040083L)
+
+//
+// MessageId: PH_E_ONLINE_FAILED_TO_ALLOCATE_MEMORY_FOR_ALL_GRAPHS
+//
+// MessageText:
+//
+// Failed to allocate memory for all graphs.
+//
+#define PH_E_ONLINE_FAILED_TO_ALLOCATE_MEMORY_FOR_ALL_GRAPHS ((HRESULT)0xE0040084L)
+
+//
+// MessageId: PH_E_ONLINE_LOW_MEMORY
+//
+// MessageText:
+//
+// The system is running low on free memory.
+//
+#define PH_E_ONLINE_LOW_MEMORY           ((HRESULT)0xE0040085L)
+
+//
+// MessageId: PH_E_ONLINE_OUT_OF_MEMORY
+//
+// MessageText:
+//
+// The system is out of memory.
+//
+#define PH_E_ONLINE_OUT_OF_MEMORY        ((HRESULT)0xE0040086L)
+
+//
+// MessageId: PH_E_ONLINE_TABLE_CREATED_BUT_VALUES_ARRAY_ALLOC_FAILED
+//
+// MessageText:
+//
+// The table was created successfully, however, the values array could not be allocated.  The table cannot be used.
+//
+#define PH_E_ONLINE_TABLE_CREATED_BUT_VALUES_ARRAY_ALLOC_FAILED ((HRESULT)0xE0040087L)

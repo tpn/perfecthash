@@ -130,6 +130,28 @@ Abstract:
 #include <PerfectHash/PerfectHash.h>
 #include <PerfectHash/PerfectHashErrors.h>
 
+#if defined(PH_WINDOWS) && defined(_M_ARM64)
+#pragma warning(push)
+#pragma warning(disable: 4255 4668 4820 28251)
+#include <intrin.h>
+#pragma warning(pop)
+
+#define _mm_crc32_u32 __crc32cw
+#define _mm_crc32_u8 __crc32cb
+#define _pext_u64 ExtractBits64_C
+// Windows exposes the ARM64 PMU cycle counter through this helper.
+#define __rdtsc() ReadTimeStampCounter()
+FORCEINLINE
+ULONGLONG
+PerfectHashReadTimestampArm64(unsigned int *Aux)
+{
+    *Aux = 0;
+    __isb(_ARM64_BARRIER_SY);
+    return ReadTimeStampCounter();
+}
+#define __rdtscp(Aux) PerfectHashReadTimestampArm64(Aux)
+#endif
+
 #ifdef PH_COMPAT
 #include "PerfectHashCompatPrivate.h"
 #endif

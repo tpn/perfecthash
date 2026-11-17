@@ -1,8 +1,8 @@
 
-DECLARE_BENCHMARK_INDEX_CPH_ROUTINE()
+static ULONG CPHCALLTYPE CphBenchmarkIndexInlineBody(ULONG Seconds)
 {
-    CPHKEY Key;
-    CPHINDEX Index;
+    volatile CPHKEY Key;
+    volatile CPHINDEX Index;
     ULONG Count;
     ULONG Attempt = 1000;
     const ULONG Iterations = 1000;
@@ -58,3 +58,8 @@ DECLARE_BENCHMARK_INDEX_CPH_ROUTINE()
     return Best;
 }
 
+
+DECLARE_BENCHMARK_INDEX_CPH_ROUTINE()
+{
+    return CphRunCycleBenchmark(CphBenchmarkIndexInlineBody, Seconds);
+}

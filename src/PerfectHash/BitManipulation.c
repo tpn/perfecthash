@@ -381,7 +381,11 @@ LeadingZeros32_LZCNT(
     ULONG Integer
     )
 {
+#if defined(PH_WINDOWS) && defined(_M_ARM64)
+    return LeadingZeros32_C(Integer);
+#else
     return _lzcnt_u32(Integer);
+#endif
 }
 
 
@@ -394,7 +398,11 @@ LeadingZeros64_LZCNT(
     ULONGLONG Integer
     )
 {
+#if defined(PH_WINDOWS) && defined(_M_ARM64)
+    return LeadingZeros64_C(Integer);
+#else
     return _lzcnt_u64(Integer);
+#endif
 }
 #endif
 
@@ -426,7 +434,11 @@ TrailingZeros32_BMI1(
     ULONG Integer
     )
 {
+#if defined(PH_WINDOWS) && defined(_M_ARM64)
+    return TrailingZeros32_C(Integer);
+#else
     return _tzcnt_u32(Integer);
+#endif
 }
 
 
@@ -439,7 +451,11 @@ TrailingZeros64_BMI1(
     ULONGLONG Integer
     )
 {
+#if defined(PH_WINDOWS) && defined(_M_ARM64)
+    return TrailingZeros64_C(Integer);
+#else
     return _tzcnt_u64(Integer);
+#endif
 }
 #endif
 

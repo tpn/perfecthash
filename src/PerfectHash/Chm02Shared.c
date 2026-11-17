@@ -784,6 +784,8 @@ Return Value:
 
         Graph->Index = Index;
         Graphs[Index] = Graph;
+        Graph->Flags.SkipVerification =
+            (TableCreateFlags.SkipGraphVerification != FALSE);
 
         Graph->CuDeviceIndex =
             InterlockedIncrement(&SolveContext->DeviceContext->NextDeviceIndex);

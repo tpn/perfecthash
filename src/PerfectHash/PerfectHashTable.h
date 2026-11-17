@@ -1071,6 +1071,10 @@ extern PERFECT_HASH_TABLE_CREATE_PATH PerfectHashTableCreatePath;
 extern PERFECT_HASH_TABLE_CREATE_VALUES_ARRAY
     PerfectHashTableCreateValuesArray;
 extern PERFECT_HASH_TABLE_RUNDOWN PerfectHashTableRundown;
+VOID PerfectHashTableReleaseOwnedData(_In_ PPERFECT_HASH_TABLE Table);
+VOID PerfectHashTablePublishOwnedData(_In_ PPERFECT_HASH_TABLE Table,
+                                     _In_ BOOLEAN IsTableInfo);
+VOID PerfectHashTableReleaseFiles(_In_ PPERFECT_HASH_TABLE Table);
 extern PERFECT_HASH_TABLE_CREATE PerfectHashTableCreate;
 extern PERFECT_HASH_TABLE_LOAD PerfectHashTableLoad;
 extern PERFECT_HASH_TABLE_GET_FLAGS PerfectHashTableGetFlags;

@@ -1,0 +1,140 @@
+[
+  {
+    "hash": "MultiplyShiftR",
+    "index_command": "D:\\src\\perfecthash\\build\\tests\\cli-out\\codegen\\_build\\Release\\BenchmarkIndex_HologramWorld_31016_Chm01_MultiplyShiftR_And.exe",
+    "full_command": "D:\\src\\perfecthash\\build\\tests\\cli-out\\codegen\\_build\\Release\\BenchmarkFull_HologramWorld_31016_Chm01_MultiplyShiftR_And.exe",
+    "index_cycles": [
+      4010,
+      4010,
+      4009,
+      4011,
+      4011,
+      4010,
+      4010
+    ],
+    "full_cycles": [
+      4369464,
+      4377327,
+      4366587,
+      4354962,
+      4385940,
+      4366676,
+      4368440
+    ]
+  },
+  {
+    "hash": "MultiplyShiftRX",
+    "index_command": "D:\\src\\perfecthash\\build\\tests\\cli-out\\codegen-multiplyshiftrx\\_build\\Release\\BenchmarkIndex_HologramWorld_31016_Chm01_MultiplyShiftRX_And.exe",
+    "full_command": "D:\\src\\perfecthash\\build\\tests\\cli-out\\codegen-multiplyshiftrx\\_build\\Release\\BenchmarkFull_HologramWorld_31016_Chm01_MultiplyShiftRX_And.exe",
+    "index_cycles": [
+      4010,
+      4010,
+      4036,
+      4010,
+      4014,
+      4011,
+      4010
+    ],
+    "full_cycles": [
+      4704376,
+      4784361,
+      4730695,
+      4755430,
+      4753064,
+      4719317,
+      4755419
+    ]
+  },
+  {
+    "hash": "Mulshrolate1RX",
+    "index_command": "D:\\src\\perfecthash\\build\\tests\\cli-out\\codegen-mulshrolate1rx\\_build\\Release\\BenchmarkIndex_HologramWorld_31016_Chm01_Mulshrolate1RX_And.exe",
+    "full_command": "D:\\src\\perfecthash\\build\\tests\\cli-out\\codegen-mulshrolate1rx\\_build\\Release\\BenchmarkFull_HologramWorld_31016_Chm01_Mulshrolate1RX_And.exe",
+    "index_cycles": [
+      4017,
+      4012,
+      4016,
+      4012,
+      4016,
+      4013,
+      4016
+    ],
+    "full_cycles": [
+      5008815,
+      4998247,
+      5020214,
+      5025576,
+      5012793,
+      5038706,
+      5025687
+    ]
+  },
+  {
+    "hash": "Mulshrolate2RX",
+    "index_command": "D:\\src\\perfecthash\\build\\tests\\cli-out\\codegen-mulshrolate2rx\\_build\\Release\\BenchmarkIndex_HologramWorld_31016_Chm01_Mulshrolate2RX_And.exe",
+    "full_command": "D:\\src\\perfecthash\\build\\tests\\cli-out\\codegen-mulshrolate2rx\\_build\\Release\\BenchmarkFull_HologramWorld_31016_Chm01_Mulshrolate2RX_And.exe",
+    "index_cycles": [
+      4009,
+      4010,
+      4010,
+      4009,
+      4011,
+      4010,
+      4014
+    ],
+    "full_cycles": [
+      4707254,
+      4713501,
+      4708570,
+      4730213,
+      4740808,
+      4734763,
+      4740610
+    ]
+  },
+  {
+    "hash": "Mulshrolate3RX",
+    "index_command": "D:\\src\\perfecthash\\build\\tests\\cli-out\\codegen-mulshrolate3rx\\_build\\Release\\BenchmarkIndex_HologramWorld_31016_Chm01_Mulshrolate3RX_And.exe",
+    "full_command": "D:\\src\\perfecthash\\build\\tests\\cli-out\\codegen-mulshrolate3rx\\_build\\Release\\BenchmarkFull_HologramWorld_31016_Chm01_Mulshrolate3RX_And.exe",
+    "index_cycles": [
+      4379,
+      4355,
+      4409,
+      4359,
+      4405,
+      4355,
+      4433
+    ],
+    "full_cycles": [
+      5255363,
+      5223328,
+      5207132,
+      5223110,
+      5219560,
+      5229578,
+      5237905
+    ]
+  },
+  {
+    "hash": "Mulshrolate4RX",
+    "index_command": "D:\\src\\perfecthash\\build\\tests\\cli-out\\codegen-mulshrolate4rx\\_build\\Release\\BenchmarkIndex_HologramWorld_31016_Chm01_Mulshrolate4RX_And.exe",
+    "full_command": "D:\\src\\perfecthash\\build\\tests\\cli-out\\codegen-mulshrolate4rx\\_build\\Release\\BenchmarkFull_HologramWorld_31016_Chm01_Mulshrolate4RX_And.exe",
+    "index_cycles": [
+      4973,
+      5010,
+      5013,
+      5011,
+      5010,
+      5010,
+      5013
+    ],
+    "full_cycles": [
+      5851291,
+      5850920,
+      5851701,
+      5861690,
+      5861282,
+      5857958,
+      5840853
+    ]
+  }
+]

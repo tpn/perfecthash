@@ -117,7 +117,7 @@ SaveTableFileChm01(
     // Update state indicating table data has been heap-allocated.
     //
 
-    Table->State.TableDataWasHeapAllocated = TRUE;
+    PerfectHashTablePublishOwnedData(Table, FALSE);
 
     //
     // Update flags with large page result for values array.

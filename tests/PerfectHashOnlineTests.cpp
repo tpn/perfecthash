@@ -272,7 +272,8 @@ protected:
       const std::vector<ULONG> *seeds = nullptr,
       ULONG maxSolveTimeInSeconds = 0,
       bool useSystemRng = false,
-      bool useRandomStartSeed = false) {
+      bool useRandomStartSeed = false,
+      bool skipGraphVerification = false) {
     PERFECT_HASH_KEYS_LOAD_FLAGS keysFlags = {0};
     PERFECT_HASH_TABLE_CREATE_FLAGS tableFlags = {0};
     std::vector<PERFECT_HASH_TABLE_CREATE_PARAMETER> table_params;
@@ -284,6 +285,7 @@ protected:
     tableFlags.Quiet = TRUE;
     tableFlags.DoNotTryUseHash16Impl = allowAssigned16 ? FALSE : TRUE;
     tableFlags.RngUseRandomStartSeed = useRandomStartSeed ? TRUE : FALSE;
+    tableFlags.SkipGraphVerification = skipGraphVerification ? TRUE : FALSE;
 
     if (graphImpl != 0) {
       PERFECT_HASH_TABLE_CREATE_PARAMETER param = {};
@@ -375,6 +377,70 @@ protected:
   HMODULE module_ = nullptr;
 };
 
+TEST_F(PerfectHashOnlineTests, UnsolvedTableDoesNotReturnAHandle) {
+  // Identical fixed multipliers produce identical vertices for every key.
+  std::vector<ULONG> keys = {1, 3, 5, 7};
+  ULONG seeds[] = {1, 1, 0x1010};
+  PERFECT_HASH_TABLE_CREATE_FLAGS flags = {};
+  flags.NoFileIo = TRUE;
+  flags.Quiet = TRUE;
+  flags.DoNotTryUseHash16Impl = TRUE;
+  PERFECT_HASH_TABLE_CREATE_PARAMETER params[2] = {};
+  params[0].Id = TableCreateParameterSeedsId;
+  params[0].AsValueArray.Values = seeds;
+  params[0].AsValueArray.NumberOfValues = 3;
+  params[0].AsValueArray.ValueSizeInBytes = sizeof(ULONG);
+  params[1].Id = TableCreateParameterFixedAttemptsId;
+  params[1].AsULong = 1;
+  PERFECT_HASH_TABLE_CREATE_PARAMETERS parameters = {};
+  parameters.SizeOfStruct = sizeof(parameters);
+  parameters.NumberOfElements = 2;
+  parameters.Params = params;
+  PPERFECT_HASH_TABLE table = nullptr;
+  HRESULT result = online_->Vtbl->CreateTableFromKeys(
+      online_, PerfectHashChm01AlgorithmId,
+      PerfectHashHashMultiplyShiftRFunctionId, PerfectHashAndMaskFunctionId,
+      sizeof(ULONG), keys.size(), keys.data(), nullptr, &flags, &parameters,
+      &table);
+  EXPECT_EQ(result, PH_E_ONLINE_CREATE_TABLE_ROUTINE_FAILED_TO_FIND_SOLUTION);
+  EXPECT_EQ(table, nullptr);
+  if (table) {
+    reinterpret_cast<PerfectHashTableShim *>(table)->Vtbl->Release(table);
+  }
+}
+
+TEST_F(PerfectHashOnlineTests, SolveTimeoutDoesNotReturnAHandle) {
+  // Identical fixed multipliers produce identical vertices for every key.
+  std::vector<ULONG> keys = {1, 3, 5, 7};
+  ULONG seeds[] = {1, 1, 0x1010};
+  PERFECT_HASH_TABLE_CREATE_FLAGS flags = {};
+  flags.NoFileIo = TRUE;
+  flags.Quiet = TRUE;
+  flags.DoNotTryUseHash16Impl = TRUE;
+  PERFECT_HASH_TABLE_CREATE_PARAMETER params[2] = {};
+  params[0].Id = TableCreateParameterSeedsId;
+  params[0].AsValueArray.Values = seeds;
+  params[0].AsValueArray.NumberOfValues = 3;
+  params[0].AsValueArray.ValueSizeInBytes = sizeof(ULONG);
+  params[1].Id = TableCreateParameterMaxSolveTimeInSecondsId;
+  params[1].AsULong = 1;
+  PERFECT_HASH_TABLE_CREATE_PARAMETERS parameters = {};
+  parameters.SizeOfStruct = sizeof(parameters);
+  parameters.NumberOfElements = 2;
+  parameters.Params = params;
+  PPERFECT_HASH_TABLE table = nullptr;
+  HRESULT result = online_->Vtbl->CreateTableFromKeys(
+      online_, PerfectHashChm01AlgorithmId,
+      PerfectHashHashMultiplyShiftRFunctionId, PerfectHashAndMaskFunctionId,
+      sizeof(ULONG), keys.size(), keys.data(), nullptr, &flags, &parameters,
+      &table);
+  EXPECT_EQ(result, PH_E_SOLVE_TIMEOUT_EXPIRED);
+  EXPECT_EQ(table, nullptr);
+  if (table) {
+    reinterpret_cast<PerfectHashTableShim *>(table)->Vtbl->Release(table);
+  }
+}
+
 TEST_F(PerfectHashOnlineTests, CreateTableFromKeysReturnsUniqueIndexes) {
   const std::vector<ULONG> keys = {
       1, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53,
@@ -382,6 +448,30 @@ TEST_F(PerfectHashOnlineTests, CreateTableFromKeysReturnsUniqueIndexes) {
 
   PPERFECT_HASH_TABLE table =
       CreateTableFromKeys(keys, PerfectHashHashMultiplyShiftRFunctionId);
+  ASSERT_NE(table, nullptr);
+
+  auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
+  std::unordered_set<ULONG> seen;
+  seen.reserve(keys.size());
+
+  for (ULONG key : keys) {
+    ULONG index = 0;
+    HRESULT result = shim->Vtbl->Index(table, key, &index);
+    ASSERT_GE(result, 0);
+    EXPECT_TRUE(seen.insert(index).second);
+  }
+
+  shim->Vtbl->Release(table);
+}
+
+TEST_F(PerfectHashOnlineTests, SkipGraphVerificationReturnsUsableTable) {
+  const std::vector<ULONG> keys = {
+      1, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53,
+  };
+
+  PPERFECT_HASH_TABLE table =
+      CreateTableFromKeys(keys, PerfectHashHashMultiplyShiftRFunctionId,
+                          false, 0, nullptr, 0, false, false, true);
   ASSERT_NE(table, nullptr);
 
   auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);

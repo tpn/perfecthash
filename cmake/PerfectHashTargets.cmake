@@ -46,6 +46,17 @@ function(perfecthash_apply_common_settings target)
     perfecthash_apply_common_definitions(${target})
 
     if(MSVC)
+        set(ph_debug_info_option /ZI)
+        if(PERFECTHASH_ARCH_ARM64)
+            set(ph_debug_info_option /Zi)
+            # Preserve the acquire/release volatile semantics used by the
+            # Windows implementation, also on ARM64 (whose default is ISO).
+            target_compile_options(${target} PRIVATE /volatile:ms /wd4746)
+            # ARM64 interlocked operations can call helpers in the CRT.
+            target_link_libraries(${target} PRIVATE
+                $<$<CONFIG:Debug>:msvcrtd>
+                $<$<NOT:$<CONFIG:Debug>>:msvcrt>)
+        endif()
         set(ph_asm_output_dir "${CMAKE_CURRENT_BINARY_DIR}/asm/${target}")
         file(MAKE_DIRECTORY "${ph_asm_output_dir}")
         target_compile_options(
@@ -63,7 +74,7 @@ function(perfecthash_apply_common_settings target)
         target_compile_options(
             ${target}
             PRIVATE
-            $<$<CONFIG:Debug>:/ZI;/Od;/Ob0>
+            $<$<CONFIG:Debug>:${ph_debug_info_option};/Od;/Ob0>
             $<$<NOT:$<CONFIG:Debug>>:/Zi>
         )
         target_link_options(

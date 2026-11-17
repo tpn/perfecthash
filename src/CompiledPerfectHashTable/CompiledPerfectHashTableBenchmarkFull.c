@@ -1,5 +1,5 @@
 
-DECLARE_BENCHMARK_FULL_CPH_ROUTINE()
+static ULONG CPHCALLTYPE CphBenchmarkFullBody(ULONG Seconds)
 {
     ULONG Count;
     CPHKEY Key;
@@ -119,3 +119,8 @@ DECLARE_BENCHMARK_FULL_CPH_ROUTINE()
 }
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :
+
+DECLARE_BENCHMARK_FULL_CPH_ROUTINE()
+{
+    return CphRunCycleBenchmark(CphBenchmarkFullBody, Seconds);
+}

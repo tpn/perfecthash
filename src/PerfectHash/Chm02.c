@@ -916,6 +916,9 @@ Return Value:
     }
 
     Result = Graph->Vtbl->Verify(Graph);
+    if (Result == PH_S_GRAPH_VERIFICATION_SKIPPED) {
+        Result = S_OK;
+    }
 
     CONTEXT_END_TIMERS(Verify);
 

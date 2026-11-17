@@ -56,7 +56,7 @@ SaveRustBenchFileChm01(
     OUTPUT_RAW("    let mut acc: u64 = 0;\n");
     OUTPUT_RAW("    let start = Instant::now();\n");
     OUTPUT_RAW("    for _ in 0..iterations {\n");
-    OUTPUT_RAW("        for &key in ph::KEYS.iter() {\n");
+    OUTPUT_RAW("        for &key in ph::KEYS_STORAGE.iter() {\n");
     OUTPUT_RAW("            acc = acc.wrapping_add(ph::index(key) as u64);\n");
     OUTPUT_RAW("        }\n");
     OUTPUT_RAW("    }\n");

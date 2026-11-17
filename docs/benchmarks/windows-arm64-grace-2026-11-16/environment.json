@@ -1,0 +1,32 @@
+{
+  "date": "2026-11-16",
+  "timezone": "America/Los_Angeles",
+  "base_commit": "ab4bc9d10f58e9c0728d0b01fe0fa95b10d0a203",
+  "cpu": "NVIDIA Grace A02P",
+  "cores": 72,
+  "os": "Windows 11 Enterprise ARM64",
+  "compiler": "MSVC 19.51.36260.0 (Visual Studio 2026 18.11.3)",
+  "cmake": "4.4.4",
+  "ninja": "1.13.2",
+  "python": "3.13.5",
+  "rust": "1.100.0 aarch64-pc-windows-msvc",
+  "cuda": "13.5.37",
+  "driver": "621.01",
+  "gpus": [
+    "NVIDIA RTX PRO 4000 Blackwell SFF Edition",
+    "NVIDIA GB300"
+  ],
+  "cpu_affinity_mask": 4,
+  "online_max_concurrency": 1,
+  "jit": false,
+  "synthetic_key_seed": "0x4b1d5d73",
+  "process_repeats": 3,
+  "measurement_iterations": 5,
+  "warmup": "One full lookup workload for each method per process, per existing harness",
+  "lookup_loops": {
+    "31016": 50,
+    "100000": 50,
+    "1000000": 5
+  },
+  "generated_benchmark_process_repeats": 7
+}

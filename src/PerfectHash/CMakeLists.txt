@@ -5080,7 +5080,8 @@ if(WIN32)
 
     add_custom_command(
         OUTPUT ${PERFECTHASH_ERRORS_HEADER}
-        COMMAND mc.exe -v -o -c -b -h "${PERFECTHASH_ROOT_DIR}/include" -x .
+               "${PERFECTHASH_ROOT_DIR}/include/PerfectHash/PerfectHashEvents.h"
+        COMMAND mc.exe -v -o -c -b -h "${PERFECTHASH_ROOT_DIR}/include/PerfectHash" -x .
                 -km PerfectHashEvents.man PerfectHashErrors.mc
         BYPRODUCTS ${PERFECTHASH_ERRORS_BIN} ${PERFECTHASH_ERRORS_DBG}
         DEPENDS PerfectHashErrors.mc PerfectHashEvents.man
@@ -5169,9 +5170,6 @@ endif()
 if(TARGET PerfectHashAsm)
     add_dependencies(${target} PerfectHashAsm)
     set(ADDITIONAL_LIBRARY_DEPENDENCIES PerfectHashAsm)
-    if(WIN32)
-        list(APPEND ADDITIONAL_LIBRARY_DEPENDENCIES rpcrt4)
-    endif()
     target_link_libraries(${target} PUBLIC "${ADDITIONAL_LIBRARY_DEPENDENCIES}")
 endif()
 
@@ -5464,9 +5462,6 @@ foreach(ph_online_target ${online_target} ${online_static_target})
     if(TARGET PerfectHashAsm)
         add_dependencies(${ph_online_target} PerfectHashAsm)
         set(ADDITIONAL_LIBRARY_DEPENDENCIES PerfectHashAsm)
-        if(WIN32)
-            list(APPEND ADDITIONAL_LIBRARY_DEPENDENCIES rpcrt4)
-        endif()
         target_link_libraries(
             ${ph_online_target}
             PUBLIC
@@ -5494,9 +5489,6 @@ foreach(ph_online_target ${online_core_target} ${online_core_static_target})
     if(TARGET PerfectHashAsm)
         add_dependencies(${ph_online_target} PerfectHashAsm)
         set(ADDITIONAL_LIBRARY_DEPENDENCIES PerfectHashAsm)
-        if(WIN32)
-            list(APPEND ADDITIONAL_LIBRARY_DEPENDENCIES rpcrt4)
-        endif()
         target_link_libraries(
             ${ph_online_target}
             PUBLIC
@@ -5566,6 +5558,13 @@ if(TARGET ${llvm_target})
             $<$<NOT:$<CONFIG:Debug>>:ucrt>
         )
     endif()
+endif()
+
+if(WIN32)
+    foreach(ph_rpc_target ${target} ${online_target} ${online_static_target}
+                          ${online_core_target} ${online_core_static_target})
+        target_link_libraries(${ph_rpc_target} PRIVATE rpcrt4)
+    endforeach()
 endif()
 
 # vim:set ts=8 sw=4 sts=4 tw=80 expandtab syntax=cmake                        :

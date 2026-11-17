@@ -164,8 +164,21 @@ Crc32u32_C(
 #pragma warning(push)
 #pragma warning(disable: 4255 4514 4668 4820 28251)
 #include <intrin.h>
+#if defined(_M_IX86) || defined(_M_X64)
 #include <mmintrin.h>
+#endif
 #pragma warning(pop)
+
+#if defined(_M_ARM64)
+#define RotateRight32 _rotr
+#define RotateLeft32  _rotl
+#define RotateRight64 _rotr64
+#define RotateLeft64  _rotl64
+#define ExtractBits64 ExtractBits64_C
+#define Crc32u32      __crc32cw
+// PMCCNTR_EL0: S3_3_C9_C13_0, matching Windows ReadTimeStampCounter().
+#define __rdtsc() ((uint64_t)_ReadStatusReg(0x5ce8))
+#endif
 
 #define DEBUGBREAK __debugbreak
 #define CPHCALLTYPE __stdcall

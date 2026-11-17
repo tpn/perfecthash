@@ -536,7 +536,7 @@ BOOLEAN
     );
 typedef LOAD_SYMBOLS_FROM_MULTIPLE_MODULES *PLOAD_SYMBOLS_FROM_MULTIPLE_MODULES;
 
-#ifdef PH_WINDOWS
+#if defined(PH_WINDOWS) && (defined(_M_AMD64) || defined(_M_IX86))
 //
 // Inline helper functions.
 //
@@ -634,7 +634,7 @@ Return Value:
         YieldProcessor();
     }
 }
-#endif // PH_WINDOWS
+#endif // PH_WINDOWS && x86/x64
 
 
 FORCEINLINE

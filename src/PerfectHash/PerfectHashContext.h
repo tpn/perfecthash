@@ -1253,7 +1253,9 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     //      warnings.
     //
 
-    PVOID Padding9;
+    // Immutable while CHM01 solver callbacks are running; zero means
+    // no deadline. Checked before allocating graph storage on worker entry.
+    ULONGLONG SolveDeadlineMilliseconds;
 
 } PERFECT_HASH_CONTEXT;
 typedef PERFECT_HASH_CONTEXT *PPERFECT_HASH_CONTEXT;
@@ -1338,12 +1340,21 @@ typedef PERFECT_HASH_CONTEXT *PPERFECT_HASH_CONTEXT;
 // QueryPerformanceCounter() routine.
 //
 
+#if defined(PH_WINDOWS) && defined(_M_ARM64)
+// Context intervals can start and stop on different worker cores. ARM64 PMU
+// counters are per-core, so zero marks these cycle counts as unavailable.
+// QueryPerformanceCounter remains the authoritative elapsed-time source.
+#define CONTEXT_READ_CYCLES() 0ULL
+#else
+#define CONTEXT_READ_CYCLES() __rdtsc()
+#endif
+
 #define CONTEXT_START_TIMERS(Name)                         \
     QueryPerformanceCounter(&Context->Name##StartCounter); \
-    Context->Name##StartCycles.QuadPart = __rdtsc()
+    Context->Name##StartCycles.QuadPart = CONTEXT_READ_CYCLES()
 
 #define CONTEXT_END_TIMERS(Name)                            \
-    Context->Name##EndCycles.QuadPart = __rdtsc();          \
+    Context->Name##EndCycles.QuadPart = CONTEXT_READ_CYCLES();          \
     QueryPerformanceCounter(&Context->Name##EndCounter);    \
     Context->Name##ElapsedCycles.QuadPart = (               \
         Context->Name##EndCycles.QuadPart -                 \

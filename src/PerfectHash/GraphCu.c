@@ -1969,6 +1969,10 @@ GraphCuVerify(
         fprintf(stderr, "[GraphCuVerify] Enter\n");
     }
 
+    if (SkipGraphVerification(Graph)) {
+        return PH_S_GRAPH_VERIFICATION_SKIPPED;
+    }
+
     Cu = Graph->CuSolveContext->DeviceContext->Cu;
 
     QueryPerformanceCounter(&Start);

@@ -1084,7 +1084,8 @@ int RunBenchmark(const BenchmarkOptions &base,
       FreeLibrary(module);
     }
 #endif
-    return 1;
+    // A distinct exit code lets runners distinguish timeout from setup errors.
+    return resultValue == PH_E_SOLVE_TIMEOUT_EXPIRED ? 2 : 1;
   }
 
   auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);

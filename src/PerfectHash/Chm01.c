@@ -112,6 +112,7 @@ Return Value:
     BOOLEAN Success;
     BOOLEAN LimitConcurrency;
     ULONG Attempt = 0;
+    ULONGLONG SolveDeadline = 0;
     ULONG ReferenceCount;
     BYTE NumberOfEvents;
     HRESULT Result = S_OK;
@@ -546,6 +547,12 @@ Return Value:
 
 RetryWithLargerTableSize:
 
+    if (Attempt > 0 && Table->MaxSolveTimeInSeconds > 0 &&
+        GetTickCount64() >= SolveDeadline) {
+        Result = PH_I_SOLVE_TIMEOUT_EXPIRED;
+        goto Error;
+    }
+
     //
     // Explicitly reset all events.  This ensures everything is back in the
     // starting state if we happen to be attempting to solve the graph after
@@ -621,16 +628,10 @@ RetryWithLargerTableSize:
         }
     }
 
-    //
-    // If we've been asked to cap the maximum solve time, submit a threadpool
-    // timer now to achieve that.
-    //
-
-    if (Table->MaxSolveTimeInSeconds > 0) {
-        SetThreadpoolTimer(Context->SolveTimeout,
-                           &Table->RelativeMaxSolveTimeInFiletime.AsFileTime,
-                           0,
-                           0);
+    // Keep one deadline for the entire solve, including table-size retries.
+    if (Table->MaxSolveTimeInSeconds > 0 && Attempt == 1) {
+        SolveDeadline = GetTickCount64() +
+            (ULONGLONG)Table->MaxSolveTimeInSeconds * 1000;
     }
 
     //
@@ -768,9 +769,35 @@ RetryWithLargerTableSize:
             Graph->Flags.IsSpare = FALSE;
             InitializeListHead(&Graph->ListEntry);
             InsertTailMainWork(Context, &Graph->ListEntry);
-            SubmitThreadpoolWork(Context->MainWork);
         }
 
+    }
+
+    // Finish all graph and timing initialization before arming the deadline.
+    // No solver callbacks have been submitted yet, so an expired startup
+    // budget cannot discard a solution. Never clear StopSolving afterward.
+    if (Table->MaxSolveTimeInSeconds > 0) {
+        ULONGLONG Now = GetTickCount64();
+        FILETIME64 DueTime;
+
+        if (Now >= SolveDeadline) {
+            SetStopSolving(Context);
+            Result = PH_I_SOLVE_TIMEOUT_EXPIRED;
+            goto Error;
+        }
+        DueTime.AsULongLong = (ULONGLONG)(
+            -(LONGLONG)((SolveDeadline - Now) * 10000)
+        );
+        SetThreadpoolTimer(Context->SolveTimeout, &DueTime.AsFileTime, 0, 0);
+    }
+
+    Context->SolveDeadlineMilliseconds = SolveDeadline;
+
+    // Release solver work only after startup is ready and the timer is armed.
+    // If the deadline expires during submission, workers observe StopSolving
+    // and the normal completion path preserves any solution already found.
+    for (Index = 0; Index < Concurrency; Index++) {
+        SubmitThreadpoolWork(Context->MainWork);
     }
 
     //
@@ -827,8 +854,9 @@ RetryWithLargerTableSize:
 
         WaitForThreadpoolWorkCallbacks(Context->MainWork, TRUE);
         WaitForThreadpoolWorkCallbacks(Context->ConsoleWork, TRUE);
-        WaitForThreadpoolWorkCallbacks(Context->FinishedWork, FALSE);
+        SetThreadpoolTimer(Context->SolveTimeout, NULL, 0, 0);
         WaitForThreadpoolTimerCallbacks(Context->SolveTimeout, TRUE);
+        WaitForThreadpoolWorkCallbacks(Context->FinishedWork, FALSE);
 
         if (!NoFileIo(Table)) {
 
@@ -869,6 +897,13 @@ RetryWithLargerTableSize:
             Context->State.UserRequestedResize = FALSE;
         } else if (Context->FinishedCount > 0) {
             goto FinishedSolution;
+        }
+
+        // A deadline published while draining workers must survive a retry.
+        if (WaitForSingleObject(Context->SolveTimeoutExpiredEvent, 0) ==
+            WAIT_OBJECT_0) {
+            Result = PH_I_SOLVE_TIMEOUT_EXPIRED;
+            goto Error;
         }
 
         //
@@ -969,8 +1004,9 @@ RetryWithLargerTableSize:
 
     WaitForThreadpoolWorkCallbacks(Context->MainWork, TRUE);
     WaitForThreadpoolWorkCallbacks(Context->ConsoleWork, TRUE);
-    WaitForThreadpoolWorkCallbacks(Context->FinishedWork, FALSE);
+    SetThreadpoolTimer(Context->SolveTimeout, NULL, 0, 0);
     WaitForThreadpoolTimerCallbacks(Context->SolveTimeout, TRUE);
+    WaitForThreadpoolWorkCallbacks(Context->FinishedWork, FALSE);
 
     Success = (Context->FinishedCount > 0);
 
@@ -1015,7 +1051,8 @@ RetryWithLargerTableSize:
 
             if (Context->State.AllGraphsFailedMemoryAllocation != FALSE) {
                 Result = PH_I_FAILED_TO_ALLOCATE_MEMORY_FOR_ALL_GRAPHS;
-            } else if (Context->State.SolveTimeoutExpired != FALSE) {
+            } else if (WaitForSingleObject(Context->SolveTimeoutExpiredEvent,
+                                           0) == WAIT_OBJECT_0) {
                 Result = PH_I_SOLVE_TIMEOUT_EXPIRED;
             } else {
                 Result = PH_I_CREATE_TABLE_ROUTINE_FAILED_TO_FIND_SOLUTION;
@@ -1048,7 +1085,9 @@ RetryWithLargerTableSize:
         // Wait for the solve timeout, if applicable.
         //
 
+        SetThreadpoolTimer(Context->SolveTimeout, NULL, 0, 0);
         WaitForThreadpoolTimerCallbacks(Context->SolveTimeout, TRUE);
+        WaitForThreadpoolWorkCallbacks(Context->FinishedWork, FALSE);
 
         //
         // Perform the same operation for the file work threadpool.  Note that
@@ -1084,8 +1123,9 @@ FinishedSolution:
 
     WaitForThreadpoolWorkCallbacks(Context->MainWork, TRUE);
     WaitForThreadpoolWorkCallbacks(Context->ConsoleWork, TRUE);
-    WaitForThreadpoolWorkCallbacks(Context->FinishedWork, FALSE);
+    SetThreadpoolTimer(Context->SolveTimeout, NULL, 0, 0);
     WaitForThreadpoolTimerCallbacks(Context->SolveTimeout, TRUE);
+    WaitForThreadpoolWorkCallbacks(Context->FinishedWork, FALSE);
 
     if (CtrlCPressed) {
         Result = PH_E_CTRL_C_PRESSED;
@@ -1368,6 +1408,9 @@ FinishedSolution:
     CONTEXT_START_TIMERS(Verify);
 
     Result = Graph->Vtbl->Verify(Graph);
+    if (Result == PH_S_GRAPH_VERIFICATION_SKIPPED) {
+        Result = S_OK;
+    }
 
     CONTEXT_END_TIMERS(Verify);
 
@@ -1432,8 +1475,11 @@ Error:
 
     SetEvent(Context->ShutdownEvent);
     WaitForThreadpoolWorkCallbacks(Context->MainWork, TRUE);
+    ResetMainWorkList(Context);
     WaitForThreadpoolWorkCallbacks(Context->ConsoleWork, TRUE);
+    SetThreadpoolTimer(Context->SolveTimeout, NULL, 0, 0);
     WaitForThreadpoolTimerCallbacks(Context->SolveTimeout, TRUE);
+    WaitForThreadpoolWorkCallbacks(Context->FinishedWork, FALSE);
     if (!NoFileIo(Table)) {
         WaitForThreadpoolWorkCallbacks(Context->FileWork, FALSE);
     }
@@ -1635,6 +1681,18 @@ Return Value:
 
     InterlockedIncrement(&Context->ActiveSolvingLoops);
 
+    // A relative timer may be armed late if its submitting thread is paused.
+    // Keep the original monotonic deadline authoritative before LoadInfo can
+    // allocate memory, and do not let already-published timeouts allocate.
+    if ((Context->SolveDeadlineMilliseconds &&
+         GetTickCount64() >= Context->SolveDeadlineMilliseconds) ||
+        WaitForSingleObject(Context->SolveTimeoutExpiredEvent, 0) ==
+            WAIT_OBJECT_0) {
+        SetEvent(Context->SolveTimeoutExpiredEvent);
+        SetStopSolving(Context);
+        goto SolverFinished;
+    }
+
     //
     // Resolve the graph from the list entry then enter the solving loop.
     //
@@ -1665,6 +1723,8 @@ Return Value:
             PH_RAISE(Result);
         }
     }
+
+SolverFinished:
 
     InterlockedDecrement(&Context->ActiveSolvingLoops);
 
