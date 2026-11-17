@@ -459,7 +459,7 @@ Return Value:
         goto Error;
     }
 
-    if (CtrlCPressed) {
+    if (CtrlCPressed && Result == S_OK) {
         Result = PH_E_CTRL_C_PRESSED;
         goto Error;
     }

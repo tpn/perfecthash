@@ -53,6 +53,8 @@ cmake --build build\examples\cpp-console-online-jit --config Release
 
 ### Local Tree Fallback (No FetchContent)
 
+When reusing a build directory with a cached `ON` or `OFF`, pass `-DPH_ONLINE_JIT_USE_FETCHCONTENT=AUTO` to select from the current `PERFECTHASH_ROOT`.
+
 ```bash
 cmake -S examples/cpp-console-online-jit \
       -B build/examples/cpp-console-online-jit \

@@ -40,34 +40,18 @@ find_path(
 
 set(_ph_lib_suffixes)
 if(WIN32)
+    set(_ph_configs ${CMAKE_BUILD_TYPE} Release RelWithDebInfo Debug MinSizeRel ${CMAKE_CONFIGURATION_TYPES})
+    list(REMOVE_DUPLICATES _ph_configs)
+    set(_ph_shared_suffixes lib build/lib)
     set(_ph_static_suffixes lib/static build/lib/static)
-    foreach(_ph_config Release RelWithDebInfo Debug MinSizeRel)
+    foreach(_ph_config IN LISTS _ph_configs)
+        list(APPEND _ph_shared_suffixes "lib/${_ph_config}" "build/lib/${_ph_config}")
         list(APPEND _ph_static_suffixes "lib/${_ph_config}/static" "build/lib/${_ph_config}/static")
     endforeach()
     if(PH_ONLINE_JIT_PREFER_SHARED)
-        list(APPEND _ph_lib_suffixes
-            lib
-            build/lib
-            lib/Release
-            build/lib/Release
-            lib/RelWithDebInfo
-            build/lib/RelWithDebInfo
-            ${_ph_static_suffixes}
-            lib/Debug
-            build/lib/Debug
-        )
+        set(_ph_lib_suffixes ${_ph_shared_suffixes} ${_ph_static_suffixes})
     else()
-        list(APPEND _ph_lib_suffixes
-            ${_ph_static_suffixes}
-            lib
-            build/lib
-            lib/Release
-            build/lib/Release
-            lib/RelWithDebInfo
-            build/lib/RelWithDebInfo
-            lib/Debug
-            build/lib/Debug
-        )
+        set(_ph_lib_suffixes ${_ph_static_suffixes} ${_ph_shared_suffixes})
     endif()
 else()
     list(APPEND _ph_lib_suffixes
@@ -154,21 +138,19 @@ if(WIN32)
     elseif(PERFECTHASH_ONLINE_JIT_LIBRARY)
         get_filename_component(_ph_import_name "${PERFECTHASH_ONLINE_JIT_LIBRARY}" NAME_WE)
         set(_ph_dll_name "${_ph_import_name}.dll")
-        get_filename_component(_ph_cached_dll "${PERFECTHASH_ONLINE_JIT_RUNTIME_DLL}" NAME)
-        string(TOLOWER "${_ph_cached_dll}" _ph_cached_dll)
-        string(TOLOWER "${_ph_dll_name}" _ph_expected_dll)
-        if(NOT EXISTS "${PERFECTHASH_ONLINE_JIT_RUNTIME_DLL}" OR NOT _ph_cached_dll STREQUAL _ph_expected_dll)
-            unset(PERFECTHASH_ONLINE_JIT_RUNTIME_DLL CACHE)
-            unset(PERFECTHASH_ONLINE_JIT_RUNTIME_DLL)
-        endif()
+        # Re-evaluate the DLL when the import library, architecture or config changes.
+        unset(PERFECTHASH_ONLINE_JIT_RUNTIME_DLL CACHE)
+        unset(PERFECTHASH_ONLINE_JIT_RUNTIME_DLL)
         get_filename_component(_ph_lib_config "${PERFECTHASH_ONLINE_JIT_LIBRARY_DIR}" NAME)
+        if(_ph_lib_config IN_LIST _ph_configs)
+            set(_ph_bin_dir "${PERFECTHASH_ONLINE_JIT_LIBRARY_DIR}/../../bin/${_ph_lib_config}")
+        else()
+            set(_ph_bin_dir "${PERFECTHASH_ONLINE_JIT_LIBRARY_DIR}/../bin")
+        endif()
         find_file(PERFECTHASH_ONLINE_JIT_RUNTIME_DLL
             NAMES "${_ph_dll_name}"
-            HINTS "${PERFECTHASH_ONLINE_JIT_LIBRARY_DIR}/../bin"
-                  "${PERFECTHASH_ONLINE_JIT_LIBRARY_DIR}/../../bin/${_ph_lib_config}"
-                  ${_ph_search_hints}
-            PATH_SUFFIXES bin build/bin bin/Release build/bin/Release
-                          bin/RelWithDebInfo build/bin/RelWithDebInfo bin/Debug build/bin/Debug)
+            PATHS "${PERFECTHASH_ONLINE_JIT_LIBRARY_DIR}" "${_ph_bin_dir}"
+            NO_DEFAULT_PATH)
         set(_ph_required_runtime PERFECTHASH_ONLINE_JIT_RUNTIME_DLL)
         if(NOT PERFECTHASH_ONLINE_JIT_RUNTIME_DLL)
             set(_ph_runtime_error REASON_FAILURE_MESSAGE

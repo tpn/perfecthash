@@ -8,6 +8,7 @@ import time
 from pathlib import Path
 
 PH_E_SYSTEM_CALL_FAILED = 0xE0040224
+PH_E_NO_KEYS_FOUND_IN_DIRECTORY = 0xE0040344
 PH_E_DUPLICATE_KEYS_DETECTED = 0xE0040211
 PH_E_CTRL_C_PRESSED = 0xE0040352
 PH_I_SOLVE_TIMEOUT_EXPIRED = 0x60040088
@@ -47,6 +48,8 @@ with tempfile.TemporaryDirectory() as tmp:
     keys = root / "keys"
     keys.mkdir()
     path = keys / "Test.keys"
+    check(bulk_create, root / "no-such-directory", root / "missing-dir", PH_E_SYSTEM_CALL_FAILED)
+    check(bulk_create, keys, root / "empty-dir", PH_E_NO_KEYS_FOUND_IN_DIRECTORY)
     check(create, path, root / "missing", PH_E_SYSTEM_CALL_FAILED)
     path.write_bytes(struct.pack("<4I", 1, 1, 3, 5))
     check(bulk_create, keys, root / "duplicate", PH_E_DUPLICATE_KEYS_DETECTED)

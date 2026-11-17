@@ -66,13 +66,16 @@ function(perfecthash_apply_common_settings target)
         else()
             file(MAKE_DIRECTORY "${ph_asm_output_dir}")
         endif()
+        # /Fa takes a native directory with a trailing backslash. Escape the
+        # separators for SHELL: so CMake preserves them even in spaced paths.
+        string(REPLACE "/" "\\\\" ph_asm_output_dir "${ph_asm_output_dir}")
         target_compile_options(
             ${target}
             PRIVATE
             /Gz         # __stdcall
             /TC         # Compile as C Code
             /FAcs       # Assembler Output: Assembly, Machine Code & Source
-            /Fa${ph_asm_output_dir}/
+            "SHELL:/Fa\"${ph_asm_output_dir}\\\\\""
             /WX         # Warnings as errors
             /Wall       # All warnings
             /FC         # Use full paths

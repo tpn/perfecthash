@@ -1702,8 +1702,8 @@ FindFirstFileW(
 
     Handle->Directory = opendir(Handle->DirectoryName);
     if (!Handle->Directory) {
-        if (errno == ENOENT) {
-            SetLastError(ERROR_FILE_NOT_FOUND);
+        if (errno == ENOENT || errno == ENOTDIR) {
+            SetLastError(ERROR_PATH_NOT_FOUND);
         } else {
             SetLastError(errno);
         }
