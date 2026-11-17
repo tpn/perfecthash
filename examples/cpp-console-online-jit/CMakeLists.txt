@@ -141,17 +141,21 @@ if(WIN32)
     set(_ph_runtime_dlls)
     if(PH_ONLINE_JIT_RUNTIME_TARGET)
         list(APPEND _ph_runtime_dlls "$<TARGET_FILE:${PH_ONLINE_JIT_RUNTIME_TARGET}>")
-    elseif(PERFECTHASH_ONLINE_JIT_RUNTIME_DLL)
+    elseif(EXISTS "${PERFECTHASH_ONLINE_JIT_RUNTIME_DLL}")
         list(APPEND _ph_runtime_dlls "${PERFECTHASH_ONLINE_JIT_RUNTIME_DLL}")
     endif()
 
     if(PH_ONLINE_JIT_LLVM_TARGET)
         list(APPEND _ph_runtime_dlls "$<TARGET_FILE:${PH_ONLINE_JIT_LLVM_TARGET}>"
                                      "$<TARGET_FILE:PerfectHash::PerfectHash>")
-    elseif(PERFECTHASH_ONLINE_JIT_LLVM_RUNTIME_DLL)
+    elseif(EXISTS "${PERFECTHASH_ONLINE_JIT_LLVM_RUNTIME_DLL}")
         get_filename_component(_ph_llvm_dir "${PERFECTHASH_ONLINE_JIT_LLVM_RUNTIME_DLL}" DIRECTORY)
-        list(APPEND _ph_runtime_dlls "${PERFECTHASH_ONLINE_JIT_LLVM_RUNTIME_DLL}"
-                                     "${_ph_llvm_dir}/PerfectHash.dll")
+        if(EXISTS "${_ph_llvm_dir}/PerfectHash.dll")
+            list(APPEND _ph_runtime_dlls "${PERFECTHASH_ONLINE_JIT_LLVM_RUNTIME_DLL}"
+                                         "${_ph_llvm_dir}/PerfectHash.dll")
+        else()
+            message(WARNING "Skipping the optional LLVM plugin: ${_ph_llvm_dir}/PerfectHash.dll is missing.")
+        endif()
     endif()
 
     if(_ph_runtime_dlls)

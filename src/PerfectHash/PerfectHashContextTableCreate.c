@@ -510,6 +510,12 @@ Return Value:
         }
     }
 
+    // Creation, testing and compilation are complete. Sample cancellation
+    // before committing this result. Cleanup preserves the completed outcome.
+    if (CtrlCPressed) {
+        Result = PH_E_CTRL_C_PRESSED;
+    }
+
     //
     // Write the .csv row if applicable.
     //
@@ -591,10 +597,6 @@ End:
     }
 
     ClearContextTableCreate(Context);
-
-    if (CtrlCPressed && Result == S_OK) {
-        Result = PH_E_CTRL_C_PRESSED;
-    }
 
     //
     // Keep a completed row even when it reports an unsuccessful solve.

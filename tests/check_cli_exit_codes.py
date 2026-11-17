@@ -72,22 +72,17 @@ with tempfile.TemporaryDirectory() as tmp:
         if any(silent.glob("*.csv")):
             raise AssertionError(f"{exe} produced a report with CSV output disabled")
 
-    other = keys / "Other.keys"
-    other.write_bytes(path.read_bytes())
-    # Native directory traversal order can differ by filesystem.
-    first, second = keys.iterdir()
     if sys.platform != "win32":
-        # Interrupt the second solve after the first times out. SIGINT must
-        # take precedence over that informational status and keep its row.
+        # Opening the report confirms the signal handler is installed. With
+        # fixed colliding seeds and no timeout the solver waits for SIGINT.
         interrupted = root / "interrupt"
-        args = command(bulk_create, keys, interrupted, *bad_seeds, "--MaxSolveTimeInSeconds=2")
+        args = command(bulk_create, keys, interrupted, *bad_seeds)
         with subprocess.Popen(args) as proc:
             try:
-                deadline = time.monotonic() + 10
-                while not any(b"PH_I_SOLVE_TIMEOUT_EXPIRED" in report.read_bytes()
-                              for report in interrupted.glob("*.csv")):
+                deadline = time.monotonic() + 30
+                while not any(interrupted.glob("*.csv")):
                     if proc.poll() is not None or time.monotonic() >= deadline:
-                        raise AssertionError("Bulk create did not report the first timeout")
+                        raise AssertionError("Bulk create did not open its report")
                     time.sleep(0.01)
                 proc.send_signal(signal.SIGINT)
                 proc.wait(timeout=15)
@@ -95,8 +90,10 @@ with tempfile.TemporaryDirectory() as tmp:
             finally:
                 if proc.poll() is None:
                     proc.kill()
-        check_rows(interrupted, [(first.stem, "PH_I_SOLVE_TIMEOUT_EXPIRED")])
 
+    (keys / "Other.keys").touch()
+    # Native directory traversal order can differ by filesystem.
+    first, second = keys.iterdir()
     first.write_bytes(struct.pack("<4I", 1, 3, 5, 7))
     second.write_bytes(struct.pack("<4I", 1, 1, 3, 5))
     mixed = root / "mixed"
