@@ -6,6 +6,7 @@
 #include <vector>
 #include <filesystem>
 #include <fstream>
+#include <random>
 
 namespace {
 
@@ -124,11 +125,11 @@ TEST_F(PerfectHashArgvTests, InvalidNumArgs) {
   EXPECT_EQ(PH_E_CONTEXT_TABLE_CREATE_INVALID_NUM_ARGS, RunTableCreate(args));
 }
 
-#ifdef PH_WINDOWS
 TEST_F(PerfectHashArgvTests, FailedFileCreateRegeneratesSharedFiles) {
+  std::random_device entropy;
   const auto candidate = std::filesystem::temp_directory_path() /
-      ("perfecthash-retry-" + std::to_string(GetCurrentProcessId()) + "-" +
-       std::to_string(GetTickCount64()));
+      ("perfecthash-retry-" + std::to_string(entropy()) + "-" +
+       std::to_string(entropy()));
   ASSERT_TRUE(std::filesystem::create_directory(candidate));
   retryDirectory_ = candidate;
   const auto keysPath = retryDirectory_ / "Retry.keys";
@@ -152,12 +153,17 @@ TEST_F(PerfectHashArgvTests, FailedFileCreateRegeneratesSharedFiles) {
   keysString.Length = static_cast<USHORT>(keysName.size() * sizeof(WCHAR));
   keysString.MaximumLength = keysString.Length + sizeof(WCHAR);
   keysString.Buffer = keysName.data();
+#ifdef PH_WINDOWS
+#define PH_TEST_IID(Name) Name
+#else
+#define PH_TEST_IID(Name) &Name
+#endif
   ASSERT_EQ(S_OK, classFactory_->Vtbl->CreateInstance(
-      classFactory_, nullptr, IID_PERFECT_HASH_KEYS,
+      classFactory_, nullptr, PH_TEST_IID(IID_PERFECT_HASH_KEYS),
       reinterpret_cast<void **>(&retryKeys_)));
   ASSERT_EQ(S_OK, retryKeys_->Vtbl->Load(retryKeys_, nullptr, &keysString, sizeof(ULONG)));
   ASSERT_EQ(S_OK, classFactory_->Vtbl->CreateInstance(
-      classFactory_, nullptr, IID_PERFECT_HASH_TABLE,
+      classFactory_, nullptr, PH_TEST_IID(IID_PERFECT_HASH_TABLE),
       reinterpret_cast<void **>(&retryTable_)));
   auto tableVtbl = reinterpret_cast<TableShim *>(retryTable_)->Vtbl;
   PERFECT_HASH_TABLE_CREATE_FLAGS flags = {};
@@ -196,7 +202,7 @@ TEST_F(PerfectHashArgvTests, FailedFileCreateRegeneratesSharedFiles) {
   tableVtbl->Release(retryTable_);
   retryTable_ = nullptr;
   ASSERT_EQ(S_OK, classFactory_->Vtbl->CreateInstance(
-      classFactory_, nullptr, IID_PERFECT_HASH_TABLE,
+      classFactory_, nullptr, PH_TEST_IID(IID_PERFECT_HASH_TABLE),
       reinterpret_cast<void **>(&retryTable_)));
   tableVtbl = reinterpret_cast<TableShim *>(retryTable_)->Vtbl;
   params[0] = {};
@@ -208,8 +214,8 @@ TEST_F(PerfectHashArgvTests, FailedFileCreateRegeneratesSharedFiles) {
   EXPECT_EQ(PH_I_CREATE_TABLE_ROUTINE_FAILED_TO_FIND_SOLUTION, create());
   EXPECT_GT(std::filesystem::file_size(outputPath / "CompiledPerfectHash.props"), 0u);
   EXPECT_GT(std::filesystem::file_size(outputPath / "CompiledPerfectHash.h"), 0u);
+#undef PH_TEST_IID
 }
-#endif
 
 TEST_F(PerfectHashArgvTests, InvalidAlgorithmId) {
   const std::vector<std::string> args = {
