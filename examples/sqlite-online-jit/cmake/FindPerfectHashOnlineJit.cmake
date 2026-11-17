@@ -43,7 +43,9 @@ if(WIN32)
     set(_ph_static_suffixes lib/static build/lib/static)
     foreach(_ph_config IN LISTS _ph_configs)
         list(APPEND _ph_shared_suffixes "lib/${_ph_config}" "build/lib/${_ph_config}")
-        list(APPEND _ph_static_suffixes "lib/${_ph_config}/static" "build/lib/${_ph_config}/static")
+        list(APPEND _ph_static_suffixes
+            "lib/${_ph_config}/static" "build/lib/${_ph_config}/static"
+            "lib/static/${_ph_config}" "build/lib/static/${_ph_config}")
     endforeach()
     if(PH_ONLINE_JIT_PREFER_SHARED)
         set(_ph_lib_suffixes ${_ph_shared_suffixes} ${_ph_static_suffixes})
@@ -127,9 +129,11 @@ set(_ph_assume_static FALSE)
 unset(_ph_required_runtime)
 unset(_ph_runtime_error)
 if(WIN32)
-    # The Windows archives live under lib/static or lib/<config>/static.
+    # Static archives and DLL import libraries share the same .lib suffix.
     string(TOLOWER "${PERFECTHASH_ONLINE_JIT_LIBRARY_DIR}" _ph_archive_dir)
-    if(_ph_archive_dir MATCHES "[/\\\\]static$")
+    get_filename_component(_ph_lib_config "${PERFECTHASH_ONLINE_JIT_LIBRARY_DIR}" NAME)
+    if(_ph_archive_dir MATCHES "[/\\\\]static$" OR
+       (_ph_archive_dir MATCHES "[/\\\\]static[/\\\\][^/\\\\]+$" AND _ph_lib_config IN_LIST _ph_configs))
         set(_ph_assume_static TRUE)
         set(PERFECTHASH_ONLINE_JIT_RUNTIME_DLL "")
     elseif(PERFECTHASH_ONLINE_JIT_LIBRARY)
@@ -138,7 +142,6 @@ if(WIN32)
         # Re-evaluate the DLL when the import library, architecture or config changes.
         unset(PERFECTHASH_ONLINE_JIT_RUNTIME_DLL CACHE)
         unset(PERFECTHASH_ONLINE_JIT_RUNTIME_DLL)
-        get_filename_component(_ph_lib_config "${PERFECTHASH_ONLINE_JIT_LIBRARY_DIR}" NAME)
         if(_ph_lib_config IN_LIST _ph_configs)
             set(_ph_bin_dir "${PERFECTHASH_ONLINE_JIT_LIBRARY_DIR}/../../bin/${_ph_lib_config}")
         else()
