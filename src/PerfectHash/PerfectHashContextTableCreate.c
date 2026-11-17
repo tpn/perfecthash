@@ -144,6 +144,7 @@ Return Value:
     BOOLEAN FindBestGraph;
     ULONG NumberOfRows = 0;
     HRESULT Result = S_OK;
+    HRESULT CleanupResult;
     HRESULT TableCreateResult;
     PCHAR RowBuffer = NULL;
     PALLOCATOR Allocator;
@@ -469,6 +470,9 @@ Return Value:
     if (Result != S_OK) {
 
         Coverage = &EmptyCoverage;
+        // Informational solve outcomes are recorded in the CSV. The command
+        // completed successfully even when a fixed attempt budget ran out.
+        Result = S_OK;
 
     } else {
 
@@ -571,13 +575,15 @@ End:
     if (RowBuffer) {
         ASSERT(Context->RowBuffer);
         ASSERT(RowBufferSize != 0);
-        Result = Rtl->Vtbl->DestroyBuffer(Rtl,
-                                          ProcessHandle,
-                                          &RowBuffer,
-                                          RowBufferSize);
-        if (FAILED(Result)) {
+        CleanupResult = Rtl->Vtbl->DestroyBuffer(Rtl,
+                                                 ProcessHandle,
+                                                 &RowBuffer,
+                                                 RowBufferSize);
+        if (FAILED(CleanupResult)) {
             SYS_ERROR(VirtualFree);
-            Result = PH_E_SYSTEM_CALL_FAILED;
+            if (SUCCEEDED(Result)) {
+                Result = PH_E_SYSTEM_CALL_FAILED;
+            }
         }
         Context->RowBuffer = RowBuffer = NULL;
     }
@@ -600,9 +606,12 @@ End:
     }
 
     if (CsvFile) {
-        Result = CsvFile->Vtbl->Close(CsvFile, EndOfFile);
-        if (FAILED(Result)) {
-            PH_ERROR(PerfectHashTableCreate_CloseCsvFile, Result);
+        CleanupResult = CsvFile->Vtbl->Close(CsvFile, EndOfFile);
+        if (FAILED(CleanupResult)) {
+            PH_ERROR(PerfectHashTableCreate_CloseCsvFile, CleanupResult);
+            if (SUCCEEDED(Result)) {
+                Result = CleanupResult;
+            }
         }
     }
 

@@ -50,6 +50,9 @@ Return Value:
     }
 
     Table->SizeOfStruct = sizeof(*Table);
+    Table->JitInterface.Table = Table;
+    Table->JitInterface.Vtbl = &PerfectHashTableJitInterfaceVtbl;
+    Table->HashJitInterface.Table = Table;
 
     //
     // Create Rtl and Allocator components.

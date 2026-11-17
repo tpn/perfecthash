@@ -43,10 +43,9 @@ set_target_properties(perfecthash_unit_tests PROPERTIES
 
 if(PERFECTHASH_HAS_RAWDOG_JIT)
     target_compile_definitions(perfecthash_unit_tests PRIVATE PH_HAS_RAWDOG_JIT)
-    if(TARGET PerfectHashLLVM)
-        # The backend-switch test loads this plugin at runtime.
-        add_dependencies(perfecthash_unit_tests PerfectHashLLVM)
-    endif()
+endif()
+if(TARGET PerfectHashLLVM)
+    add_dependencies(perfecthash_unit_tests PerfectHashLLVM)
 endif()
 
 add_executable(perfecthash_online_jit_invalid_env
@@ -154,6 +153,12 @@ set(TEST_KEYS_DIR "${PERFECTHASH_ROOT_DIR}/keys")
 set(TEST_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/cli-out")
 
 if(TARGET PerfectHashCreateExe AND TARGET PerfectHashBulkCreateExe)
+    add_test(
+        NAME perfecthash.cli.exit_codes
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/check_cli_exit_codes.py
+            $<TARGET_FILE:PerfectHashCreateExe> $<TARGET_FILE:PerfectHashBulkCreateExe>
+    )
+
     add_test(
         NAME perfecthash.cli.create
         COMMAND ${CMAKE_COMMAND}

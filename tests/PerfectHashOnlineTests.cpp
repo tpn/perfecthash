@@ -688,6 +688,112 @@ TEST_F(PerfectHashOnlineTests, Assigned16RequiresGraphImpl3AndOptIn) {
 }
 
 #if defined(PH_HAS_RAWDOG_JIT)
+#if defined(PH_HAS_LLVM)
+TEST_F(PerfectHashOnlineTests, HeldJitInterfaceFollowsBackendRecompile) {
+  const std::vector<ULONG> keys = {1, 3, 5, 7, 11, 13, 17, 19};
+  auto *table = CreateTableFromKeys(keys, PerfectHashHashMultiplyShiftRFunctionId);
+  ASSERT_NE(table, nullptr);
+  auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
+  ULONG expected[2] = {};
+  ASSERT_GE(shim->Vtbl->Index(table, keys[0], &expected[0]), 0);
+  ASSERT_GE(shim->Vtbl->Index(table, keys[1], &expected[1]), 0);
+
+  PERFECT_HASH_TABLE_COMPILE_FLAGS flags = {};
+  flags.Jit = TRUE;
+  flags.JitBackendRawDog = TRUE;
+  ASSERT_GE(online_->Vtbl->CompileTable(online_, table, &flags), 0);
+  PPERFECT_HASH_TABLE_JIT_INTERFACE held = nullptr;
+  HRESULT result = shim->Vtbl->QueryInterface(
+      table,
+#ifdef PH_WINDOWS
+      IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
+#else
+      &IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
+#endif
+      reinterpret_cast<void **>(&held));
+  ASSERT_GE(result, 0);
+  ASSERT_NE(held, nullptr);
+
+  flags.JitBackendRawDog = FALSE;
+  flags.JitBackendLlvm = TRUE;
+  flags.JitIndex32x2 = TRUE;
+  ASSERT_GE(online_->Vtbl->CompileTable(online_, table, &flags), 0);
+  PERFECT_HASH_TABLE_JIT_INFO info = {};
+  ASSERT_GE(held->Vtbl->GetInfo(held, &info), 0);
+  ASSERT_TRUE(info.Flags.BackendLlvm);
+  ASSERT_TRUE(info.Flags.Index32x2Compiled);
+
+  // This table has only 32-bit keys. The failed request leaves the LLVM x2
+  // binding intact. The held interface owns its reference to the table.
+  flags.JitIndex64 = TRUE;
+  ASSERT_EQ(online_->Vtbl->CompileTable(online_, table, &flags), PH_E_NOT_IMPLEMENTED);
+  shim->Vtbl->Release(table);
+  ULONG actual[2] = {};
+  ASSERT_GE(held->Vtbl->Index32x2(held, keys[0], keys[1], &actual[0], &actual[1]), 0);
+  EXPECT_EQ(actual[0], expected[0]);
+  EXPECT_EQ(actual[1], expected[1]);
+  held->Vtbl->Release(held);
+}
+#endif
+
+#if defined(_M_ARM64) || defined(__aarch64__)
+TEST_F(PerfectHashOnlineTests, FailedRawDogVectorCompilePreservesBatchIndex) {
+  const std::vector<ULONG> keys = {1, 3, 5, 7, 11, 13, 17, 19};
+  auto *table = CreateTableFromKeys(keys, PerfectHashHashMultiplyShiftRFunctionId);
+  ASSERT_NE(table, nullptr);
+  auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
+  ULONG expected[4] = {};
+  for (size_t i = 0; i < 4; ++i) {
+    ASSERT_GE(shim->Vtbl->Index(table, keys[i], &expected[i]), 0);
+  }
+
+  PERFECT_HASH_TABLE_COMPILE_FLAGS flags = {};
+  flags.Jit = TRUE;
+  flags.JitBackendRawDog = TRUE;
+  flags.JitIndex32x4 = TRUE;
+  ASSERT_GE(online_->Vtbl->CompileTable(online_, table, &flags), 0);
+
+  // RawDog implements the ARM64 x4 entry using scalar instructions.
+  // The COM default permits partial widths, but this SIMD request fails.
+  flags.JitVectorIndex32x4 = TRUE;
+  ASSERT_EQ(online_->Vtbl->CompileTable(online_, table, &flags), PH_E_NOT_IMPLEMENTED);
+  PERFECT_HASH_TABLE_FLAGS table_flags = {};
+  ASSERT_GE(shim->Vtbl->GetFlags(table, sizeof(table_flags), &table_flags), 0);
+  ASSERT_TRUE(table_flags.JitEnabled);
+  PPERFECT_HASH_TABLE_JIT_INTERFACE jit = nullptr;
+  HRESULT result = shim->Vtbl->QueryInterface(
+      table,
+#ifdef PH_WINDOWS
+      IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
+#else
+      &IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
+#endif
+      reinterpret_cast<void **>(&jit));
+  ASSERT_GE(result, 0);
+  ASSERT_NE(jit, nullptr);
+  ULONG actual[4] = {};
+  ASSERT_GE(jit->Vtbl->Index32x4(jit, keys[0], keys[1], keys[2], keys[3],
+                                  &actual[0], &actual[1], &actual[2], &actual[3]), 0);
+  for (size_t i = 0; i < 4; ++i) {
+    EXPECT_EQ(actual[i], expected[i]);
+  }
+  jit->Vtbl->Release(jit);
+#if defined(PH_HAS_LLVM)
+  // With the default COM flags, LLVM can still install a usable scalar
+  // index when the requested ISA cap precludes its x16 routine.
+  flags = {};
+  flags.Jit = TRUE;
+  flags.JitBackendLlvm = TRUE;
+  flags.JitIndex32x16 = TRUE;
+  flags.JitMaxIsa = PerfectHashJitMaxIsaAvx2;
+  ASSERT_GE(online_->Vtbl->CompileTable(online_, table, &flags), 0);
+  ASSERT_GE(shim->Vtbl->Index(table, keys[0], &actual[0]), 0);
+  EXPECT_EQ(actual[0], expected[0]);
+#endif
+  shim->Vtbl->Release(table);
+}
+#endif
+
 TEST_F(PerfectHashOnlineTests, RawDogJitIndexMatchesSlowIndex) {
   const std::vector<ULONG> keys = {
       1, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53,
@@ -4401,6 +4507,11 @@ TEST_F(PerfectHashOnlineTests, JitInterfaceIndex32x16MatchesSlowIndex) {
   HRESULT result = online_->Vtbl->CompileTable(online_, table, &compileFlags);
   if (result < 0) {
     shim->Vtbl->Release(table);
+#ifdef PH_HAS_LLVM
+    if (arm64) {
+      FAIL() << "LLVM could not compile the NEON x16 index: " << result;
+    }
+#endif
     GTEST_SKIP() << "LLVM JIT unavailable on this host.";
   }
   ASSERT_GE(result, 0);

@@ -45,7 +45,7 @@ PhGetOnlineJitInterface(
     if (!Table->Table->Jit || !Table->Table->Jit->Flags.Valid) {
         return E_NOINTERFACE;
     }
-    *Interface = &Table->Table->Jit->Interface;
+    *Interface = &Table->Table->JitInterface;
     return S_OK;
 }
 

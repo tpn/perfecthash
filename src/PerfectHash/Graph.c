@@ -1092,7 +1092,7 @@ Return Value:
         return GraphHashKeys(Graph, NumberOfKeys, Keys);
     }
 
-    Jit = &HashJit->Interface;
+    Jit = &Table->HashJitInterface;
     Vtbl = Jit->Vtbl;
     if (!ARGUMENT_PRESENT(Vtbl) ||
         !ARGUMENT_PRESENT(Vtbl->BindHashEx)) {
@@ -1271,7 +1271,7 @@ Return Value:
         return GraphHashKeys16(Graph, NumberOfKeys, Keys);
     }
 
-    Jit = &HashJit->Interface;
+    Jit = &Table->HashJitInterface;
     Vtbl = Jit->Vtbl;
     if (!ARGUMENT_PRESENT(Vtbl)) {
         return GraphHashKeys16(Graph, NumberOfKeys, Keys);

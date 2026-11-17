@@ -68,6 +68,25 @@ jobs:
         run: |
           micromamba run -n "${{ matrix.env_name }}" ctest --test-dir "${{ matrix.build_dir }}" --output-on-failure -C Release --timeout 300
 
+      - name: Test installed ARM64 JIT libraries
+        if: matrix.name == 'linux-arm64-py313'
+        shell: bash -l {0}
+        run: |
+          set -euo pipefail
+          prefix="$RUNNER_TEMP/perfecthash-installed"
+          build_dir="${{ matrix.build_dir }}"
+          micromamba run -n "${{ matrix.env_name }}" cmake --install "$build_dir" --config Release --prefix "$prefix"
+          mapfile -t core < <(find "$prefix" -type f -name libPerfectHashOnlineCore.so)
+          [[ ${#core[@]} == 1 ]]
+          # Bind the test client to installed Core. Core must find the sibling LLVM plugin itself.
+          micromamba run -n "${{ matrix.env_name }}" env -u LD_LIBRARY_PATH LD_PRELOAD="${core[0]}" \
+            LD_DEBUG=files LD_DEBUG_OUTPUT="$RUNNER_TEMP/jit-loader" \
+            "$build_dir/bin/Release/perfecthash_arm64_online_core_tests" --gtest_color=no \
+            --gtest_filter='*Arm64*StrictWidthsMatchScalar:*SwitchBackendsAndReportCompiledWidth' \
+            | tee "$RUNNER_TEMP/installed-jit.log"
+          grep -Fxq '[  PASSED  ] 3 tests.' "$RUNNER_TEMP/installed-jit.log"
+          grep -Fq "calling init: ${core[0]%/*}/libPerfectHashLLVM.so" "$RUNNER_TEMP"/jit-loader.*
+
       - name: Examples (RawDog JIT + LLVM JIT + sqlite-online-jit)
         shell: bash -l {0}
         run: |

@@ -154,6 +154,8 @@ Return Value:
     BOOLEAN FindBestGraph;
     BOOLEAN MonitorLowMemory;
     HRESULT Result;
+    HRESULT CleanupResult;
+    HRESULT FirstFailure = S_OK;
     HRESULT TableCreateResult;
     PCHAR Buffer;
     PCHAR BaseBuffer = NULL;
@@ -485,6 +487,7 @@ Return Value:
         Result = PH_E_SYSTEM_CALL_FAILED;
         goto Error;
     }
+    FindHandle = NULL;
 
     //
     // Now that we know how many *.keys files to expect in the target directory,
@@ -820,6 +823,9 @@ Return Value:
     ReleaseKeys:
 
         RELEASE(Keys);
+        if (FAILED(Result) && SUCCEEDED(FirstFailure)) {
+            FirstFailure = Result;
+        }
 
         if (Terminate || CtrlCPressed) {
             break;
@@ -836,6 +842,9 @@ Return Value:
     if ((!Failures && !Terminate) || CtrlCPressed) {
         Result = S_OK;
         goto End;
+    }
+    if (FAILED(FirstFailure)) {
+        Result = FirstFailure;
     }
 
     //
@@ -866,26 +875,30 @@ End:
 
     if (RowBuffer) {
         ASSERT(Context->RowBuffer);
-        Result = Rtl->Vtbl->DestroyBuffer(Rtl,
-                                          ProcessHandle,
-                                          &RowBuffer,
-                                          RowBufferSize);
-        if (FAILED(Result)) {
+        CleanupResult = Rtl->Vtbl->DestroyBuffer(Rtl,
+                                                 ProcessHandle,
+                                                 &RowBuffer,
+                                                 RowBufferSize);
+        if (FAILED(CleanupResult)) {
             SYS_ERROR(VirtualFree);
-            Result = PH_E_SYSTEM_CALL_FAILED;
+            if (SUCCEEDED(Result)) {
+                Result = PH_E_SYSTEM_CALL_FAILED;
+            }
         }
         Context->RowBuffer = RowBuffer = NULL;
     }
 
     if (BaseBuffer) {
         ASSERT(BufferSize != 0);
-        Result = Rtl->Vtbl->DestroyBuffer(Rtl,
-                                          ProcessHandle,
-                                          &BaseBuffer,
-                                          BufferSize);
-        if (FAILED(Result)) {
+        CleanupResult = Rtl->Vtbl->DestroyBuffer(Rtl,
+                                                 ProcessHandle,
+                                                 &BaseBuffer,
+                                                 BufferSize);
+        if (FAILED(CleanupResult)) {
             SYS_ERROR(VirtualFree);
-            Result = PH_E_SYSTEM_CALL_FAILED;
+            if (SUCCEEDED(Result)) {
+                Result = PH_E_SYSTEM_CALL_FAILED;
+            }
         }
         BaseBuffer = NULL;
     }
@@ -893,7 +906,9 @@ End:
     if (FindHandle) {
         if (!FindClose(FindHandle)) {
             SYS_ERROR(FindClose);
-            Result = PH_E_SYSTEM_CALL_FAILED;
+            if (SUCCEEDED(Result)) {
+                Result = PH_E_SYSTEM_CALL_FAILED;
+            }
         }
         FindHandle = NULL;
     }
@@ -913,9 +928,12 @@ End:
     }
 
     if (CsvFile) {
-        Result = CsvFile->Vtbl->Close(CsvFile, EndOfFile);
-        if (FAILED(Result)) {
-            PH_ERROR(PerfectHashBulkCreate_CloseCsvFile, Result);
+        CleanupResult = CsvFile->Vtbl->Close(CsvFile, EndOfFile);
+        if (FAILED(CleanupResult)) {
+            PH_ERROR(PerfectHashBulkCreate_CloseCsvFile, CleanupResult);
+            if (SUCCEEDED(Result)) {
+                Result = CleanupResult;
+            }
         }
     }
 

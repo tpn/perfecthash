@@ -156,6 +156,7 @@ source_group("Resource Files" FILES ${Resource_Files})
 set(Source_Files
     "BitManipulation.c"
     "ChmOnline01Stub.c"
+    "PerfectHashTableJitInterface.c"
     "ChmOnline01HashJit.c"
     "Chm01Shared.c"
     "Chm01FileWork.c"
@@ -5232,6 +5233,19 @@ set(llvm_target PerfectHashLLVM)
 
 if(PERFECTHASH_HAS_LLVM)
     add_library(${llvm_target} SHARED ${LLVM_SOURCE_FILES})
+    # Online clients load this plugin on demand, including in a subproject
+    # where only the downstream client's link dependencies are built.
+    foreach(ph_library ${online_target} ${online_static_target} ${online_core_target} ${online_core_static_target})
+        add_dependencies(${ph_library} ${llvm_target})
+    endforeach()
+    if(PERFECTHASH_IS_LINUX)
+        # With a static archive, dlopen runs from the consumer binary. Resolve
+        # the plugin directory from the active build or imported package target.
+        foreach(ph_archive ${online_static_target} ${online_core_static_target})
+            target_link_options(${ph_archive} INTERFACE
+                "LINKER:-rpath,$<TARGET_FILE_DIR:PerfectHash::${llvm_target}>")
+        endforeach()
+    endif()
 endif()
 
 if(PERFECTHASH_IS_LINUX)

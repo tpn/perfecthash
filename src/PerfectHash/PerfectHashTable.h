@@ -365,6 +365,8 @@ typedef struct _PERFECT_HASH_TABLE_JIT_INTERFACE {
 typedef PERFECT_HASH_TABLE_JIT_INTERFACE
       *PPERFECT_HASH_TABLE_JIT_INTERFACE;
 
+extern PERFECT_HASH_TABLE_JIT_INTERFACE_VTBL PerfectHashTableJitInterfaceVtbl;
+
 //
 // Define the PERFECT_HASH_TABLE_HASH_JIT_INTERFACE structure used for
 // QueryInterface exposure of hash JIT-compiled routines.
@@ -410,7 +412,6 @@ typedef struct _PERFECT_HASH_TABLE_JIT {
     PPERFECT_HASH_TABLE_QUERY_INTERFACE OriginalQueryInterface;
     CHAR TargetCpu[PERFECT_HASH_JIT_CPU_NAME_MAX_CHARS];
     CHAR TargetFeatures[PERFECT_HASH_JIT_CPU_FEATURES_MAX_CHARS];
-    PERFECT_HASH_TABLE_JIT_INTERFACE Interface;
 #if defined(PH_WINDOWS) && defined(_M_ARM64)
     // One OS function table per separately allocated RawDog batch routine.
     RUNTIME_FUNCTION RawDogBatchUnwind[3];
@@ -451,7 +452,6 @@ typedef struct _PERFECT_HASH_TABLE_HASH_JIT {
     PVOID Hash16Ex32x8Function;
     PVOID Hash16Ex32x16Function;
     PPERFECT_HASH_TABLE_QUERY_INTERFACE OriginalQueryInterface;
-    PERFECT_HASH_TABLE_HASH_JIT_INTERFACE Interface;
 } PERFECT_HASH_TABLE_HASH_JIT;
 typedef PERFECT_HASH_TABLE_HASH_JIT *PPERFECT_HASH_TABLE_HASH_JIT;
 
@@ -913,6 +913,10 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
 
     PPERFECT_HASH_TABLE_JIT Jit;
     PPERFECT_HASH_TABLE_HASH_JIT HashJit;
+    // QueryInterface retains the table, so the interface must outlive each
+    // individual set of compiled functions.
+    PERFECT_HASH_TABLE_JIT_INTERFACE JitInterface;
+    PERFECT_HASH_TABLE_HASH_JIT_INTERFACE HashJitInterface;
 
 } PERFECT_HASH_TABLE;
 typedef PERFECT_HASH_TABLE *PPERFECT_HASH_TABLE;

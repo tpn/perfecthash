@@ -1830,10 +1830,8 @@ int RunCompare(const BenchmarkOptions &base) {
                  false,
                  false,
                  false);
-#if defined(PH_WINDOWS)
         addEntry("batch", "rawdog", "x16", BenchmarkOptions::JitBackend::RawDog,
                  PerfectHashJitMaxIsaNeon, false, false, true, false, false);
-#endif
       }
     } else {
       if (isaAllowed(PerfectHashJitMaxIsaAvx)) {
