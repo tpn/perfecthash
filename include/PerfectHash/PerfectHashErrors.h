@@ -5269,3 +5269,4 @@ Abstract:
 // The table was created successfully, however, the values array could not be allocated.  The table cannot be used.
 //
 #define PH_E_ONLINE_TABLE_CREATED_BUT_VALUES_ARRAY_ALLOC_FAILED ((HRESULT)0xE0040087L)
+
