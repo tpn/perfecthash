@@ -5050,10 +5050,15 @@ if(WIN32)
 endif()
 
 if(PERFECTHASH_IS_LINUX AND PERFECTHASH_ARCH_X86_64)
+    #
+    # Only AVX2 is enabled for the whole file; the AVX-512 routines enable
+    # their extensions per function (see PH_TARGET_AVX512 in GraphAvx.c), so
+    # the AVX2 routines stay runnable on processors without AVX-512.
+    #
     set_source_files_properties(
         "GraphAvx.c"
         PROPERTIES
-        COMPILE_OPTIONS "-mavx2;-mavx512f;-mavx512bw;-mavx512vl;-mavx512dq;-mavx512cd"
+        COMPILE_OPTIONS "-mavx2"
     )
 endif()
 

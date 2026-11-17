@@ -16,6 +16,21 @@ Abstract:
 #include "stdafx.h"
 #include "PerfectHashEventsPrivate.h"
 
+//
+// The AVX2 routines in this file must contain only instructions that an
+// AVX2-only processor can execute, so they use AVX/AVX2 intrinsics exclusively
+// and the file is not compiled with AVX-512 enabled.  GCC and Clang instead
+// enable the AVX-512 extensions per routine via PH_TARGET_AVX512.  (MSVC emits
+// the instruction each intrinsic names and needs no annotation.)
+//
+
+#if defined(__GNUC__) || defined(__clang__)
+#define PH_TARGET_AVX512 \
+    __attribute__((target("avx512f,avx512bw,avx512vl,avx512dq,avx512cd")))
+#else
+#define PH_TARGET_AVX512
+#endif
+
 _Must_inspect_result_
 _Success_(return >= 0)
 _Requires_exclusive_lock_held_(Graph->Lock)
@@ -138,7 +153,7 @@ Return Value:
         // Load 8 keys into our YMM register.
         //
 
-        KeysYmm = _mm256_loadu_epi32(Edges);
+        KeysYmm = _mm256_loadu_si256((const __m256i *)Edges);
 
         //
         // Perform vectorized multiply, shift, then and-masking against 8
@@ -151,7 +166,7 @@ Return Value:
 
         Vertex1Ymm = _mm256_mullo_epi32(KeysYmm, Seed1Ymm);
         Vertex1Ymm = _mm256_srli_epi32(Vertex1Ymm, Seed3.Byte1);
-        Vertex1Ymm = _mm256_and_epi32(Vertex1Ymm, HashMaskYmm);
+        Vertex1Ymm = _mm256_and_si256(Vertex1Ymm, HashMaskYmm);
 
         //
         // Vertex 2: (((Key * SEED2) >> SEED3_BYTE2) & Mask)
@@ -159,7 +174,7 @@ Return Value:
 
         Vertex2Ymm = _mm256_mullo_epi32(KeysYmm, Seed2Ymm);
         Vertex2Ymm = _mm256_srli_epi32(Vertex2Ymm, Seed3.Byte2);
-        Vertex2Ymm = _mm256_and_epi32(Vertex2Ymm, HashMaskYmm);
+        Vertex2Ymm = _mm256_and_si256(Vertex2Ymm, HashMaskYmm);
 
         //
         // Compare each pair of vertices against each other to see if there
@@ -251,7 +266,7 @@ Return Value:
         Ymm1 = _mm256_permutevar8x32_epi32(Vertex1Ymm, Imm0);
         Ymm2 = _mm256_permutevar8x32_epi32(Vertex2Ymm, Imm0);
         Ymm3 = _mm256_blend_epi32(Ymm1, Ymm2, 0xaa);
-        _mm256_storeu_epi32(VertexPairsYmm, Ymm3);
+        _mm256_storeu_si256((__m256i *)VertexPairsYmm, Ymm3);
         VertexPairsYmm++;
 
         //
@@ -261,7 +276,7 @@ Return Value:
         Ymm1 = _mm256_permutevar8x32_epi32(Vertex1Ymm, Imm1);
         Ymm2 = _mm256_permutevar8x32_epi32(Vertex2Ymm, Imm1);
         Ymm3 = _mm256_blend_epi32(Ymm1, Ymm2, 0xaa);
-        _mm256_storeu_epi32(VertexPairsYmm, Ymm3);
+        _mm256_storeu_si256((__m256i *)VertexPairsYmm, Ymm3);
         VertexPairsYmm++;
 
         //IACA_VC_END();
@@ -310,6 +325,7 @@ End:
 }
 
 
+PH_TARGET_AVX512
 _Must_inspect_result_
 _Success_(return >= 0)
 _Requires_exclusive_lock_held_(Graph->Lock)
@@ -706,7 +722,7 @@ Return Value:
         // Load 8 keys into our YMM register.
         //
 
-        KeysYmm = _mm256_loadu_epi32(Edges);
+        KeysYmm = _mm256_loadu_si256((const __m256i *)Edges);
 
         //
         // Perform vectorized multiply and shift ops against 8 keys at a time,
@@ -754,7 +770,7 @@ Return Value:
         Ymm1 = _mm256_permutevar8x32_epi32(Vertex1Ymm, Imm0);
         Ymm2 = _mm256_permutevar8x32_epi32(Vertex2Ymm, Imm0);
         Ymm3 = _mm256_blend_epi32(Ymm1, Ymm2, 0xaa);
-        _mm256_storeu_epi32(VertexPairsYmm, Ymm3);
+        _mm256_storeu_si256((__m256i *)VertexPairsYmm, Ymm3);
         VertexPairsYmm++;
 
         //
@@ -764,7 +780,7 @@ Return Value:
         Ymm1 = _mm256_permutevar8x32_epi32(Vertex1Ymm, Imm1);
         Ymm2 = _mm256_permutevar8x32_epi32(Vertex2Ymm, Imm1);
         Ymm3 = _mm256_blend_epi32(Ymm1, Ymm2, 0xaa);
-        _mm256_storeu_epi32(VertexPairsYmm, Ymm3);
+        _mm256_storeu_si256((__m256i *)VertexPairsYmm, Ymm3);
         VertexPairsYmm++;
 
         //IACA_VC_END();
@@ -810,6 +826,7 @@ End:
     return Result;
 }
 
+PH_TARGET_AVX512
 _Must_inspect_result_
 _Success_(return >= 0)
 _Requires_exclusive_lock_held_(Graph->Lock)
@@ -1080,6 +1097,7 @@ End:
     return Result;
 }
 
+PH_TARGET_AVX512
 _Must_inspect_result_
 _Success_(return >= 0)
 _Requires_exclusive_lock_held_(Graph->Lock)
