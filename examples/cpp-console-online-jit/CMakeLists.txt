@@ -159,7 +159,12 @@ if(WIN32)
         endif()
     endif()
 
-    if(_ph_runtime_dlls)
+    if(NOT PH_ONLINE_JIT_USE_FETCHCONTENT AND PERFECTHASH_ONLINE_JIT_STATIC_DEPLOY_ARGS)
+        add_custom_command(TARGET cpp-console-online-jit POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E "${PERFECTHASH_ONLINE_JIT_STATIC_DEPLOY_ARGS}"
+            WORKING_DIRECTORY "$<TARGET_FILE_DIR:cpp-console-online-jit>"
+            COMMAND_EXPAND_LISTS VERBATIM)
+    elseif(_ph_runtime_dlls)
         add_custom_command(TARGET cpp-console-online-jit POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_if_different ${_ph_runtime_dlls}
                     "$<TARGET_FILE_DIR:cpp-console-online-jit>"

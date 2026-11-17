@@ -60,6 +60,25 @@ jobs:
           & "$root/build/examples/sqlite-online-jit/Release/sqlite-online-jit.exe" --backend llvm-jit --dim-size 2000 --fact-size 20000 --iterations 2 --vector-width 1
           & "$root/build/examples/sqlite-online-jit/Release/sqlite-online-jit.exe" --matrix --dim-size 512 --fact-size 4096 --iterations 1
 
+      - name: Run standalone examples against the static-only Release SDK
+        shell: pwsh
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          $scratch = "$env:RUNNER_TEMP/perfecthash-static-examples"
+          $sdk = "$scratch/sdk"
+          $archives = "$sdk/lib/static/Release"
+          New-Item -ItemType Directory -Path $archives -Force | Out-Null
+          Copy-Item include $sdk -Recurse
+          Copy-Item build/lib/Release/static/PerfectHashOnlineCore.lib, build/lib/Release/PerfectHashAsm.lib $archives
+          foreach ($example in 'cpp-console-online-jit', 'sqlite-online-jit') {
+            cmake -S "examples/$example" -B "$scratch/$example" -G "Ninja Multi-Config" "-DPERFECTHASH_ROOT=$sdk"
+            cmake --build "$scratch/$example" --config Release --parallel
+          }
+          $console = & "$scratch/cpp-console-online-jit/Release/cpp-console-online-jit.exe" --backend rawdog-jit --vector-width 1
+          if (!($console -match 'mode=jit\.')) { throw "Console example did not use the JIT. $console" }
+          $sqlite = & "$scratch/sqlite-online-jit/Release/sqlite-online-jit.exe" --backend rawdog-jit --vector-width 1 --dim-size 512 --fact-size 4096 --iterations 1
+          if (!($sqlite -match 'jit enabled:\s+1$')) { throw "SQLite example did not use the JIT. $sqlite" }
+
   arm64-jit:
     runs-on: windows-11-arm
     steps:
