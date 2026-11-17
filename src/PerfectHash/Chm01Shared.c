@@ -394,7 +394,10 @@ Return Value:
     } else {
         UseAssigned16 = FALSE;
         AssignedShift = ASSIGNED_SHIFT;
-        Table->State.UsingAssigned16 = FALSE;
+        if (Table->State.UsingAssigned16) {
+            Table->State.UsingAssigned16 = FALSE;
+            CompletePerfectHashTableInitialization(Table);
+        }
     }
 
     //

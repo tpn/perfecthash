@@ -533,6 +533,13 @@ Return Value:
 
 Error:
 
+    if (!Table->Flags.Created && !Table->Flags.Loaded) {
+        PerfectHashTableReleaseOwnedData(Table);
+        PerfectHashTableReleaseFiles(Table);
+        Table->TableInfoOnDisk = NULL;
+        Table->TableDataBaseAddress = NULL;
+    }
+
     if (Result == S_OK) {
         Result = E_UNEXPECTED;
     }
@@ -625,6 +632,10 @@ Return Value:
 
     GraphImpl = DEFAULT_GRAPH_IMPL_VERSION;
     FixedAttempts = 0;
+    Context->FixedAttempts = 0;
+    Context->SolveDeadlineMilliseconds = 0;
+    Table->MaxSolveTimeInSeconds = 0;
+    Table->RelativeMaxSolveTimeInFiletime.AsULongLong = 0;
 
     if (Count == 0) {
         if (Param != NULL) {

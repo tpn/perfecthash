@@ -1,5 +1,5 @@
 
-DECLARE_BENCHMARK_INDEX_CPH_ROUTINE()
+static ULONG CPHCALLTYPE CphBenchmarkIndexBody(ULONG Seconds)
 {
     CPHKEY Key;
     CPHINDEX Index;
@@ -58,3 +58,8 @@ DECLARE_BENCHMARK_INDEX_CPH_ROUTINE()
     return Best;
 }
 
+
+DECLARE_BENCHMARK_INDEX_CPH_ROUTINE()
+{
+    return CphRunCycleBenchmark(CphBenchmarkIndexBody, Seconds);
+}

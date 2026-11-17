@@ -559,6 +559,12 @@ Return Value:
 
 RetryWithLargerTableSize:
 
+    if (Context->SolveDeadlineMilliseconds &&
+        GetTickCount64() >= Context->SolveDeadlineMilliseconds) {
+        Result = PH_I_SOLVE_TIMEOUT_EXPIRED;
+        goto Error;
+    }
+
     //
     // Explicitly reset all events.  This ensures everything is back in the
     // starting state if we happen to be attempting to solve the graph after
@@ -621,19 +627,12 @@ RetryWithLargerTableSize:
         }
     }
 
-#if 0
-    //
-    // If we've been asked to cap the maximum solve time, submit a threadpool
-    // timer now to achieve that.
-    //
-
-    if (Table->MaxSolveTimeInSeconds > 0) {
-        SetThreadpoolTimer(Context->SolveTimeout,
-                           &Table->RelativeMaxSolveTimeInFiletime.AsFileTime,
-                           0,
-                           0);
+    // The compatibility pool has no solve timer. Workers check this monotonic
+    // deadline between graph operations, preserving one budget across resizes.
+    if (Table->MaxSolveTimeInSeconds > 0 && Attempt == 1) {
+        Context->SolveDeadlineMilliseconds = GetTickCount64() +
+            (ULONGLONG)Table->MaxSolveTimeInSeconds * 1000;
     }
-#endif
 
     //
     // Submit all of the file preparation work items.
@@ -971,7 +970,8 @@ RetryWithLargerTableSize:
 
             if (Context->State.AllGraphsFailedMemoryAllocation != FALSE) {
                 Result = PH_I_FAILED_TO_ALLOCATE_MEMORY_FOR_ALL_GRAPHS;
-            } else if (Context->State.SolveTimeoutExpired != FALSE) {
+            } else if (WaitForSingleObject(Context->SolveTimeoutExpiredEvent,
+                                           0) == WAIT_OBJECT_0) {
                 Result = PH_I_SOLVE_TIMEOUT_EXPIRED;
             } else {
                 Result = PH_I_CREATE_TABLE_ROUTINE_FAILED_TO_FIND_SOLUTION;
@@ -1293,6 +1293,9 @@ FinishedSolution:
     CONTEXT_START_TIMERS(Verify);
 
     Result = Graph->Vtbl->Verify(Graph);
+    if (Result == PH_S_GRAPH_VERIFICATION_SKIPPED) {
+        Result = S_OK;
+    }
 
     CONTEXT_END_TIMERS(Verify);
 
@@ -1533,6 +1536,12 @@ Return Value:
 
     InterlockedIncrement(&Context->ActiveSolvingLoops);
 
+    // Context is already attached on the compatibility path. Check the
+    // deadline before EnterSolvingLoop allocates graph storage.
+    if (!GraphShouldWeContinueTryingToSolve(Graph)) {
+        goto SolverFinished;
+    }
+
     Result = Graph->Vtbl->EnterSolvingLoop(Graph);
 
     if (FAILED(Result)) {
@@ -1557,6 +1566,8 @@ Return Value:
             PH_RAISE(Result);
         }
     }
+
+SolverFinished:
 
     InterlockedDecrement(&Context->ActiveSolvingLoops);
 

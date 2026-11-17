@@ -163,7 +163,7 @@ SaveTableInfoStreamChm01(
     // Update state indicating table info has been heap-allocated.
     //
 
-    Table->State.TableInfoOnDiskWasHeapAllocated = TRUE;
+    PerfectHashTablePublishOwnedData(Table, TRUE);
 
     //
     // We're done, jump to the end.

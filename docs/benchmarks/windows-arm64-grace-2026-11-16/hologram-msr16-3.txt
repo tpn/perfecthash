@@ -1,0 +1,29 @@
+PerfectHash benchmarks
+  Keys:       31016
+  Keys file:  keys/HologramWorld-31016.keys
+  Hash:       MultiplyShiftR
+  Graph Impl: 3
+  Iterations: 5
+  Loops:      50
+  JIT:        off
+  JIT Backend: auto
+  JIT Max ISA: auto
+  Seeds:      0xd5557d96,0x37bc1058,0x1010
+  Max Solve Time: 30s
+  Index32x2:  off
+  Index32x4:  off
+  Index32x8:  off
+  Index32x16: off
+  JIT Vec32x2: off
+  JIT Vec32x4: off
+  JIT Vec32x8: off
+  Allow Assigned16: on
+Key sort time:           0.2285 ms
+Build time (PerfectHash): 15.3955 ms
+Build time (unordered_map): 3.9763 ms
+Build time (map): 2.0586 ms
+Lookup avg (PerfectHash): 6.83384 ms (4.4 ns/op)
+Lookup avg (unordered_map): 2e+01 ms (10.4 ns/op)
+Lookup avg (map): 7e+01 ms (43.7 ns/op)
+Assigned element bits:   16
+Sink: 0

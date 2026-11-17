@@ -1,0 +1,6 @@
+BenchmarkIndex_HologramWorld_31016_Chm01_MultiplyShiftR_And.exe: 4020 cycles per 1000-call batch
+BenchmarkIndex_HologramWorld_31016_Chm01_Mulshrolate1RX_And.exe: 4302 cycles per 1000-call batch
+BenchmarkIndex_HologramWorld_31016_Chm01_Mulshrolate2RX_And.exe: 4065 cycles per 1000-call batch
+BenchmarkIndex_HologramWorld_31016_Chm01_Mulshrolate3RX_And.exe: 4354 cycles per 1000-call batch
+BenchmarkIndex_HologramWorld_31016_Chm01_Mulshrolate4RX_And.exe: 5010 cycles per 1000-call batch
+BenchmarkIndex_HologramWorld_31016_Chm01_MultiplyShiftRX_And.exe: 4009 cycles per 1000-call batch

@@ -74,93 +74,17 @@ GRAPH_REGISTER_SOLVED GraphRegisterSolved16NoBestCoverage;
 // COM scaffolding routines for initialization and rundown.
 //
 
-GRAPH_INITIALIZE GraphInitialize;
-
-_Use_decl_annotations_
-HRESULT
-GraphInitialize(
-    PGRAPH Graph
+// Select routines consistently for new graphs and graphs resized to 32 bits.
+static
+VOID
+GraphInitializeRoutines(
+    PGRAPH Graph,
+    PPERFECT_HASH_TABLE Table,
+    PERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags
     )
-/*++
-
-Routine Description:
-
-    Initializes a graph structure.  This is a relatively simple method that
-    just primes the COM scaffolding.
-
-Arguments:
-
-    Graph - Supplies a pointer to a GRAPH structure for which initialization
-        is to be performed.
-
-Return Value:
-
-    S_OK - Success.
-
-    E_POINTER - Graph is NULL.
-
-    E_UNEXPECTED - All other errors.
-
---*/
 {
-    PRTL Rtl;
-    HRESULT Result = S_OK;
-    PPERFECT_HASH_TABLE Table;
-    PPERFECT_HASH_TLS_CONTEXT TlsContext;
-    PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId;
-    PERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags;
-
-    if (!ARGUMENT_PRESENT(Graph)) {
-        return E_POINTER;
-    }
-
-    Graph->SizeOfStruct = sizeof(*Graph);
-
-    //
-    // Create Rtl and Allocator components.
-    //
-
-    Result = Graph->Vtbl->CreateInstance(Graph,
-                                         NULL,
-                                         &IID_PERFECT_HASH_RTL,
-                                         PPV(&Graph->Rtl));
-
-    if (FAILED(Result)) {
-        goto Error;
-    }
-
-    Result = Graph->Vtbl->CreateInstance(Graph,
-                                         NULL,
-                                         &IID_PERFECT_HASH_ALLOCATOR,
-                                         PPV(&Graph->Allocator));
-
-    if (FAILED(Result)) {
-        goto Error;
-    }
-
-    Result = Graph->Vtbl->CreateInstance(Graph,
-                                         NULL,
-                                         &IID_PERFECT_HASH_RNG,
-                                         PPV(&Graph->Rng));
-
-    if (FAILED(Result)) {
-        goto Error;
-    }
-
-    //
-    // Load the items we need from the TLS context.
-    //
-
-    TlsContext = PerfectHashTlsEnsureContext();
-    Table = TlsContext->Table;
-    TableCreateFlags.AsULongLong = TlsContext->TableCreateFlags.AsULongLong;
-    HashFunctionId = TlsContext->Table->HashFunctionId;
-
-    Rtl = Graph->Rtl;
-
-#ifdef PH_USE_CUDA
-    Graph->HashFunctionId = HashFunctionId;
-#endif
+    PRTL Rtl = Graph->Rtl;
+    PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId = Table->HashFunctionId;
 
     //
     // Override vtbl methods based on table state and table create flags.
@@ -361,6 +285,95 @@ Return Value:
 
 #endif // _M_AMD64 || _M_X64
 
+}
+
+GRAPH_INITIALIZE GraphInitialize;
+
+_Use_decl_annotations_
+HRESULT
+GraphInitialize(
+    PGRAPH Graph
+    )
+/*++
+
+Routine Description:
+
+    Initializes a graph structure.  This is a relatively simple method that
+    just primes the COM scaffolding.
+
+Arguments:
+
+    Graph - Supplies a pointer to a GRAPH structure for which initialization
+        is to be performed.
+
+Return Value:
+
+    S_OK - Success.
+
+    E_POINTER - Graph is NULL.
+
+    E_UNEXPECTED - All other errors.
+
+--*/
+{
+    HRESULT Result = S_OK;
+    PPERFECT_HASH_TABLE Table;
+    PPERFECT_HASH_TLS_CONTEXT TlsContext;
+    PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId;
+    PERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags;
+
+    if (!ARGUMENT_PRESENT(Graph)) {
+        return E_POINTER;
+    }
+
+    Graph->SizeOfStruct = sizeof(*Graph);
+
+    //
+    // Create Rtl and Allocator components.
+    //
+
+    Result = Graph->Vtbl->CreateInstance(Graph,
+                                         NULL,
+                                         &IID_PERFECT_HASH_RTL,
+                                         PPV(&Graph->Rtl));
+
+    if (FAILED(Result)) {
+        goto Error;
+    }
+
+    Result = Graph->Vtbl->CreateInstance(Graph,
+                                         NULL,
+                                         &IID_PERFECT_HASH_ALLOCATOR,
+                                         PPV(&Graph->Allocator));
+
+    if (FAILED(Result)) {
+        goto Error;
+    }
+
+    Result = Graph->Vtbl->CreateInstance(Graph,
+                                         NULL,
+                                         &IID_PERFECT_HASH_RNG,
+                                         PPV(&Graph->Rng));
+
+    if (FAILED(Result)) {
+        goto Error;
+    }
+
+    //
+    // Load the items we need from the TLS context.
+    //
+
+    TlsContext = PerfectHashTlsEnsureContext();
+    Table = TlsContext->Table;
+    TableCreateFlags.AsULongLong = TlsContext->TableCreateFlags.AsULongLong;
+    HashFunctionId = TlsContext->Table->HashFunctionId;
+
+#ifdef PH_USE_CUDA
+    Graph->HashFunctionId = HashFunctionId;
+#endif
+
+    GraphInitializeRoutines(Graph, Table, TableCreateFlags);
+
     //
     // Create an activity GUID to track this graph in ETW events.
     //
@@ -440,7 +453,7 @@ Return Value:
 
     if (Graph->VertexPairs != NULL) {
         if (!VirtualFree(Graph->VertexPairs,
-                         VFS(Graph->Info->VertexPairsSizeInBytes),
+                         VFS(Graph->VertexPairsAllocationSizeInBytes),
                          MEM_RELEASE)) {
             SYS_ERROR(VirtualFree);
         }
@@ -483,6 +496,12 @@ Return Value:
     PPERFECT_HASH_CONTEXT Context;
 
     Context = Graph->Context;
+
+    if (Context->SolveDeadlineMilliseconds &&
+        GetTickCount64() >= Context->SolveDeadlineMilliseconds) {
+        SetEvent(Context->SolveTimeoutExpiredEvent);
+        SetStopSolving(Context);
+    }
 
     //
     // If ctrl-C has been pressed, set stop solving.  Continue solving unless
@@ -623,6 +642,16 @@ Return Value:
     //
     // We created an acyclic graph.
     //
+
+    // Accept only solutions discovered within the solve budget. Assignment
+    // and coordinator processing may complete after this acceptance point.
+    if (Context->SolveDeadlineMilliseconds &&
+        GetTickCount64() >= Context->SolveDeadlineMilliseconds) {
+        SetEvent(Context->SolveTimeoutExpiredEvent);
+        SetStopSolving(Context);
+        Result = PH_S_STOP_GRAPH_SOLVING;
+        goto End;
+    }
 
     //
     // Update the context's most recent solved attempt.
@@ -4342,6 +4371,31 @@ Return Value:
 
     Result = S_OK;
 
+    // A resize can cross the 16-bit vertex limit.  Reset every routine
+    // that interprets graph storage before selecting the graph implementation.
+    if (IsUsingAssigned16(Graph) && !Table->State.UsingAssigned16) {
+        PERFECT_HASH_TABLE_CREATE_FLAGS ResizeFlags = TableCreateFlags;
+
+        // Workers must not replace the shared LLVM execution engine here.
+        // Select the requested AVX routines or scalar fallback after resize;
+        // the old hash JIT stays alive until normal table cleanup.
+        ResizeFlags.TryUseJitHashFunction = FALSE;
+        Graph->Flags.UsingAssigned16 = FALSE;
+        Graph->Flags.UsedAvx2HashFunction = FALSE;
+        Graph->Flags.UsedAvx512HashFunction = FALSE;
+        Graph->Flags.UsedAvx2MemoryCoverageFunction = FALSE;
+        Graph->Vtbl->HashKeys = GraphHashKeys;
+        Graph->Vtbl->AddKeys = GraphAddKeys;
+        Graph->Vtbl->Verify = GraphVerify;
+        Graph->Vtbl->IsAcyclic = GraphIsAcyclic;
+        Graph->Vtbl->Assign = GraphAssign;
+        Graph->Vtbl->RegisterSolved = GraphRegisterSolved;
+        Graph->Vtbl->CalculateAssignedMemoryCoverage =
+            GraphCalculateAssignedMemoryCoverage;
+        GraphInitializeRoutines(Graph, Table, ResizeFlags);
+        Graph->Impl = 0;
+    }
+
     //
     // Do some more gross vtbl hacking based on graph impl.
     //
@@ -4481,16 +4535,27 @@ SkipGraphVtblHackery:
 
     //
     // If we're hashing all keys first, prepare the vertex pairs array if it
-    // hasn't already been prepared.  (This array is sized off the number of
-    // keys, which never changes upon subsequent table resize events, so it
-    // never needs to be reallocated to a larger size (unlike the other arrays
-    // above, which grow larger upon each resize event).)
+    // hasn't already been prepared.  The key count remains constant, but
+    // crossing the 16-bit vertex limit doubles the size of each vertex pair.
     //
 
     if (TableCreateFlags.HashAllKeysFirst || Graph->Impl == 3) {
 
         VertexPairsSizeInBytes = (SIZE_T)Info->VertexPairsSizeInBytes;
         ASSERT(VertexPairsSizeInBytes != 0);
+
+        if (Graph->VertexPairs != NULL &&
+            Graph->VertexPairsLogicalSizeInBytes != VertexPairsSizeInBytes) {
+            if (!VirtualFree(Graph->VertexPairs,
+                             VFS(Graph->VertexPairsAllocationSizeInBytes),
+                             MEM_RELEASE)) {
+                SYS_ERROR(VirtualFree);
+                Result = PH_E_SYSTEM_CALL_FAILED;
+                goto Error;
+            }
+            Graph->VertexPairs = NULL;
+            Graph->VertexPairsAllocationSizeInBytes = 0;
+        }
 
         if (Graph->VertexPairs == NULL) {
 
@@ -4529,6 +4594,13 @@ SkipGraphVtblHackery:
                 Result = E_OUTOFMEMORY;
                 goto Error;
             }
+
+            Graph->VertexPairsLogicalSizeInBytes = VertexPairsSizeInBytes;
+            Graph->VertexPairsAllocationSizeInBytes = (
+                LargePagesForVertexPairs ?
+                ALIGN_UP(VertexPairsSizeInBytes, GetLargePageMinimum()) :
+                VertexPairsSizeInBytes
+            );
 
             //
             // Update the graph flags indicating whether or not large pages

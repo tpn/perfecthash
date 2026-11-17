@@ -407,6 +407,7 @@ Return Value:
                     (LONGLONG)Keys->NumberOfKeys.QuadPart *
                     Eof->Multiplier
                 );
+                EndOfFile.QuadPart = max(EndOfFile.QuadPart, 64 * 1024);
                 break;
 
             case EofInitTypeNumberOfTableElementsMultiplier:
@@ -414,6 +415,9 @@ Return Value:
                     NumberOfTableElements.QuadPart *
                     Eof->Multiplier
                 );
+                // Generated text also has a fixed preamble/body. Tiny tables
+                // must not receive only one page for that scaffolding.
+                EndOfFile.QuadPart = max(EndOfFile.QuadPart, 64 * 1024);
                 break;
 
             case EofInitTypeNumberOfPages:
@@ -1088,6 +1092,24 @@ Return Value:
         Result = File->Vtbl->Close(File, Item->EndOfFile);
         if (FAILED(Result)) {
             PH_ERROR(CloseFileChm01, Result);
+        }
+        if (IsContextFileWorkItem(Item) && IsFileClosed(File) &&
+            Item->EndOfFile && Item->EndOfFile->QuadPart == 0) {
+            // Discard uncommitted shared files even if deletion failed after
+            // closing the handle. Preserve the close error for the caller.
+            // Previously committed files never enter this branch.
+            if (File->ParentDirectory) {
+                HRESULT RemoveResult;
+                RemoveResult = File->ParentDirectory->Vtbl->RemoveFile(
+                    File->ParentDirectory, File
+                );
+                if (FAILED(RemoveResult)) {
+                    PH_ERROR(PerfectHashDirectoryRemoveFile, RemoveResult);
+                    return FAILED(Result) ? Result : RemoveResult;
+                }
+            }
+            *Item->FilePointer = NULL;
+            RELEASE(File);
         }
     }
 

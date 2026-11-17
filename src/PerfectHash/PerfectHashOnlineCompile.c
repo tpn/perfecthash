@@ -97,6 +97,7 @@ Return Value:
 #endif
 #endif
 
+#if !defined(PH_ONLINE_CORE_ONLY) || defined(PH_HAS_RAWDOG_JIT)
     //
     // Dispatch to the table's Compile() routine.
     //
@@ -104,6 +105,7 @@ Return Value:
     return Table->Vtbl->Compile(Table,
                                 &CompileFlags,
                                 PerfectHashGetCurrentCpuArch());
+#endif
 }
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

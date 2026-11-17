@@ -1325,7 +1325,7 @@ const GUARDED_LIST_VTBL GuardedListInterface = {
 VERIFY_VTBL_SIZE(GUARDED_LIST, 10);
 
 
-#ifdef PH_WINDOWS
+#if defined(PH_WINDOWS) && defined(_M_AMD64)
 
 //
 // TSX versions of the GuardedList interface.  See dllmain.c for more info.

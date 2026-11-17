@@ -59,6 +59,27 @@ if(NOT result EQUAL 0)
   message(FATAL_ERROR "Command failed with exit code ${result}")
 endif()
 
+# These fixed-RNG, single-worker HologramWorld cases must exercise reuse of
+# a 16-bit graph after crossing the 65536-vertex boundary.
+if(TEST_EXPECT_RESIZE)
+  execute_process(
+    COMMAND "${TEST_PYTHON}" -c [=[
+import csv, glob, sys
+paths = glob.glob(sys.argv[1] + '/PerfectHashTableCreate*.csv')
+with open(paths[0], newline='') as stream:
+    row = list(csv.DictReader(stream))[-1]
+assert int(row['InitialNumberOfTableResizes']) == 0, row
+assert int(row['NumberOfTableResizeEvents']) >= 1, row
+assert int(row['NumberOfVertices']) > 65536, row
+assert row['UsedAssigned16'] == 'N', row
+]=] "${TEST_OUTPUT}"
+    RESULT_VARIABLE resize_result
+  )
+  if(NOT resize_result EQUAL 0)
+    message(FATAL_ERROR "Expected a resize from 16-bit to 32-bit graph storage")
+  endif()
+endif()
+
 file(GLOB cmake_lists "${test_output_native}/*/CMakeLists.txt")
 list(LENGTH cmake_lists cmake_lists_count)
 if(cmake_lists_count LESS 1)

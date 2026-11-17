@@ -184,7 +184,13 @@ TEST(PerfectHashOnlineJitTests, CreateTable32AndIndex32) {
                                        nullptr,
                                        nullptr);
   }
+#if defined(PH_HAS_RAWDOG_JIT) || defined(PH_HAS_LLVM)
   ASSERT_GE(result, 0);
+#else
+  // With no JIT backend, retain coverage of the scalar index fallback.
+  ASSERT_TRUE(result >= 0 || result == PH_E_LLVM_BACKEND_NOT_FOUND ||
+              result == PH_E_NOT_IMPLEMENTED);
+#endif
 
   std::unordered_set<uint32_t> seen;
   for (auto key : keys) {

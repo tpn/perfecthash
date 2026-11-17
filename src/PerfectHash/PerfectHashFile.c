@@ -854,6 +854,7 @@ Return Value:
     ULONG LastError;
     LARGE_INTEGER EndOfFile = { 0 };
     PPERFECT_HASH_DIRECTORY Directory;
+    HRESULT CleanupResult;
 
     //
     // Validate arguments.
@@ -923,12 +924,18 @@ Return Value:
     if (EndOfFile.QuadPart > 0) {
 
         if (IsFileReadOnly(File)) {
-            Result = PH_E_INVARIANT_CHECK_FAILED;
-            PH_ERROR(PerfectHashFileClose, Result);
+            CleanupResult = PH_E_INVARIANT_CHECK_FAILED;
+            PH_ERROR(PerfectHashFileClose, CleanupResult);
+            if (SUCCEEDED(Result)) {
+                Result = CleanupResult;
+            }
         } else {
-            Result = File->Vtbl->Truncate(File, &EndOfFile);
-            if (FAILED(Result)) {
-                PH_ERROR(PerfectHashFileTruncate, Result);
+            CleanupResult = File->Vtbl->Truncate(File, &EndOfFile);
+            if (FAILED(CleanupResult)) {
+                PH_ERROR(PerfectHashFileTruncate, CleanupResult);
+                if (SUCCEEDED(Result)) {
+                    Result = CleanupResult;
+                }
             }
         }
 
@@ -965,7 +972,9 @@ Return Value:
 
                 } else {
                     SYS_ERROR(DeleteFileW);
-                    Result = PH_E_SYSTEM_CALL_FAILED;
+                    if (SUCCEEDED(Result)) {
+                        Result = PH_E_SYSTEM_CALL_FAILED;
+                    }
                 }
             }
         }
@@ -980,10 +989,13 @@ Return Value:
 
         if (Directory) {
 
-            Result = Directory->Vtbl->RemoveFile(Directory, File);
+            CleanupResult = Directory->Vtbl->RemoveFile(Directory, File);
 
-            if (FAILED(Result)) {
-                PH_ERROR(PerfectHashFileClose_DirectoryRemoveFile, Result);
+            if (FAILED(CleanupResult)) {
+                PH_ERROR(PerfectHashFileClose_DirectoryRemoveFile, CleanupResult);
+                if (SUCCEEDED(Result)) {
+                    Result = CleanupResult;
+                }
             }
 
             //
@@ -1001,7 +1013,9 @@ Return Value:
     if (File->FileHandle) {
         if (!CloseFile(File->FileHandle)) {
             SYS_ERROR(CloseHandle);
-            Result = PH_E_SYSTEM_CALL_FAILED;
+            if (SUCCEEDED(Result)) {
+                Result = PH_E_SYSTEM_CALL_FAILED;
+            }
         }
         File->FileHandle = NULL;
     }
@@ -1016,9 +1030,12 @@ Return Value:
         if (IsFileReadOnly(File)) {
             PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
         }
-        Result = File->Vtbl->DoRename(File);
-        if (FAILED(Result)) {
-            PH_ERROR(PerfectHashFileDoRename, Result);
+        CleanupResult = File->Vtbl->DoRename(File);
+        if (FAILED(CleanupResult)) {
+            PH_ERROR(PerfectHashFileDoRename, CleanupResult);
+            if (SUCCEEDED(Result)) {
+                Result = CleanupResult;
+            }
         }
     }
 

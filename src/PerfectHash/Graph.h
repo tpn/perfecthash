@@ -2039,6 +2039,10 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
         };
     };
 
+    // Actual mapped size, retained independently of the current graph info.
+    SIZE_T VertexPairsAllocationSizeInBytes;
+    SIZE_T VertexPairsLogicalSizeInBytes;
+
 } GRAPH;
 typedef GRAPH *PGRAPH;
 

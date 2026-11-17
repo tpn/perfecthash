@@ -53,7 +53,7 @@ SaveRustTestFileChm01(
     OUTPUT_RAW("    }\n");
     OUTPUT_RAW("    let mut seen = vec![0u8; ph::INDEX_MASK as usize + 1];\n");
     OUTPUT_RAW("    let mut count = 0usize;\n");
-    OUTPUT_RAW("    for &key in ph::KEYS.iter() {\n");
+    OUTPUT_RAW("    for &key in ph::KEYS_STORAGE.iter() {\n");
     OUTPUT_RAW("        let idx = ph::index(key);\n");
     OUTPUT_RAW("        let pos = idx as usize;\n");
     OUTPUT_RAW("        if pos >= seen.len() {\n");

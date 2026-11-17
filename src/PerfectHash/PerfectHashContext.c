@@ -881,6 +881,18 @@ Return Value:
 
     ASSERT(Context->SizeOfStruct == sizeof(*Context));
 
+#ifdef PH_WINDOWS
+    // A completed solve can still have a future one-shot deadline armed.
+    // Drain the timer and the work it submits before resetting/closing events.
+    if (Context->SolveTimeout) {
+        SetThreadpoolTimer(Context->SolveTimeout, NULL, 0, 0);
+        WaitForThreadpoolTimerCallbacks(Context->SolveTimeout, TRUE);
+    }
+    if (Context->FinishedWork) {
+        WaitForThreadpoolWorkCallbacks(Context->FinishedWork, FALSE);
+    }
+#endif
+
     //
     // If the context needs a reset, do it now.  This ensures the guarded
     // lists are cleared prior to rundown below.
@@ -1345,8 +1357,13 @@ Return Value:
     Context = (PPERFECT_HASH_CONTEXT)Ctx;
 
     CONTEXT_END_TIMERS(Solve);
+    // Publish the deadline before workers can finish; packed state bits can
+    // lose concurrent updates from StopSolving and other worker state.
+    if (!SetEvent(Context->SolveTimeoutExpiredEvent)) {
+        SYS_ERROR(SetEvent);
+        PH_RAISE(PH_E_SYSTEM_CALL_FAILED);
+    }
     SetStopSolving(Context);
-    Context->State.SolveTimeoutExpired = TRUE;
     SubmitThreadpoolWork(Context->FinishedWork);
 
     return;

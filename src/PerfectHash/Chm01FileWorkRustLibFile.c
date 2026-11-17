@@ -364,6 +364,12 @@ SaveRustLibFileChm01(
 
     OUTPUT_RAW("];\n\n");
 
+    // Preserve the public constants while borrowing shared runtime storage.
+    OUTPUT_RAW("static TABLE_DATA_STORAGE: [TableDataType; "
+               "NUMBER_OF_TABLE_ELEMENTS] = TABLE_DATA;\n");
+    OUTPUT_RAW("pub static KEYS_STORAGE: [OriginalKeyType; "
+               "NUMBER_OF_KEYS] = KEYS;\n\n");
+
     //
     // Write helpers and index routine.
     //
@@ -411,9 +417,9 @@ SaveRustLibFileChm01(
         OUTPUT_RAW("    let masked_low = (vertex1 as u32) & HASH_MASK;\n");
         OUTPUT_RAW("    let masked_high = (vertex2 as u32) & HASH_MASK;\n");
         OUTPUT_RAW("    let value_low = "
-                   "TABLE_DATA[masked_low as usize] as u32;\n");
+                   "TABLE_DATA_STORAGE[masked_low as usize] as u32;\n");
         OUTPUT_RAW("    let value_high = "
-                   "TABLE_DATA[masked_high as usize] as u32;\n");
+                   "TABLE_DATA_STORAGE[masked_high as usize] as u32;\n");
         OUTPUT_RAW("    value_low.wrapping_add(value_high) & INDEX_MASK\n");
     } else if (Table->HashFunctionId ==
                PerfectHashHashMultiplyShiftLRFunctionId) {
@@ -426,9 +432,9 @@ SaveRustLibFileChm01(
         OUTPUT_RAW("    let masked_low = (vertex1 as u32) & HASH_MASK;\n");
         OUTPUT_RAW("    let masked_high = (vertex2 as u32) & HASH_MASK;\n");
         OUTPUT_RAW("    let value_low = "
-                   "TABLE_DATA[masked_low as usize] as u32;\n");
+                   "TABLE_DATA_STORAGE[masked_low as usize] as u32;\n");
         OUTPUT_RAW("    let value_high = "
-                   "TABLE_DATA[masked_high as usize] as u32;\n");
+                   "TABLE_DATA_STORAGE[masked_high as usize] as u32;\n");
         OUTPUT_RAW("    value_low.wrapping_add(value_high) & INDEX_MASK\n");
     } else if (Table->HashFunctionId ==
                PerfectHashHashMultiplyShiftRMultiplyFunctionId) {
@@ -443,9 +449,9 @@ SaveRustLibFileChm01(
         OUTPUT_RAW("    let masked_low = (vertex1 as u32) & HASH_MASK;\n");
         OUTPUT_RAW("    let masked_high = (vertex2 as u32) & HASH_MASK;\n");
         OUTPUT_RAW("    let value_low = "
-                   "TABLE_DATA[masked_low as usize] as u32;\n");
+                   "TABLE_DATA_STORAGE[masked_low as usize] as u32;\n");
         OUTPUT_RAW("    let value_high = "
-                   "TABLE_DATA[masked_high as usize] as u32;\n");
+                   "TABLE_DATA_STORAGE[masked_high as usize] as u32;\n");
         OUTPUT_RAW("    value_low.wrapping_add(value_high) & INDEX_MASK\n");
     } else if (Table->HashFunctionId ==
                PerfectHashHashMultiplyShiftR2FunctionId) {
@@ -462,9 +468,9 @@ SaveRustLibFileChm01(
         OUTPUT_RAW("    let masked_low = (vertex1 as u32) & HASH_MASK;\n");
         OUTPUT_RAW("    let masked_high = (vertex2 as u32) & HASH_MASK;\n");
         OUTPUT_RAW("    let value_low = "
-                   "TABLE_DATA[masked_low as usize] as u32;\n");
+                   "TABLE_DATA_STORAGE[masked_low as usize] as u32;\n");
         OUTPUT_RAW("    let value_high = "
-                   "TABLE_DATA[masked_high as usize] as u32;\n");
+                   "TABLE_DATA_STORAGE[masked_high as usize] as u32;\n");
         OUTPUT_RAW("    value_low.wrapping_add(value_high) & INDEX_MASK\n");
     } else if (Table->HashFunctionId ==
                PerfectHashHashMultiplyShiftRXFunctionId) {
@@ -472,12 +478,12 @@ SaveRustLibFileChm01(
                    "downsized.wrapping_mul(SEED1 as KeyType);\n");
         OUTPUT_RAW("    vertex1 >>= SEED3_BYTE1;\n");
         OUTPUT_RAW("    let value_low = "
-                   "TABLE_DATA[vertex1 as usize] as u32;\n");
+                   "TABLE_DATA_STORAGE[vertex1 as usize] as u32;\n");
         OUTPUT_RAW("    let mut vertex2: KeyType = "
                    "downsized.wrapping_mul(SEED2 as KeyType);\n");
         OUTPUT_RAW("    vertex2 >>= SEED3_BYTE1;\n");
         OUTPUT_RAW("    let value_high = "
-                   "TABLE_DATA[vertex2 as usize] as u32;\n");
+                   "TABLE_DATA_STORAGE[vertex2 as usize] as u32;\n");
         OUTPUT_RAW("    value_low.wrapping_add(value_high) & INDEX_MASK\n");
     } else if (Table->HashFunctionId ==
                PerfectHashHashMulshrolate1RXFunctionId) {
@@ -485,10 +491,10 @@ SaveRustLibFileChm01(
         OUTPUT_RAW("    let mut vertex1 = downsized32.wrapping_mul(SEED1);\n");
         OUTPUT_RAW("    vertex1 = rotr32(vertex1, SEED3_BYTE2);\n");
         OUTPUT_RAW("    vertex1 >>= SEED3_BYTE1;\n");
-        OUTPUT_RAW("    let value_low = TABLE_DATA[vertex1 as usize] as u32;\n");
+        OUTPUT_RAW("    let value_low = TABLE_DATA_STORAGE[vertex1 as usize] as u32;\n");
         OUTPUT_RAW("    let mut vertex2 = downsized32.wrapping_mul(SEED2);\n");
         OUTPUT_RAW("    vertex2 >>= SEED3_BYTE1;\n");
-        OUTPUT_RAW("    let value_high = TABLE_DATA[vertex2 as usize] as u32;\n");
+        OUTPUT_RAW("    let value_high = TABLE_DATA_STORAGE[vertex2 as usize] as u32;\n");
         OUTPUT_RAW("    value_low.wrapping_add(value_high) & INDEX_MASK\n");
     } else if (Table->HashFunctionId ==
                PerfectHashHashMulshrolate2RXFunctionId) {
@@ -496,11 +502,11 @@ SaveRustLibFileChm01(
         OUTPUT_RAW("    let mut vertex1 = downsized32.wrapping_mul(SEED1);\n");
         OUTPUT_RAW("    vertex1 = rotr32(vertex1, SEED3_BYTE2);\n");
         OUTPUT_RAW("    vertex1 >>= SEED3_BYTE1;\n");
-        OUTPUT_RAW("    let value_low = TABLE_DATA[vertex1 as usize] as u32;\n");
+        OUTPUT_RAW("    let value_low = TABLE_DATA_STORAGE[vertex1 as usize] as u32;\n");
         OUTPUT_RAW("    let mut vertex2 = downsized32.wrapping_mul(SEED2);\n");
         OUTPUT_RAW("    vertex2 = rotr32(vertex2, SEED3_BYTE3);\n");
         OUTPUT_RAW("    vertex2 >>= SEED3_BYTE1;\n");
-        OUTPUT_RAW("    let value_high = TABLE_DATA[vertex2 as usize] as u32;\n");
+        OUTPUT_RAW("    let value_high = TABLE_DATA_STORAGE[vertex2 as usize] as u32;\n");
         OUTPUT_RAW("    value_low.wrapping_add(value_high) & INDEX_MASK\n");
     } else if (Table->HashFunctionId ==
                PerfectHashHashMulshrolate3RXFunctionId) {
@@ -509,11 +515,11 @@ SaveRustLibFileChm01(
         OUTPUT_RAW("    vertex1 = rotr32(vertex1, SEED3_BYTE2);\n");
         OUTPUT_RAW("    vertex1 = vertex1.wrapping_mul(SEED4);\n");
         OUTPUT_RAW("    vertex1 >>= SEED3_BYTE1;\n");
-        OUTPUT_RAW("    let value_low = TABLE_DATA[vertex1 as usize] as u32;\n");
+        OUTPUT_RAW("    let value_low = TABLE_DATA_STORAGE[vertex1 as usize] as u32;\n");
         OUTPUT_RAW("    let mut vertex2 = downsized32.wrapping_mul(SEED2);\n");
         OUTPUT_RAW("    vertex2 = rotr32(vertex2, SEED3_BYTE3);\n");
         OUTPUT_RAW("    vertex2 >>= SEED3_BYTE1;\n");
-        OUTPUT_RAW("    let value_high = TABLE_DATA[vertex2 as usize] as u32;\n");
+        OUTPUT_RAW("    let value_high = TABLE_DATA_STORAGE[vertex2 as usize] as u32;\n");
         OUTPUT_RAW("    value_low.wrapping_add(value_high) & INDEX_MASK\n");
     } else if (Table->HashFunctionId ==
                PerfectHashHashMulshrolate4RXFunctionId) {
@@ -522,12 +528,12 @@ SaveRustLibFileChm01(
         OUTPUT_RAW("    vertex1 = rotr32(vertex1, SEED3_BYTE2);\n");
         OUTPUT_RAW("    vertex1 = vertex1.wrapping_mul(SEED4);\n");
         OUTPUT_RAW("    vertex1 >>= SEED3_BYTE1;\n");
-        OUTPUT_RAW("    let value_low = TABLE_DATA[vertex1 as usize] as u32;\n");
+        OUTPUT_RAW("    let value_low = TABLE_DATA_STORAGE[vertex1 as usize] as u32;\n");
         OUTPUT_RAW("    let mut vertex2 = downsized32.wrapping_mul(SEED2);\n");
         OUTPUT_RAW("    vertex2 = rotr32(vertex2, SEED3_BYTE3);\n");
         OUTPUT_RAW("    vertex2 = vertex2.wrapping_mul(SEED5);\n");
         OUTPUT_RAW("    vertex2 >>= SEED3_BYTE1;\n");
-        OUTPUT_RAW("    let value_high = TABLE_DATA[vertex2 as usize] as u32;\n");
+        OUTPUT_RAW("    let value_high = TABLE_DATA_STORAGE[vertex2 as usize] as u32;\n");
         OUTPUT_RAW("    value_low.wrapping_add(value_high) & INDEX_MASK\n");
     } else {
         OUTPUT_RAW("    let _ = downsized;\n");
@@ -545,7 +551,7 @@ SaveRustLibFileChm01(
     OUTPUT_RAW("        }\n");
     OUTPUT_RAW("        let mut seen = vec![0u8; INDEX_MASK as usize + 1];\n");
     OUTPUT_RAW("        let mut count = 0usize;\n");
-    OUTPUT_RAW("        for &key in KEYS.iter() {\n");
+    OUTPUT_RAW("        for &key in KEYS_STORAGE.iter() {\n");
     OUTPUT_RAW("            let idx = index(key);\n");
     OUTPUT_RAW("            let pos = idx as usize;\n");
     OUTPUT_RAW("            assert!(pos < seen.len(), \"index out of range: {}\", idx);\n");

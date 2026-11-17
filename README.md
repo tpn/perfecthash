@@ -180,6 +180,25 @@ use `msbuild` from a Visual Studio 2022 command prompt:
 msbuild /nologo /m /t:Rebuild /p:Configuration=Release;Platform=x64
 ```
 
+For a native Windows ARM64 CMake build, enter an ARM64 developer PowerShell
+(for example, with Visual Studio 2026 installed):
+
+```powershell
+& "${env:ProgramFiles}/Microsoft Visual Studio/18/Professional/Common7/Tools/Launch-VsDevShell.ps1" -Arch arm64 -HostArch arm64 -SkipAutomaticLocation
+$env:PATH = "$env:USERPROFILE/.cargo/bin;$env:PATH"
+cmake --preset ninja-multi
+cmake --build --preset ninja-release --parallel
+cmake --build --preset ninja-debug --parallel
+$env:CMAKE_GENERATOR = 'Ninja Multi-Config'
+ctest --test-dir build -C Release --output-on-failure --timeout 300
+```
+
+Adjust the Visual Studio path for your installed version/edition. Install CMake,
+Ninja, Python, and native ARM64 Rust/Cargo first; the code-generation tests compile
+and validate the emitted C, C++, Python, Rust, and, when available, CUDA outputs.
+The default build works without LLVM; JIT-specific tests are skipped when their
+backend is unavailable.
+
 You can also download the latest binaries from the [Releases](https://github.com/tpn/perfecthash/releases/)
 page.  The `PGO` zip files refer to profile-guided optimization builds, and are
 generally faster than the `Release` builds by up to 30-40%.

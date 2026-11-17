@@ -1,0 +1,95 @@
+Test project D:/src/perfecthash/build
+      Start 33: perfecthash.cli.codegen.mulshrolate2rx
+      Start 31: perfecthash.cli.codegen
+      Start 32: perfecthash.cli.codegen.mulshrolate1rx
+      Start 39: perfecthash.fast.cli.codegen
+ 1/39 Test #31: perfecthash.cli.codegen .....................................................................................   Passed   33.32 sec
+      Start 34: perfecthash.cli.codegen.mulshrolate3rx
+ 2/39 Test #32: perfecthash.cli.codegen.mulshrolate1rx ......................................................................   Passed   37.56 sec
+      Start 35: perfecthash.cli.codegen.mulshrolate4rx
+ 3/39 Test #33: perfecthash.cli.codegen.mulshrolate2rx ......................................................................   Passed   37.95 sec
+      Start 36: perfecthash.cli.codegen.multiplyshiftrx
+ 4/39 Test #39: perfecthash.fast.cli.codegen ................................................................................   Passed   39.35 sec
+      Start 30: perfecthash.cli.bulk
+ 5/39 Test #30: perfecthash.cli.bulk ........................................................................................   Passed    2.15 sec
+      Start 28: perfecthash.cli.create
+ 6/39 Test #28: perfecthash.cli.create ......................................................................................   Passed    2.15 sec
+      Start 27: perfecthash.fast.unit
+ 7/39 Test #27: perfecthash.fast.unit .......................................................................................   Passed    1.37 sec
+      Start  2: perfecthash_unit_tests.PerfectHashArgvTests.FailedFileCreateRegeneratesSharedFiles
+ 8/39 Test  #2: perfecthash_unit_tests.PerfectHashArgvTests.FailedFileCreateRegeneratesSharedFiles ..........................   Passed    0.13 sec
+      Start 29: perfecthash.cli.create.assigned16-boundary
+ 9/39 Test #29: perfecthash.cli.create.assigned16-boundary ..................................................................   Passed    0.44 sec
+      Start 12: perfecthash_unit_tests.PerfectHashOnlineTests.UnsolvedTableDoesNotReturnAHandle
+10/39 Test #12: perfecthash_unit_tests.PerfectHashOnlineTests.UnsolvedTableDoesNotReturnAHandle .............................   Passed    0.04 sec
+      Start 26: perfecthash_unit_tests.PerfectHashOnlineJitInvalidEnvRejected
+11/39 Test #26: perfecthash_unit_tests.PerfectHashOnlineJitInvalidEnvRejected ...............................................   Passed    0.08 sec
+      Start 17: perfecthash_unit_tests.PerfectHashOnlineTests.Assigned16Boundary32767Vs32768Keys
+12/39 Test #17: perfecthash_unit_tests.PerfectHashOnlineTests.Assigned16Boundary32767Vs32768Keys ............................   Passed    0.07 sec
+      Start 38: perfecthash.fast.cli.bulk
+13/39 Test #38: perfecthash.fast.cli.bulk ...................................................................................   Passed    0.11 sec
+      Start 37: perfecthash.fast.cli.create
+14/39 Test #37: perfecthash.fast.cli.create .................................................................................   Passed    0.10 sec
+      Start 15: perfecthash_unit_tests.PerfectHashOnlineTests.SkipGraphVerificationReturnsUsableTable
+15/39 Test #15: perfecthash_unit_tests.PerfectHashOnlineTests.SkipGraphVerificationReturnsUsableTable .......................   Passed    0.04 sec
+      Start 13: perfecthash_unit_tests.PerfectHashOnlineTests.SolveTimeoutDoesNotReturnAHandle
+16/39 Test #13: perfecthash_unit_tests.PerfectHashOnlineTests.SolveTimeoutDoesNotReturnAHandle ..............................   Passed    1.03 sec
+      Start 18: perfecthash_unit_tests.PerfectHashOnlineTests.Assigned16RequiresGraphImpl3AndOptIn
+17/39 Test #18: perfecthash_unit_tests.PerfectHashOnlineTests.Assigned16RequiresGraphImpl3AndOptIn ..........................   Passed    0.06 sec
+      Start  9: perfecthash_unit_tests.PerfectHashOnlineJitTests.CreateTable32AndIndex32
+18/39 Test  #9: perfecthash_unit_tests.PerfectHashOnlineJitTests.CreateTable32AndIndex32 ....................................   Passed    0.04 sec
+      Start 10: perfecthash_unit_tests.PerfectHashOnlineJitTests.Index64On32BitTableIsNotImplemented
+19/39 Test #10: perfecthash_unit_tests.PerfectHashOnlineJitTests.Index64On32BitTableIsNotImplemented ........................   Passed    0.04 sec
+      Start  8: perfecthash_unit_tests.PerfectHashOnlineJitTests.CreateTable64AndIndex64
+20/39 Test  #8: perfecthash_unit_tests.PerfectHashOnlineJitTests.CreateTable64AndIndex64 ....................................   Passed    0.03 sec
+      Start 16: perfecthash_unit_tests.PerfectHashOnlineTests.CreateTableFromUnsortedKeysReturnsUniqueIndexes
+21/39 Test #16: perfecthash_unit_tests.PerfectHashOnlineTests.CreateTableFromUnsortedKeysReturnsUniqueIndexes ...............   Passed    0.04 sec
+      Start 14: perfecthash_unit_tests.PerfectHashOnlineTests.CreateTableFromKeysReturnsUniqueIndexes
+22/39 Test #14: perfecthash_unit_tests.PerfectHashOnlineTests.CreateTableFromKeysReturnsUniqueIndexes .......................   Passed    0.04 sec
+      Start 11: perfecthash_unit_tests.PerfectHashOnlineJitTests.CreateTable64RejectsNonDownsizedKeys
+23/39 Test #11: perfecthash_unit_tests.PerfectHashOnlineJitTests.CreateTable64RejectsNonDownsizedKeys .......................   Passed    0.03 sec
+      Start  3: perfecthash_unit_tests.PerfectHashArgvTests.InvalidAlgorithmId
+24/39 Test  #3: perfecthash_unit_tests.PerfectHashArgvTests.InvalidAlgorithmId ..............................................   Passed    0.03 sec
+      Start  6: perfecthash_unit_tests.PerfectHashArgvTests.MissingTableCreateParamValue
+25/39 Test  #6: perfecthash_unit_tests.PerfectHashArgvTests.MissingTableCreateParamValue ....................................   Passed    0.03 sec
+      Start  1: perfecthash_unit_tests.PerfectHashArgvTests.InvalidNumArgs
+26/39 Test  #1: perfecthash_unit_tests.PerfectHashArgvTests.InvalidNumArgs ..................................................   Passed    0.03 sec
+      Start  4: perfecthash_unit_tests.PerfectHashArgvTests.InvalidHashFunctionId
+27/39 Test  #4: perfecthash_unit_tests.PerfectHashArgvTests.InvalidHashFunctionId ...........................................   Passed    0.04 sec
+      Start  7: perfecthash_unit_tests.PerfectHashArgvTests.InvalidCommandLineArg
+28/39 Test  #7: perfecthash_unit_tests.PerfectHashArgvTests.InvalidCommandLineArg ...........................................   Passed    0.04 sec
+      Start  5: perfecthash_unit_tests.PerfectHashArgvTests.InvalidMaskFunctionId
+29/39 Test  #5: perfecthash_unit_tests.PerfectHashArgvTests.InvalidMaskFunctionId ...........................................   Passed    0.04 sec
+      Start 19: perfecthash_unit_tests.PerfectHashOnlineTests.JitIndexMatchesSlowIndex
+30/39 Test #19: perfecthash_unit_tests.PerfectHashOnlineTests.JitIndexMatchesSlowIndex ......................................***Skipped   0.02 sec
+      Start 20: perfecthash_unit_tests.PerfectHashOnlineTests.JitAssigned16MatchesOriginalIndex
+31/39 Test #20: perfecthash_unit_tests.PerfectHashOnlineTests.JitAssigned16MatchesOriginalIndex .............................***Skipped   0.02 sec
+      Start 21: perfecthash_unit_tests.PerfectHashOnlineTests.JitInterfaceIndex32x2Index32x4Index32x8MatchSlowIndex
+32/39 Test #21: perfecthash_unit_tests.PerfectHashOnlineTests.JitInterfaceIndex32x2Index32x4Index32x8MatchSlowIndex .........***Skipped   0.02 sec
+      Start 22: perfecthash_unit_tests.PerfectHashOnlineTests.JitVectorInterfaceIndex32x2Index32x4Index32x8MatchSlowIndex
+33/39 Test #22: perfecthash_unit_tests.PerfectHashOnlineTests.JitVectorInterfaceIndex32x2Index32x4Index32x8MatchSlowIndex ...***Skipped   0.02 sec
+      Start 23: perfecthash_unit_tests.PerfectHashOnlineTests.JitInterfaceIndex32x16MatchesSlowIndex
+34/39 Test #23: perfecthash_unit_tests.PerfectHashOnlineTests.JitInterfaceIndex32x16MatchesSlowIndex ........................***Skipped   0.02 sec
+      Start 24: perfecthash_unit_tests.PerfectHashOnlineTests.JitInterfaceIndex64x2x4x8MatchesDownsizedIndex
+35/39 Test #24: perfecthash_unit_tests.PerfectHashOnlineTests.JitInterfaceIndex64x2x4x8MatchesDownsizedIndex ................***Skipped   0.08 sec
+      Start 25: perfecthash_unit_tests.PerfectHashOnlineTests.JitVectorInterfaceIndex64x2x4x8MatchesDownsizedIndex
+36/39 Test #25: perfecthash_unit_tests.PerfectHashOnlineTests.JitVectorInterfaceIndex64x2x4x8MatchesDownsizedIndex ..........***Skipped   0.03 sec
+37/39 Test #34: perfecthash.cli.codegen.mulshrolate3rx ......................................................................   Passed   29.84 sec
+38/39 Test #36: perfecthash.cli.codegen.multiplyshiftrx .....................................................................   Passed   29.00 sec
+39/39 Test #35: perfecthash.cli.codegen.mulshrolate4rx ......................................................................   Passed   34.94 sec
+
+100% tests passed out of 39
+
+Label Time Summary:
+fast    =  40.93 sec*proc (4 tests)
+
+Total Test time (real) =  72.54 sec
+
+The following tests did not run:
+	 19 - perfecthash_unit_tests.PerfectHashOnlineTests.JitIndexMatchesSlowIndex (Skipped)
+	 20 - perfecthash_unit_tests.PerfectHashOnlineTests.JitAssigned16MatchesOriginalIndex (Skipped)
+	 21 - perfecthash_unit_tests.PerfectHashOnlineTests.JitInterfaceIndex32x2Index32x4Index32x8MatchSlowIndex (Skipped)
+	 22 - perfecthash_unit_tests.PerfectHashOnlineTests.JitVectorInterfaceIndex32x2Index32x4Index32x8MatchSlowIndex (Skipped)
+	 23 - perfecthash_unit_tests.PerfectHashOnlineTests.JitInterfaceIndex32x16MatchesSlowIndex (Skipped)
+	 24 - perfecthash_unit_tests.PerfectHashOnlineTests.JitInterfaceIndex64x2x4x8MatchesDownsizedIndex (Skipped)
+	 25 - perfecthash_unit_tests.PerfectHashOnlineTests.JitVectorInterfaceIndex64x2x4x8MatchesDownsizedIndex (Skipped)

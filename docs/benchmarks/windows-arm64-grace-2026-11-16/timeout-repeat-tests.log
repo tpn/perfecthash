@@ -1,0 +1,133 @@
+Running main() from D:\src\perfecthash\build\_deps\googletest-src\googletest\src\gtest_main.cc
+
+Repeating all tests (iteration 1) . . .
+
+Note: Google Test filter = *SolveTimeout*
+[==========] Running 1 test from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 1 test from PerfectHashOnlineTests
+[ RUN      ] PerfectHashOnlineTests.SolveTimeoutDoesNotReturnAHandle
+D:\src\perfecthash\src\PerfectHash\PerfectHashOnlineCreate.c: 445: PerfectHashTableCreate failed with error: 3758359582 (0xe004041e).  The online table solve timeout expired before a solution was found.
+[       OK ] PerfectHashOnlineTests.SolveTimeoutDoesNotReturnAHandle (1028 ms)
+[----------] 1 test from PerfectHashOnlineTests (1028 ms total)
+
+[==========] 1 test from 1 test suite ran. (1028 ms total)
+[  PASSED  ] 1 test.
+
+Repeating all tests (iteration 2) . . .
+
+Note: Google Test filter = *SolveTimeout*
+[==========] Running 1 test from 1 test suite.
+[----------] 1 test from PerfectHashOnlineTests
+[ RUN      ] PerfectHashOnlineTests.SolveTimeoutDoesNotReturnAHandle
+D:\src\perfecthash\src\PerfectHash\PerfectHashOnlineCreate.c: 445: PerfectHashTableCreate failed with error: 3758359582 (0xe004041e).  The online table solve timeout expired before a solution was found.
+[       OK ] PerfectHashOnlineTests.SolveTimeoutDoesNotReturnAHandle (1010 ms)
+[----------] 1 test from PerfectHashOnlineTests (1010 ms total)
+
+[==========] 1 test from 1 test suite ran. (1011 ms total)
+[  PASSED  ] 1 test.
+
+Repeating all tests (iteration 3) . . .
+
+Note: Google Test filter = *SolveTimeout*
+[==========] Running 1 test from 1 test suite.
+[----------] 1 test from PerfectHashOnlineTests
+[ RUN      ] PerfectHashOnlineTests.SolveTimeoutDoesNotReturnAHandle
+D:\src\perfecthash\src\PerfectHash\PerfectHashOnlineCreate.c: 445: PerfectHashTableCreate failed with error: 3758359582 (0xe004041e).  The online table solve timeout expired before a solution was found.
+[       OK ] PerfectHashOnlineTests.SolveTimeoutDoesNotReturnAHandle (1024 ms)
+[----------] 1 test from PerfectHashOnlineTests (1024 ms total)
+
+[==========] 1 test from 1 test suite ran. (1024 ms total)
+[  PASSED  ] 1 test.
+
+Repeating all tests (iteration 4) . . .
+
+Note: Google Test filter = *SolveTimeout*
+[==========] Running 1 test from 1 test suite.
+[----------] 1 test from PerfectHashOnlineTests
+[ RUN      ] PerfectHashOnlineTests.SolveTimeoutDoesNotReturnAHandle
+D:\src\perfecthash\src\PerfectHash\PerfectHashOnlineCreate.c: 445: PerfectHashTableCreate failed with error: 3758359582 (0xe004041e).  The online table solve timeout expired before a solution was found.
+[       OK ] PerfectHashOnlineTests.SolveTimeoutDoesNotReturnAHandle (1021 ms)
+[----------] 1 test from PerfectHashOnlineTests (1021 ms total)
+
+[==========] 1 test from 1 test suite ran. (1021 ms total)
+[  PASSED  ] 1 test.
+
+Repeating all tests (iteration 5) . . .
+
+Note: Google Test filter = *SolveTimeout*
+[==========] Running 1 test from 1 test suite.
+[----------] 1 test from PerfectHashOnlineTests
+[ RUN      ] PerfectHashOnlineTests.SolveTimeoutDoesNotReturnAHandle
+D:\src\perfecthash\src\PerfectHash\PerfectHashOnlineCreate.c: 445: PerfectHashTableCreate failed with error: 3758359582 (0xe004041e).  The online table solve timeout expired before a solution was found.
+[       OK ] PerfectHashOnlineTests.SolveTimeoutDoesNotReturnAHandle (1007 ms)
+[----------] 1 test from PerfectHashOnlineTests (1007 ms total)
+
+[==========] 1 test from 1 test suite ran. (1007 ms total)
+[  PASSED  ] 1 test.
+
+Repeating all tests (iteration 6) . . .
+
+Note: Google Test filter = *SolveTimeout*
+[==========] Running 1 test from 1 test suite.
+[----------] 1 test from PerfectHashOnlineTests
+[ RUN      ] PerfectHashOnlineTests.SolveTimeoutDoesNotReturnAHandle
+D:\src\perfecthash\src\PerfectHash\PerfectHashOnlineCreate.c: 445: PerfectHashTableCreate failed with error: 3758359582 (0xe004041e).  The online table solve timeout expired before a solution was found.
+[       OK ] PerfectHashOnlineTests.SolveTimeoutDoesNotReturnAHandle (1019 ms)
+[----------] 1 test from PerfectHashOnlineTests (1019 ms total)
+
+[==========] 1 test from 1 test suite ran. (1019 ms total)
+[  PASSED  ] 1 test.
+
+Repeating all tests (iteration 7) . . .
+
+Note: Google Test filter = *SolveTimeout*
+[==========] Running 1 test from 1 test suite.
+[----------] 1 test from PerfectHashOnlineTests
+[ RUN      ] PerfectHashOnlineTests.SolveTimeoutDoesNotReturnAHandle
+D:\src\perfecthash\src\PerfectHash\PerfectHashOnlineCreate.c: 445: PerfectHashTableCreate failed with error: 3758359582 (0xe004041e).  The online table solve timeout expired before a solution was found.
+[       OK ] PerfectHashOnlineTests.SolveTimeoutDoesNotReturnAHandle (1021 ms)
+[----------] 1 test from PerfectHashOnlineTests (1021 ms total)
+
+[==========] 1 test from 1 test suite ran. (1021 ms total)
+[  PASSED  ] 1 test.
+
+Repeating all tests (iteration 8) . . .
+
+Note: Google Test filter = *SolveTimeout*
+[==========] Running 1 test from 1 test suite.
+[----------] 1 test from PerfectHashOnlineTests
+[ RUN      ] PerfectHashOnlineTests.SolveTimeoutDoesNotReturnAHandle
+D:\src\perfecthash\src\PerfectHash\PerfectHashOnlineCreate.c: 445: PerfectHashTableCreate failed with error: 3758359582 (0xe004041e).  The online table solve timeout expired before a solution was found.
+[       OK ] PerfectHashOnlineTests.SolveTimeoutDoesNotReturnAHandle (1004 ms)
+[----------] 1 test from PerfectHashOnlineTests (1004 ms total)
+
+[==========] 1 test from 1 test suite ran. (1004 ms total)
+[  PASSED  ] 1 test.
+
+Repeating all tests (iteration 9) . . .
+
+Note: Google Test filter = *SolveTimeout*
+[==========] Running 1 test from 1 test suite.
+[----------] 1 test from PerfectHashOnlineTests
+[ RUN      ] PerfectHashOnlineTests.SolveTimeoutDoesNotReturnAHandle
+D:\src\perfecthash\src\PerfectHash\PerfectHashOnlineCreate.c: 445: PerfectHashTableCreate failed with error: 3758359582 (0xe004041e).  The online table solve timeout expired before a solution was found.
+[       OK ] PerfectHashOnlineTests.SolveTimeoutDoesNotReturnAHandle (1022 ms)
+[----------] 1 test from PerfectHashOnlineTests (1022 ms total)
+
+[==========] 1 test from 1 test suite ran. (1022 ms total)
+[  PASSED  ] 1 test.
+
+Repeating all tests (iteration 10) . . .
+
+Note: Google Test filter = *SolveTimeout*
+[==========] Running 1 test from 1 test suite.
+[----------] 1 test from PerfectHashOnlineTests
+[ RUN      ] PerfectHashOnlineTests.SolveTimeoutDoesNotReturnAHandle
+D:\src\perfecthash\src\PerfectHash\PerfectHashOnlineCreate.c: 445: PerfectHashTableCreate failed with error: 3758359582 (0xe004041e).  The online table solve timeout expired before a solution was found.
+[       OK ] PerfectHashOnlineTests.SolveTimeoutDoesNotReturnAHandle (1023 ms)
+[----------] 1 test from PerfectHashOnlineTests (1023 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test suite ran. (1023 ms total)
+[  PASSED  ] 1 test.

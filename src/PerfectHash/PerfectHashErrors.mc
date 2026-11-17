@@ -4710,3 +4710,77 @@ SymbolicName=PH_E_TRY_USE_JIT_HASH_FUNC_FLAG_REQUIRE_HASH_ALL_KEYS_FIRST
 Language=English
 ---HashAllKeysFirst is required when specifying --TryUseJitHashFunction.
 .
+
+MessageId=0x41E
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_SOLVE_TIMEOUT_EXPIRED
+Language=English
+The online table solve timeout expired before a solution was found.
+.
+
+;// Failure counterparts for informational online solve outcomes.
+
+MessageId=0x080
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ONLINE_CREATE_TABLE_ROUTINE_RECEIVED_SHUTDOWN_EVENT
+Language=English
+Create table routine received shutdown event.
+.
+
+MessageId=0x081
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ONLINE_CREATE_TABLE_ROUTINE_FAILED_TO_FIND_SOLUTION
+Language=English
+Create table routine failed to find perfect hash solution.
+.
+
+MessageId=0x082
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ONLINE_MAXIMUM_NUMBER_OF_TABLE_RESIZE_EVENTS_REACHED
+Language=English
+The maximum number of table resize events was reached before a perfect hash table solution could be found.
+.
+
+MessageId=0x083
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ONLINE_REQUESTED_NUMBER_OF_TABLE_ELEMENTS_TOO_LARGE
+Language=English
+The requested number of table elements was too large.
+.
+
+MessageId=0x084
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ONLINE_FAILED_TO_ALLOCATE_MEMORY_FOR_ALL_GRAPHS
+Language=English
+Failed to allocate memory for all graphs.
+.
+
+MessageId=0x085
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ONLINE_LOW_MEMORY
+Language=English
+The system is running low on free memory.
+.
+
+MessageId=0x086
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ONLINE_OUT_OF_MEMORY
+Language=English
+The system is out of memory.
+.
+
+MessageId=0x087
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ONLINE_TABLE_CREATED_BUT_VALUES_ARRAY_ALLOC_FAILED
+Language=English
+The table was created successfully, however, the values array could not be allocated.  The table cannot be used.
+.

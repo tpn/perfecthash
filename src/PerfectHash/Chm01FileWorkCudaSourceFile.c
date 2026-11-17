@@ -44,7 +44,7 @@ PrepareCudaSourceFileChm01(
     Table = Context->Table;
     Keys = Table->Keys;
     File = *Item->FilePointer;
-    TableInfo = Table->TableInfoOnDisk;
+    TableInfo = &Context->GraphInfoOnDisk->TableInfoOnDisk;
 
     if (!File) {
         return E_UNEXPECTED;
@@ -134,10 +134,12 @@ SaveCudaSourceFileChm01(
     File = *Item->FilePointer;
     Path = GetActivePath(File);
     Name = &Path->TableNameA;
-    TableInfo = Table->TableInfoOnDisk;
+    TableInfo = &Context->GraphInfoOnDisk->TableInfoOnDisk;
     Graph = (PGRAPH)Context->SolvedContext;
     TotalNumberOfElements = TableInfo->NumberOfTableElements.QuadPart;
-    NumberOfSeeds = TableInfo->NumberOfSeeds;
+    // File save callbacks run concurrently.  The metadata stream may not
+    // have published the winning seeds yet; use the solved graph directly.
+    NumberOfSeeds = Graph->NumberOfSeeds;
     NumberOfKeys = Keys->NumberOfKeys.QuadPart;
     UsingAssigned16 = (TableInfo->AssignedElementSizeInBytes == sizeof(USHORT));
     Supported = (
@@ -254,26 +256,26 @@ SaveCudaSourceFileChm01(
     OUTPUT_INT(NumberOfSeeds);
     OUTPUT_RAW("u;\n");
     OUTPUT_RAW("inline constexpr std::uint32_t seed1 = ");
-    OUTPUT_HEX((NumberOfSeeds >= 1) ? TableInfo->Seed1 : 0);
+    OUTPUT_HEX((NumberOfSeeds >= 1) ? Graph->Seeds[0] : 0);
     OUTPUT_RAW("u;\n");
     OUTPUT_RAW("inline constexpr std::uint32_t seed2 = ");
-    OUTPUT_HEX((NumberOfSeeds >= 2) ? TableInfo->Seed2 : 0);
+    OUTPUT_HEX((NumberOfSeeds >= 2) ? Graph->Seeds[1] : 0);
     OUTPUT_RAW("u;\n");
     OUTPUT_RAW("inline constexpr std::uint32_t seed3 = ");
-    OUTPUT_HEX((NumberOfSeeds >= 3) ? TableInfo->Seed3 : 0);
+    OUTPUT_HEX((NumberOfSeeds >= 3) ? Graph->Seeds[2] : 0);
     OUTPUT_RAW("u;\n\n");
     OUTPUT_RAW("inline constexpr std::uint32_t seed4 = ");
-    OUTPUT_HEX((NumberOfSeeds >= 4) ? TableInfo->Seed4 : 0);
+    OUTPUT_HEX((NumberOfSeeds >= 4) ? Graph->Seeds[3] : 0);
     OUTPUT_RAW("u;\n");
     OUTPUT_RAW("inline constexpr std::uint32_t seed5 = ");
-    OUTPUT_HEX((NumberOfSeeds >= 5) ? TableInfo->Seed5 : 0);
+    OUTPUT_HEX((NumberOfSeeds >= 5) ? Graph->Seeds[4] : 0);
     OUTPUT_RAW("u;\n\n");
 
-    Seed1 = (NumberOfSeeds >= 1 ? TableInfo->Seed1 : 0);
-    Seed2 = (NumberOfSeeds >= 2 ? TableInfo->Seed2 : 0);
-    Seed3 = (NumberOfSeeds >= 3 ? TableInfo->Seed3 : 0);
-    Seed4 = (NumberOfSeeds >= 4 ? TableInfo->Seed4 : 0);
-    Seed5 = (NumberOfSeeds >= 5 ? TableInfo->Seed5 : 0);
+    Seed1 = (NumberOfSeeds >= 1 ? Graph->Seeds[0] : 0);
+    Seed2 = (NumberOfSeeds >= 2 ? Graph->Seeds[1] : 0);
+    Seed3 = (NumberOfSeeds >= 3 ? Graph->Seeds[2] : 0);
+    Seed4 = (NumberOfSeeds >= 4 ? Graph->Seeds[3] : 0);
+    Seed5 = (NumberOfSeeds >= 5 ? Graph->Seeds[4] : 0);
     Seed3Byte1 = (Seed3 & 0xff);
     Seed3Byte2 = ((Seed3 >> 8) & 0xff);
     Seed3Byte3 = ((Seed3 >> 16) & 0xff);

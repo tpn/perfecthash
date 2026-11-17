@@ -186,10 +186,14 @@ Arguments:
         parameters structure.
 
     TablePointer - Receives a pointer to the created table on success.
+        Remains NULL when solving does not produce a usable table.
 
 Return Value:
 
     S_OK on success, an appropriate error code on failure.
+
+    PH_E_SOLVE_TIMEOUT_EXPIRED if the solve deadline expires. Other
+    informational solve outcomes retain their code with failure severity set.
 
 --*/
 {
@@ -427,7 +431,21 @@ Return Value:
                                  &TableCreateFlags,
                                  TableCreateParameters);
 
-    if (FAILED(Result)) {
+    if (Result != S_OK) {
+        // Informational solve outcomes (including timeout) have no usable table.
+        // Convert them to a failure before publishing an online table handle.
+        if (Result == PH_I_SOLVE_TIMEOUT_EXPIRED) {
+            Result = PH_E_SOLVE_TIMEOUT_EXPIRED;
+        } else if (Result == PH_I_CUDA_OUT_OF_MEMORY) {
+            Result = PH_E_CUDA_OUT_OF_MEMORY;
+        } else if (Result >= PH_I_CREATE_TABLE_ROUTINE_RECEIVED_SHUTDOWN_EVENT &&
+                   Result <= PH_I_TABLE_CREATED_BUT_VALUES_ARRAY_ALLOC_FAILED) {
+            // Registered PH_E_ONLINE_* counterparts preserve the solve reason.
+            Result = (HRESULT)((ULONG)Result | 0x80000000UL);
+        } else if (SUCCEEDED(Result)) {
+            // Any other non-S_OK success code has no failure counterpart.
+            Result = E_UNEXPECTED;
+        }
         PH_ERROR(PerfectHashTableCreate, Result);
         goto Error;
     }

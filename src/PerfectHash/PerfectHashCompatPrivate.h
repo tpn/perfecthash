@@ -152,7 +152,7 @@ CreateStringFromWide(
     _In_ PCWSTR WideString
     );
 
-extern DWORD LastError;
+extern __thread DWORD LastError;
 
 typedef union _PH_HANDLE {
     int AsFileDescriptor;

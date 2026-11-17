@@ -109,52 +109,40 @@ End:
     return Result;
 }
 
-PERFECT_HASH_TABLE_RUNDOWN PerfectHashTableRundown;
-
-_Use_decl_annotations_
+// File save callbacks publish these ownership bits concurrently.
 VOID
-PerfectHashTableRundown(
-    PPERFECT_HASH_TABLE Table
+PerfectHashTablePublishOwnedData(
+    PPERFECT_HASH_TABLE Table,
+    BOOLEAN IsTableInfo
     )
-/*++
-
-Routine Description:
-
-    Release all resources associated with a perfect hash table.
-
-Arguments:
-
-    Table - Supplies a pointer to a PERFECT_HASH_TABLE structure for which
-        rundown is to be performed.
-
-Return Value:
-
-    None.
-
---*/
 {
-    PALLOCATOR Allocator;
-    HRESULT RemoveResult;
+    PERFECT_HASH_TABLE_STATE Mask = { 0 };
+    LONG Previous;
+    LONG Observed;
 
-    //
-    // Validate arguments.
-    //
-
-    if (!ARGUMENT_PRESENT(Table)) {
-        return;
+    if (IsTableInfo) {
+        Mask.TableInfoOnDiskWasHeapAllocated = TRUE;
+    } else {
+        Mask.TableDataWasHeapAllocated = TRUE;
     }
 
-    //
-    // Sanity check structure size.
-    //
+    Observed = InterlockedCompareExchange(&Table->State.AsLong, 0, 0);
+    do {
+        Previous = Observed;
+        Observed = InterlockedCompareExchange(&Table->State.AsLong,
+                                               Previous | Mask.AsLong,
+                                               Previous);
+    } while (Observed != Previous);
+}
 
-    ASSERT(Table->SizeOfStruct == sizeof(*Table));
-
-    Allocator = Table->Allocator;
-
-    //
-    // Release any JIT resources before freeing table data.
-    //
+// Release allocations owned by creation even when it did not reach Created.
+// Clearing ownership permits a failed table object to be retried safely.
+VOID
+PerfectHashTableReleaseOwnedData(
+    PPERFECT_HASH_TABLE Table
+    )
+{
+    PALLOCATOR Allocator = Table->Allocator;
 
     PerfectHashTableHashJitRundown(Table);
     PerfectHashTableJitRundown(Table);
@@ -187,29 +175,37 @@ Return Value:
     // data, if applicable.
     //
 
-    if (Table->Flags.Created && !IsTableCreateOnly(Table)) {
-        if (Table->TableInfoOnDisk && WasTableInfoOnDiskHeapAllocated(Table)) {
-            Allocator->Vtbl->FreePointer(Allocator,
-                                         PPV(&Table->TableInfoOnDisk));
+    // Ownership also covers allocations made before creation completed.
+    if (Table->TableInfoOnDisk && WasTableInfoOnDiskHeapAllocated(Table)) {
+        Allocator->Vtbl->FreePointer(Allocator,
+                                     PPV(&Table->TableInfoOnDisk));
+    }
+    if (Table->TableDataBaseAddress && WasTableDataHeapAllocated(Table)) {
+        if (!VirtualFree(Table->TableDataBaseAddress,
+                         VFS(Table->Flags.TableDataUsesLargePages ?
+                             ALIGN_UP(Table->TableDataSizeInBytes,
+                                      GetLargePageMinimum()) :
+                             Table->TableDataSizeInBytes),
+                         MEM_RELEASE)) {
+            SYS_ERROR(VirtualFree);
+            // Do not clear ownership after a failed release. Match the
+            // values-array cleanup's noncontinuable failure behavior.
+            PH_RAISE(E_UNEXPECTED);
         }
-        if (Table->TableDataBaseAddress && WasTableDataHeapAllocated(Table)) {
-            if (!VirtualFree(Table->TableDataBaseAddress,
-                             VFS(Table->TableDataSizeInBytes),
-                             MEM_RELEASE)) {
-                SYS_ERROR(VirtualFree);
-            }
-            Table->TableDataBaseAddress = NULL;
-        }
+        Table->TableDataBaseAddress = NULL;
     }
 
-    //
-    // Invariant check: the context files should always be NULL.
-    //
+    Table->State.TableInfoOnDiskWasHeapAllocated = FALSE;
+    Table->State.TableDataWasHeapAllocated = FALSE;
+}
 
-#define EXPAND_AS_ASSERT_NULL(Verb, VUpper, Name, Upper) \
-    ASSERT(Table->Name == NULL);
-
-    CONTEXT_FILE_WORK_TABLE_ENTRY(EXPAND_AS_ASSERT_NULL);
+// File work is drained and directories are closed before this is called.
+VOID
+PerfectHashTableReleaseFiles(
+    PPERFECT_HASH_TABLE Table
+    )
+{
+    HRESULT RemoveResult;
 
     //
     // Detach file instances from their parent directories before releasing
@@ -248,6 +244,65 @@ Return Value:
 
     RELEASE(Table->OutputPath);
     RELEASE(Table->OutputDirectory);
+
+#undef EXPAND_AS_RELEASE
+}
+
+PERFECT_HASH_TABLE_RUNDOWN PerfectHashTableRundown;
+
+_Use_decl_annotations_
+VOID
+PerfectHashTableRundown(
+    PPERFECT_HASH_TABLE Table
+    )
+/*++
+
+Routine Description:
+
+    Release all resources associated with a perfect hash table.
+
+Arguments:
+
+    Table - Supplies a pointer to a PERFECT_HASH_TABLE structure for which
+        rundown is to be performed.
+
+Return Value:
+
+    None.
+
+--*/
+{
+
+    //
+    // Validate arguments.
+    //
+
+    if (!ARGUMENT_PRESENT(Table)) {
+        return;
+    }
+
+    //
+    // Sanity check structure size.
+    //
+
+    ASSERT(Table->SizeOfStruct == sizeof(*Table));
+
+    //
+    // Release any JIT resources before freeing table data.
+    //
+
+    PerfectHashTableReleaseOwnedData(Table);
+
+    //
+    // Invariant check: the context files should always be NULL.
+    //
+
+#define EXPAND_AS_ASSERT_NULL(Verb, VUpper, Name, Upper) \
+    ASSERT(Table->Name == NULL);
+
+    CONTEXT_FILE_WORK_TABLE_ENTRY(EXPAND_AS_ASSERT_NULL);
+
+    PerfectHashTableReleaseFiles(Table);
     RELEASE(Table->Context);
     RELEASE(Table->Keys);
     RELEASE(Table->Rtl);

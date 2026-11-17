@@ -1,0 +1,9 @@
+Test project D:/src/perfecthash/build
+    Start  2: perfecthash_unit_tests.PerfectHashArgvTests.FailedFileCreateRegeneratesSharedFiles
+1/2 Test  #2: perfecthash_unit_tests.PerfectHashArgvTests.FailedFileCreateRegeneratesSharedFiles ...   Passed    0.59 sec
+    Start 13: perfecthash_unit_tests.PerfectHashOnlineTests.SolveTimeoutDoesNotReturnAHandle
+2/2 Test #13: perfecthash_unit_tests.PerfectHashOnlineTests.SolveTimeoutDoesNotReturnAHandle .......   Passed    1.03 sec
+
+100% tests passed out of 2
+
+Total Test time (real) =   1.63 sec

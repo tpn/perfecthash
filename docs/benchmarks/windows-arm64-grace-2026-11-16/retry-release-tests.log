@@ -1,0 +1,18 @@
+Running main() from D:\src\perfecthash\build\_deps\googletest-src\googletest\src\gtest_main.cc
+Note: Google Test filter = *UnsolvedTable*:*SolveTimeout*:*SkipGraphVerification*
+[==========] Running 3 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 3 tests from PerfectHashOnlineTests
+[ RUN      ] PerfectHashOnlineTests.UnsolvedTableDoesNotReturnAHandle
+D:\src\perfecthash\src\PerfectHash\PerfectHashOnlineCreate.c: 445: PerfectHashTableCreate failed with error: 3758358657 (0xe0040081).  Create table routine failed to find perfect hash solution.
+[       OK ] PerfectHashOnlineTests.UnsolvedTableDoesNotReturnAHandle (19 ms)
+[ RUN      ] PerfectHashOnlineTests.SolveTimeoutDoesNotReturnAHandle
+D:\src\perfecthash\src\PerfectHash\PerfectHashOnlineCreate.c: 445: PerfectHashTableCreate failed with error: 3758359582 (0xe004041e).  The online table solve timeout expired before a solution was found.
+[       OK ] PerfectHashOnlineTests.SolveTimeoutDoesNotReturnAHandle (1016 ms)
+[ RUN      ] PerfectHashOnlineTests.SkipGraphVerificationReturnsUsableTable
+[       OK ] PerfectHashOnlineTests.SkipGraphVerificationReturnsUsableTable (15 ms)
+[----------] 3 tests from PerfectHashOnlineTests (1051 ms total)
+
+[----------] Global test environment tear-down
+[==========] 3 tests from 1 test suite ran. (1051 ms total)
+[  PASSED  ] 3 tests.

@@ -1,0 +1,374 @@
+[
+  {
+    "name": "hologram-msr32",
+    "command": [
+      "D:\\src\\perfecthash\\build\\bin\\Release\\perfecthash_benchmarks.exe",
+      "--keys-file=D:\\src\\perfecthash\\keys\\HologramWorld-31016.keys",
+      "--preset=hologramworld-msr",
+      "--no-jit",
+      "--iterations=5",
+      "--loops=50",
+      "--max-solve-time=30"
+    ],
+    "runs": [
+      {
+        "repeat": 1,
+        "exit_code": 0,
+        "build_ms": 19.6451,
+        "ph_ns": 7.0,
+        "unordered_ns": 10.3,
+        "map_ns": 43.6
+      },
+      {
+        "repeat": 2,
+        "exit_code": 0,
+        "build_ms": 17.3566,
+        "ph_ns": 7.1,
+        "unordered_ns": 10.3,
+        "map_ns": 44.0
+      },
+      {
+        "repeat": 3,
+        "exit_code": 0,
+        "build_ms": 17.8641,
+        "ph_ns": 7.1,
+        "unordered_ns": 10.6,
+        "map_ns": 44.1
+      }
+    ]
+  },
+  {
+    "name": "hologram-msr16",
+    "command": [
+      "D:\\src\\perfecthash\\build\\bin\\Release\\perfecthash_benchmarks.exe",
+      "--keys-file=D:\\src\\perfecthash\\keys\\HologramWorld-31016.keys",
+      "--preset=hologramworld-msr",
+      "--allow-assigned16",
+      "--no-jit",
+      "--iterations=5",
+      "--loops=50",
+      "--max-solve-time=30"
+    ],
+    "runs": [
+      {
+        "repeat": 1,
+        "exit_code": 0,
+        "build_ms": 17.8923,
+        "ph_ns": 4.5,
+        "unordered_ns": 10.3,
+        "map_ns": 44.3
+      },
+      {
+        "repeat": 2,
+        "exit_code": 0,
+        "build_ms": 17.6114,
+        "ph_ns": 4.5,
+        "unordered_ns": 10.3,
+        "map_ns": 43.8
+      },
+      {
+        "repeat": 3,
+        "exit_code": 0,
+        "build_ms": 15.3955,
+        "ph_ns": 4.4,
+        "unordered_ns": 10.4,
+        "map_ns": 43.7
+      }
+    ]
+  },
+  {
+    "name": "random100k-MultiplyShiftR",
+    "command": [
+      "D:\\src\\perfecthash\\build\\bin\\Release\\perfecthash_benchmarks.exe",
+      "--keys=100000",
+      "--hash=MultiplyShiftR",
+      "--no-jit",
+      "--iterations=5",
+      "--loops=50",
+      "--max-solve-time=30"
+    ],
+    "runs": [
+      {
+        "repeat": 1,
+        "exit_code": 0,
+        "build_ms": 250.836,
+        "ph_ns": 13.3,
+        "unordered_ns": 14.0,
+        "map_ns": 227.8
+      },
+      {
+        "repeat": 2,
+        "exit_code": 0,
+        "build_ms": 252.577,
+        "ph_ns": 10.3,
+        "unordered_ns": 13.9,
+        "map_ns": 226.1
+      },
+      {
+        "repeat": 3,
+        "exit_code": 0,
+        "build_ms": 254.349,
+        "ph_ns": 10.3,
+        "unordered_ns": 13.9,
+        "map_ns": 228.4
+      }
+    ]
+  },
+  {
+    "name": "random100k-MultiplyShiftRX",
+    "command": [
+      "D:\\src\\perfecthash\\build\\bin\\Release\\perfecthash_benchmarks.exe",
+      "--keys=100000",
+      "--hash=MultiplyShiftRX",
+      "--no-jit",
+      "--iterations=5",
+      "--loops=50",
+      "--max-solve-time=30"
+    ],
+    "runs": [
+      {
+        "repeat": 1,
+        "exit_code": 0,
+        "build_ms": 41.5458,
+        "ph_ns": 11.7,
+        "unordered_ns": 14.0,
+        "map_ns": 225.5
+      },
+      {
+        "repeat": 2,
+        "exit_code": 0,
+        "build_ms": 41.032,
+        "ph_ns": 11.9,
+        "unordered_ns": 13.9,
+        "map_ns": 228.6
+      },
+      {
+        "repeat": 3,
+        "exit_code": 0,
+        "build_ms": 41.6692,
+        "ph_ns": 11.7,
+        "unordered_ns": 14.0,
+        "map_ns": 227.1
+      }
+    ]
+  },
+  {
+    "name": "random100k-Mulshrolate1RX",
+    "command": [
+      "D:\\src\\perfecthash\\build\\bin\\Release\\perfecthash_benchmarks.exe",
+      "--keys=100000",
+      "--hash=Mulshrolate1RX",
+      "--no-jit",
+      "--iterations=5",
+      "--loops=50",
+      "--max-solve-time=30"
+    ],
+    "runs": [
+      {
+        "repeat": 1,
+        "exit_code": 0,
+        "build_ms": 36.0326,
+        "ph_ns": 12.4,
+        "unordered_ns": 13.9,
+        "map_ns": 228.5
+      },
+      {
+        "repeat": 2,
+        "exit_code": 0,
+        "build_ms": 38.3196,
+        "ph_ns": 11.8,
+        "unordered_ns": 13.8,
+        "map_ns": 225.3
+      },
+      {
+        "repeat": 3,
+        "exit_code": 0,
+        "build_ms": 35.522,
+        "ph_ns": 11.8,
+        "unordered_ns": 14.0,
+        "map_ns": 227.3
+      }
+    ]
+  },
+  {
+    "name": "random100k-Mulshrolate2RX",
+    "command": [
+      "D:\\src\\perfecthash\\build\\bin\\Release\\perfecthash_benchmarks.exe",
+      "--keys=100000",
+      "--hash=Mulshrolate2RX",
+      "--no-jit",
+      "--iterations=5",
+      "--loops=50",
+      "--max-solve-time=30"
+    ],
+    "runs": [
+      {
+        "repeat": 1,
+        "exit_code": 0,
+        "build_ms": 43.2567,
+        "ph_ns": 11.3,
+        "unordered_ns": 13.9,
+        "map_ns": 227.0
+      },
+      {
+        "repeat": 2,
+        "exit_code": 0,
+        "build_ms": 41.3976,
+        "ph_ns": 12.4,
+        "unordered_ns": 13.9,
+        "map_ns": 228.0
+      },
+      {
+        "repeat": 3,
+        "exit_code": 0,
+        "build_ms": 41.2807,
+        "ph_ns": 12.6,
+        "unordered_ns": 13.9,
+        "map_ns": 225.7
+      }
+    ]
+  },
+  {
+    "name": "random100k-Mulshrolate3RX",
+    "command": [
+      "D:\\src\\perfecthash\\build\\bin\\Release\\perfecthash_benchmarks.exe",
+      "--keys=100000",
+      "--hash=Mulshrolate3RX",
+      "--no-jit",
+      "--iterations=5",
+      "--loops=50",
+      "--max-solve-time=30"
+    ],
+    "runs": [
+      {
+        "repeat": 1,
+        "exit_code": 0,
+        "build_ms": 36.6802,
+        "ph_ns": 12.8,
+        "unordered_ns": 13.9,
+        "map_ns": 228.0
+      },
+      {
+        "repeat": 2,
+        "exit_code": 0,
+        "build_ms": 37.2966,
+        "ph_ns": 12.0,
+        "unordered_ns": 13.8,
+        "map_ns": 224.7
+      },
+      {
+        "repeat": 3,
+        "exit_code": 0,
+        "build_ms": 36.294,
+        "ph_ns": 12.3,
+        "unordered_ns": 13.9,
+        "map_ns": 226.4
+      }
+    ]
+  },
+  {
+    "name": "random100k-Mulshrolate4RX",
+    "command": [
+      "D:\\src\\perfecthash\\build\\bin\\Release\\perfecthash_benchmarks.exe",
+      "--keys=100000",
+      "--hash=Mulshrolate4RX",
+      "--no-jit",
+      "--iterations=5",
+      "--loops=50",
+      "--max-solve-time=30"
+    ],
+    "runs": [
+      {
+        "repeat": 1,
+        "exit_code": 0,
+        "build_ms": 36.477,
+        "ph_ns": 13.9,
+        "unordered_ns": 13.9,
+        "map_ns": 227.3
+      },
+      {
+        "repeat": 2,
+        "exit_code": 0,
+        "build_ms": 36.2407,
+        "ph_ns": 12.3,
+        "unordered_ns": 13.8,
+        "map_ns": 226.1
+      },
+      {
+        "repeat": 3,
+        "exit_code": 0,
+        "build_ms": 36.9594,
+        "ph_ns": 13.1,
+        "unordered_ns": 13.9,
+        "map_ns": 226.5
+      }
+    ]
+  },
+  {
+    "name": "random1m-MultiplyShiftR",
+    "command": [
+      "D:\\src\\perfecthash\\build\\bin\\Release\\perfecthash_benchmarks.exe",
+      "--keys=1000000",
+      "--hash=MultiplyShiftR",
+      "--no-jit",
+      "--iterations=5",
+      "--loops=5",
+      "--max-solve-time=30"
+    ],
+    "runs": [
+      {
+        "repeat": 1,
+        "exit_code": 2,
+        "outcome": "solve timeout; no timing"
+      },
+      {
+        "repeat": 2,
+        "exit_code": 2,
+        "outcome": "solve timeout; no timing"
+      },
+      {
+        "repeat": 3,
+        "exit_code": 2,
+        "outcome": "solve timeout; no timing"
+      }
+    ]
+  },
+  {
+    "name": "random1m-Mulshrolate4RX",
+    "command": [
+      "D:\\src\\perfecthash\\build\\bin\\Release\\perfecthash_benchmarks.exe",
+      "--keys=1000000",
+      "--hash=Mulshrolate4RX",
+      "--no-jit",
+      "--iterations=5",
+      "--loops=5",
+      "--max-solve-time=30"
+    ],
+    "runs": [
+      {
+        "repeat": 1,
+        "exit_code": 0,
+        "build_ms": 1126.51,
+        "ph_ns": 18.7,
+        "unordered_ns": 26.2,
+        "map_ns": 537.6
+      },
+      {
+        "repeat": 2,
+        "exit_code": 0,
+        "build_ms": 1242.55,
+        "ph_ns": 19.9,
+        "unordered_ns": 26.4,
+        "map_ns": 521.1
+      },
+      {
+        "repeat": 3,
+        "exit_code": 0,
+        "build_ms": 1222.05,
+        "ph_ns": 18.4,
+        "unordered_ns": 24.9,
+        "map_ns": 511.5
+      }
+    ]
+  }
+]

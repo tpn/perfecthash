@@ -1,0 +1,27 @@
+PerfectHash benchmarks
+  Keys:       1000000
+  Hash:       Mulshrolate4RX
+  Graph Impl: 3
+  Iterations: 5
+  Loops:      5
+  JIT:        off
+  JIT Backend: auto
+  JIT Max ISA: auto
+  Max Solve Time: 30s
+  Index32x2:  off
+  Index32x4:  off
+  Index32x8:  off
+  Index32x16: off
+  JIT Vec32x2: off
+  JIT Vec32x4: off
+  JIT Vec32x8: off
+  Allow Assigned16: off
+Key sort time:           53.6924 ms
+Build time (PerfectHash): 1126.51 ms
+Build time (unordered_map): 93.1956 ms
+Build time (map): 529.3 ms
+Lookup avg (PerfectHash): 93.5113 ms (18.7 ns/op)
+Lookup avg (unordered_map): 1e+02 ms (26.2 ns/op)
+Lookup avg (map): 3e+03 ms (537.6 ns/op)
+Assigned element bits:   32
+Sink: 0

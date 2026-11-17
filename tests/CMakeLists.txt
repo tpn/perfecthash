@@ -191,7 +191,8 @@ if(TARGET PerfectHashCreateExe AND TARGET PerfectHashBulkCreateExe)
             -DTEST_KEYS=${TEST_KEYS_FILE}
             -DTEST_OUTPUT=${TEST_OUTPUT_DIR}/codegen-mulshrolate1rx
             -DTEST_ARGS=Chm01|Mulshrolate1RX|And|1
-            -DTEST_FLAGS=--Quiet
+            -DTEST_EXPECT_RESIZE=ON
+            -DTEST_FLAGS=--Quiet|--AttemptsBeforeTableResize=1000
             -DTEST_PYTHON=${Python3_EXECUTABLE}
             -DTEST_CARGO=${CARGO_EXECUTABLE}
             -DTEST_BUILD_CONFIG=$<CONFIG>
@@ -247,7 +248,8 @@ if(TARGET PerfectHashCreateExe AND TARGET PerfectHashBulkCreateExe)
             -DTEST_KEYS=${TEST_KEYS_FILE}
             -DTEST_OUTPUT=${TEST_OUTPUT_DIR}/codegen-multiplyshiftrx
             -DTEST_ARGS=Chm01|MultiplyShiftRX|And|1
-            -DTEST_FLAGS=--Quiet
+            -DTEST_EXPECT_RESIZE=ON
+            -DTEST_FLAGS=--Quiet|--AttemptsBeforeTableResize=1000
             -DTEST_PYTHON=${Python3_EXECUTABLE}
             -DTEST_CARGO=${CARGO_EXECUTABLE}
             -DTEST_BUILD_CONFIG=$<CONFIG>
