@@ -510,9 +510,10 @@ Return Value:
         }
     }
 
-    // Creation, testing and compilation are complete. Sample cancellation
-    // before committing this result. Cleanup preserves the completed outcome.
-    if (CtrlCPressed) {
+    // A completed solve status such as a timeout is already the outcome.
+    // A signal during optional testing or compilation of a solved table
+    // cancels that remaining work before its result is committed.
+    if (Result == S_OK && CtrlCPressed) {
         Result = PH_E_CTRL_C_PRESSED;
     }
 

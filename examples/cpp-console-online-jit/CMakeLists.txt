@@ -11,11 +11,11 @@ option(
     "Prefer shared PerfectHash runtime over static."
     ON
 )
-option(
-    PH_ONLINE_JIT_USE_FETCHCONTENT
-    "Fetch PerfectHash from GitHub via FetchContent."
-    ON
+set(
+    PH_ONLINE_JIT_USE_FETCHCONTENT AUTO CACHE STRING
+    "Fetch PerfectHash via FetchContent (AUTO uses a local tree if PERFECTHASH_ROOT is set)."
 )
+set_property(CACHE PH_ONLINE_JIT_USE_FETCHCONTENT PROPERTY STRINGS AUTO ON OFF)
 
 set(
     PERFECTHASH_GIT_REPOSITORY
@@ -46,8 +46,12 @@ set(PH_ONLINE_JIT_TARGET "")
 set(PH_ONLINE_JIT_RUNTIME_TARGET "")
 set(PH_ONLINE_JIT_LLVM_TARGET "")
 
-if(PERFECTHASH_ROOT AND NOT PERFECTHASH_ROOT STREQUAL "")
-    set(PH_ONLINE_JIT_USE_FETCHCONTENT OFF CACHE BOOL "" FORCE)
+if(PH_ONLINE_JIT_USE_FETCHCONTENT STREQUAL "AUTO")
+    if(PERFECTHASH_ROOT)
+        set(PH_ONLINE_JIT_USE_FETCHCONTENT OFF)
+    else()
+        set(PH_ONLINE_JIT_USE_FETCHCONTENT ON)
+    endif()
 endif()
 
 if(PH_ONLINE_JIT_USE_FETCHCONTENT)

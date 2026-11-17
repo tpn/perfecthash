@@ -72,24 +72,24 @@ with tempfile.TemporaryDirectory() as tmp:
         if any(silent.glob("*.csv")):
             raise AssertionError(f"{exe} produced a report with CSV output disabled")
 
-    if sys.platform != "win32":
-        # Opening the report confirms the signal handler is installed. With
-        # fixed colliding seeds and no timeout the solver waits for SIGINT.
-        interrupted = root / "interrupt"
-        args = command(bulk_create, keys, interrupted, *bad_seeds)
-        with subprocess.Popen(args) as proc:
-            try:
-                deadline = time.monotonic() + 30
-                while not any(interrupted.glob("*.csv")):
-                    if proc.poll() is not None or time.monotonic() >= deadline:
-                        raise AssertionError("Bulk create did not open its report")
-                    time.sleep(0.01)
-                proc.send_signal(signal.SIGINT)
-                proc.wait(timeout=15)
-                check_status(proc, PH_E_CTRL_C_PRESSED)
-            finally:
-                if proc.poll() is None:
-                    proc.kill()
+        if sys.platform != "win32":
+            # Opening the report confirms the signal handler is installed. With
+            # fixed colliding seeds and no timeout the solver waits for SIGINT.
+            interrupted = root / f"{name}-interrupt"
+            args = command(exe, source, interrupted, *bad_seeds)
+            with subprocess.Popen(args) as proc:
+                try:
+                    deadline = time.monotonic() + 30
+                    while not any(interrupted.glob("*.csv")):
+                        if proc.poll() is not None or time.monotonic() >= deadline:
+                            raise AssertionError(f"{exe} did not open its report")
+                        time.sleep(0.01)
+                    proc.send_signal(signal.SIGINT)
+                    proc.wait(timeout=15)
+                    check_status(proc, PH_E_CTRL_C_PRESSED)
+                finally:
+                    if proc.poll() is None:
+                        proc.kill()
 
     (keys / "Other.keys").touch()
     # Native directory traversal order can differ by filesystem.

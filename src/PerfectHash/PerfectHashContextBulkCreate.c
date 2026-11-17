@@ -465,6 +465,12 @@ Return Value:
         NumberOfKeysFiles++;
     } while (FindNextFileW(FindHandle, &FindData));
 
+    if (GetLastError() != ERROR_NO_MORE_FILES) {
+        SYS_ERROR(FindNextFileW);
+        Result = PH_E_SYSTEM_CALL_FAILED;
+        goto Error;
+    }
+
     //
     // Sanity check we saw at least one *.keys file.
     //
@@ -815,7 +821,17 @@ Return Value:
             break;
         }
 
-    } while (FindNextFileW(FindHandle, &FindData));
+        if (!FindNextFileW(FindHandle, &FindData)) {
+            if (GetLastError() != ERROR_NO_MORE_FILES) {
+                SYS_ERROR(FindNextFileW);
+                if (SUCCEEDED(BatchResult)) {
+                    BatchResult = PH_E_SYSTEM_CALL_FAILED;
+                }
+            }
+            break;
+        }
+
+    } while (TRUE);
 
     //
     // Bulk create complete!

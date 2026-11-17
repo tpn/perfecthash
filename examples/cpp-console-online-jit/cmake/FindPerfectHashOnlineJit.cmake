@@ -40,6 +40,10 @@ find_path(
 
 set(_ph_lib_suffixes)
 if(WIN32)
+    set(_ph_static_suffixes lib/static build/lib/static)
+    foreach(_ph_config Release RelWithDebInfo Debug MinSizeRel)
+        list(APPEND _ph_static_suffixes "lib/${_ph_config}/static" "build/lib/${_ph_config}/static")
+    endforeach()
     if(PH_ONLINE_JIT_PREFER_SHARED)
         list(APPEND _ph_lib_suffixes
             lib
@@ -48,15 +52,13 @@ if(WIN32)
             build/lib/Release
             lib/RelWithDebInfo
             build/lib/RelWithDebInfo
-            lib/static
-            build/lib/static
+            ${_ph_static_suffixes}
             lib/Debug
             build/lib/Debug
         )
     else()
         list(APPEND _ph_lib_suffixes
-            lib/static
-            build/lib/static
+            ${_ph_static_suffixes}
             lib
             build/lib
             lib/Release
@@ -140,25 +142,39 @@ if(PERFECTHASH_ONLINE_JIT_LLVM_LIBRARY)
     )
 endif()
 
+set(_ph_assume_static FALSE)
+unset(_ph_required_runtime)
+unset(_ph_runtime_error)
 if(WIN32)
-    find_file(
-        PERFECTHASH_ONLINE_JIT_RUNTIME_DLL
-        NAMES
-            PerfectHashOnlineCore.dll
-            PerfectHashOnline.dll
-        HINTS
-            ${_ph_search_hints}
-            "${PERFECTHASH_ONLINE_JIT_LIBRARY_DIR}"
-        PATH_SUFFIXES
-            bin
-            build/bin
-            bin/Release
-            build/bin/Release
-            bin/RelWithDebInfo
-            build/bin/RelWithDebInfo
-            bin/Debug
-            build/bin/Debug
-    )
+    # The Windows archives live under lib/static or lib/<config>/static.
+    string(TOLOWER "${PERFECTHASH_ONLINE_JIT_LIBRARY_DIR}" _ph_archive_dir)
+    if(_ph_archive_dir MATCHES "[/\\\\]static$")
+        set(_ph_assume_static TRUE)
+        set(PERFECTHASH_ONLINE_JIT_RUNTIME_DLL "")
+    elseif(PERFECTHASH_ONLINE_JIT_LIBRARY)
+        get_filename_component(_ph_import_name "${PERFECTHASH_ONLINE_JIT_LIBRARY}" NAME_WE)
+        set(_ph_dll_name "${_ph_import_name}.dll")
+        get_filename_component(_ph_cached_dll "${PERFECTHASH_ONLINE_JIT_RUNTIME_DLL}" NAME)
+        string(TOLOWER "${_ph_cached_dll}" _ph_cached_dll)
+        string(TOLOWER "${_ph_dll_name}" _ph_expected_dll)
+        if(NOT EXISTS "${PERFECTHASH_ONLINE_JIT_RUNTIME_DLL}" OR NOT _ph_cached_dll STREQUAL _ph_expected_dll)
+            unset(PERFECTHASH_ONLINE_JIT_RUNTIME_DLL CACHE)
+            unset(PERFECTHASH_ONLINE_JIT_RUNTIME_DLL)
+        endif()
+        get_filename_component(_ph_lib_config "${PERFECTHASH_ONLINE_JIT_LIBRARY_DIR}" NAME)
+        find_file(PERFECTHASH_ONLINE_JIT_RUNTIME_DLL
+            NAMES "${_ph_dll_name}"
+            HINTS "${PERFECTHASH_ONLINE_JIT_LIBRARY_DIR}/../bin"
+                  "${PERFECTHASH_ONLINE_JIT_LIBRARY_DIR}/../../bin/${_ph_lib_config}"
+                  ${_ph_search_hints}
+            PATH_SUFFIXES bin build/bin bin/Release build/bin/Release
+                          bin/RelWithDebInfo build/bin/RelWithDebInfo bin/Debug build/bin/Debug)
+        set(_ph_required_runtime PERFECTHASH_ONLINE_JIT_RUNTIME_DLL)
+        if(NOT PERFECTHASH_ONLINE_JIT_RUNTIME_DLL)
+            set(_ph_runtime_error REASON_FAILURE_MESSAGE
+                "The import library ${PERFECTHASH_ONLINE_JIT_LIBRARY} requires ${_ph_dll_name}.")
+        endif()
+    endif()
 
     find_file(
         PERFECTHASH_ONLINE_JIT_LLVM_RUNTIME_DLL
@@ -177,6 +193,8 @@ if(WIN32)
             bin/Debug
             build/bin/Debug
     )
+elseif(PERFECTHASH_ONLINE_JIT_LIBRARY MATCHES "\\.a$")
+    set(_ph_assume_static TRUE)
 endif()
 
 find_package_handle_standard_args(
@@ -184,6 +202,8 @@ find_package_handle_standard_args(
     REQUIRED_VARS
         PERFECTHASH_ONLINE_JIT_LIBRARY
         PERFECTHASH_ONLINE_JIT_INCLUDE_DIR
+        ${_ph_required_runtime}
+    ${_ph_runtime_error}
 )
 
 if(PerfectHashOnlineJit_FOUND AND NOT TARGET PerfectHash::OnlineJit)
@@ -195,27 +215,12 @@ if(PerfectHashOnlineJit_FOUND AND NOT TARGET PerfectHash::OnlineJit)
             INTERFACE_INCLUDE_DIRECTORIES "${PERFECTHASH_ONLINE_JIT_INCLUDE_DIR}"
     )
 
-    set(_ph_assume_static FALSE)
-    if(NOT WIN32)
-        if(PERFECTHASH_ONLINE_JIT_LIBRARY MATCHES "\\.a$")
-            set(_ph_assume_static TRUE)
-        endif()
-    endif()
-
-    if(WIN32)
-        if(PERFECTHASH_ONLINE_JIT_LIBRARY MATCHES "([/\\\\]|^)static([/\\\\]|$)")
-            set(_ph_assume_static TRUE)
-        elseif(NOT PERFECTHASH_ONLINE_JIT_RUNTIME_DLL)
-            set(_ph_assume_static TRUE)
-        endif()
-
-        if(_ph_assume_static)
-            set_property(
-                TARGET PerfectHash::OnlineJit
-                APPEND
-                PROPERTY INTERFACE_COMPILE_DEFINITIONS PERFECT_HASH_ONLINE_JIT_STATIC
-            )
-        endif()
+    if(WIN32 AND _ph_assume_static)
+        set_property(
+            TARGET PerfectHash::OnlineJit
+            APPEND
+            PROPERTY INTERFACE_COMPILE_DEFINITIONS PERFECT_HASH_ONLINE_JIT_STATIC
+        )
     endif()
 
     if(_ph_assume_static)
