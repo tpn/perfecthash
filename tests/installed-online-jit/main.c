@@ -30,6 +30,16 @@ int main(int argc, char **argv)
     uint32_t native[16], batch[16];
     int result = 1;
 
+#ifdef _WIN32
+    DWORD hostTls = TlsAlloc();
+    if (hostTls == TLS_OUT_OF_INDEXES) {
+        return 1;
+    }
+    if (!TlsSetValue(hostTls, argv)) {
+        TlsFree(hostTls);
+        return 1;
+    }
+#endif
     if (argc != 2 || PhOnlineJitOpen(&context) < 0 ||
         PhOnlineJitCreateTable32(context, PhOnlineJitHashMultiplyShiftR, keys, 16, &table) < 0) {
         fputs("Could not create the installed Core test table\n", stderr);
@@ -65,5 +75,12 @@ int main(int argc, char **argv)
 done:
     PhOnlineJitReleaseTable(table);
     PhOnlineJitClose(context);
+#ifdef _WIN32
+    if (TlsGetValue(hostTls) != argv) {
+        fputs("Client thread-local state changed during JIT lookup\n", stderr);
+        result = 1;
+    }
+    TlsFree(hostTls);
+#endif
     return result;
 }

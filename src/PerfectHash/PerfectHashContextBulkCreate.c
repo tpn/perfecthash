@@ -153,7 +153,7 @@ Return Value:
     BOOLEAN MonitorLowMemory;
     HRESULT Result;
     HRESULT CleanupResult;
-    HRESULT FirstFailure = S_OK;
+    HRESULT BatchResult = S_OK;
     HRESULT TableCreateResult;
     PCHAR Buffer;
     PCHAR BaseBuffer = NULL;
@@ -805,8 +805,10 @@ Return Value:
     ReleaseKeys:
 
         RELEASE(Keys);
-        if (Result != S_OK && FirstFailure == S_OK) {
-            FirstFailure = Result;
+        // Keep the first hard failure, or the first informational outcome if
+        // every input completed without a hard failure.
+        if (BatchResult == S_OK || (SUCCEEDED(BatchResult) && FAILED(Result))) {
+            BatchResult = Result;
         }
 
         if (Terminate || CtrlCPressed) {
@@ -821,8 +823,8 @@ Return Value:
 
     NEWLINE();
 
-    Result = FirstFailure;
-    if (Result == S_OK && CtrlCPressed) {
+    Result = BatchResult;
+    if (SUCCEEDED(Result) && CtrlCPressed) {
         Result = PH_E_CTRL_C_PRESSED;
     }
     goto End;

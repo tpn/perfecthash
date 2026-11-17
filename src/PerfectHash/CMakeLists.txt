@@ -5573,6 +5573,10 @@ if(TARGET ${llvm_target})
         target_link_libraries(${llvm_target} PRIVATE LLVM-C)
     elseif(LLVM_LINK_LLVM_DYLIB AND TARGET LLVM)
         target_link_libraries(${llvm_target} PRIVATE LLVM)
+        if(APPLE)
+            # An external LLVM dylib may use an @rpath install name.
+            set_property(TARGET ${llvm_target} PROPERTY INSTALL_RPATH_USE_LINK_PATH TRUE)
+        endif()
     else()
         llvm_map_components_to_libnames(
             LLVM_LIBS

@@ -169,33 +169,27 @@ PerfectHashTableCompileJitLocked(
     )
 {
     HRESULT Result;
-    PERFECT_HASH_TABLE_COMPILE_FLAGS Flags = { 0 };
     INDEX_JIT_BINDING Saved = { 0 };
     PPERFECT_HASH_TABLE_JIT Jit;
 
     // The caller holds the exclusive table lock. Keep the old backend and
     // its executable pages alive while compiling against the original vtable.
-    // The DLL sees only its established backend flags.
-    if (CompileFlags) {
-        Flags = *CompileFlags;
-        Flags.JitRequireRequestedWidth = FALSE;
-    }
     Saved.Index = Table->Jit ? Table->Jit->OriginalIndex : Table->Vtbl->Index;
     Saved.QueryInterface = Table->Jit ? Table->Jit->OriginalQueryInterface :
                                        Table->Vtbl->QueryInterface;
     ExchangeIndexJitBinding(Table, &Saved);
-    Result = PerfectHashTableCompileJit(Table, CompileFlags ? &Flags : NULL);
+    Result = PerfectHashTableCompileJit(Table, CompileFlags);
     Jit = Table->Jit;
     if (SUCCEEDED(Result) && CompileFlags &&
         CompileFlags->JitRequireRequestedWidth &&
         (!Jit ||
-         ((Flags.JitIndex32x2 || Flags.JitVectorIndex32x2) &&
+         ((CompileFlags->JitIndex32x2 || CompileFlags->JitVectorIndex32x2) &&
           !Jit->Flags.Index32x2Compiled) ||
-         ((Flags.JitIndex32x4 || Flags.JitVectorIndex32x4) &&
+         ((CompileFlags->JitIndex32x4 || CompileFlags->JitVectorIndex32x4) &&
           !Jit->Flags.Index32x4Compiled) ||
-         ((Flags.JitIndex32x8 || Flags.JitVectorIndex32x8) &&
+         ((CompileFlags->JitIndex32x8 || CompileFlags->JitVectorIndex32x8) &&
           !Jit->Flags.Index32x8Compiled) ||
-         (Flags.JitIndex32x16 && !Jit->Flags.Index32x16Compiled))) {
+         (CompileFlags->JitIndex32x16 && !Jit->Flags.Index32x16Compiled))) {
         Result = PH_E_NOT_IMPLEMENTED;
     }
     if (FAILED(Result)) {

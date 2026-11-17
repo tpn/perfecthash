@@ -14,15 +14,13 @@ Abstract:
 
 #include "stdafx.h"
 
-//
-// Our TLS index.  Assigned at PROCESS_ATTACH, free'd at PROCESS_DETACH.
-//
+#ifdef PH_WINDOWS_STATIC_ONLINE
+// The image loader gives each thread a zero-initialized context pointer,
+// including when the archive is linked into an executable without DllMain.
+static __declspec(thread) PPERFECT_HASH_TLS_CONTEXT ThreadContext;
+#elif defined(PH_WINDOWS)
+TLS_KEY_TYPE PerfectHashTlsIndex = TLS_OUT_OF_INDEXES;
 
-#ifdef PH_WINDOWS
-TLS_KEY_TYPE PerfectHashTlsIndex;
-#endif
-
-#ifdef PH_WINDOWS
 PERFECT_HASH_TLS_FUNCTION PerfectHashTlsProcessAttach;
 
 _Use_decl_annotations_
@@ -104,7 +102,12 @@ PerfectHashTlsSetContext(
     PPERFECT_HASH_TLS_CONTEXT Context
     )
 {
+#ifdef PH_WINDOWS_STATIC_ONLINE
+    ThreadContext = Context;
+    return TRUE;
+#else
     return TlsSetValue(PerfectHashTlsIndex, Context);
+#endif
 }
 
 PERFECT_HASH_TLS_GET_CONTEXT PerfectHashTlsGetContext;
@@ -115,11 +118,11 @@ PerfectHashTlsGetContext(
     VOID
     )
 {
-    PVOID Value;
-
-    Value = TlsGetValue(PerfectHashTlsIndex);
-
-    return (PPERFECT_HASH_TLS_CONTEXT)Value;
+#ifdef PH_WINDOWS_STATIC_ONLINE
+    return ThreadContext;
+#else
+    return (PPERFECT_HASH_TLS_CONTEXT)TlsGetValue(PerfectHashTlsIndex);
+#endif
 }
 
 _Use_decl_annotations_
@@ -130,7 +133,7 @@ PerfectHashTlsEnsureContext(
 {
     PVOID Value;
 
-    Value = TlsGetValue(PerfectHashTlsIndex);
+    Value = PerfectHashTlsGetContext();
 
     if (!Value) {
         PH_RAISE(PH_E_NO_TLS_CONTEXT_SET);
@@ -149,11 +152,11 @@ PerfectHashTlsGetOrSetContext(
 {
     PVOID Value;
 
-    Value = TlsGetValue(PerfectHashTlsIndex);
+    Value = PerfectHashTlsGetContext();
 
     if (!Value) {
         ZeroStructPointerInline(Context);
-        if (!TlsSetValue(PerfectHashTlsIndex, Context)) {
+        if (!PerfectHashTlsSetContext(Context)) {
             SYS_ERROR(TlsSetValue);
             PH_RAISE(E_UNEXPECTED);
         }
@@ -176,7 +179,7 @@ PerfectHashTlsClearContextIfActive(
     Active = PerfectHashTlsEnsureContext();
 
     if (Active == Context) {
-        if (!TlsSetValue(PerfectHashTlsIndex, NULL)) {
+        if (!PerfectHashTlsSetContext(NULL)) {
             SYS_ERROR(TlsSetValue);
             PH_RAISE(E_UNEXPECTED);
         }

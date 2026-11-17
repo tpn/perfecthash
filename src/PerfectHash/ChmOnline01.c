@@ -3975,6 +3975,10 @@ CompileChm01IndexJit(
     }
 
     if (CompileIndex32x16 && !CanCompileJit32x16(JitMaxIsa, HostCpuFeatures)) {
+        if (CompileFlags->JitRequireRequestedWidth) {
+            Result = PH_E_NOT_IMPLEMENTED;
+            goto Error;
+        }
         CompileIndex32x16 = FALSE;
         CompileVectorIndex32x16 = FALSE;
     }

@@ -351,6 +351,11 @@ Table Create Flags:
 
         N.B. Only applies when HashAllKeysFirst is set.
 
+    --DoNotTryUseNeonHashFunction
+
+        Disables ARM64 NEON key hashing for MultiplyShiftR and MultiplyShiftRX
+        when HashAllKeysFirst is set.
+
     --DoNotTryUseAvx2MemoryCoverageFunction
 
         When set, disables automatically using the AVX2 memory coverage

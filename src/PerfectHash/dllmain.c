@@ -49,6 +49,7 @@ InstallSigIntSignalHandler (
 HMODULE PerfectHashModule;
 MODULEINFO PerfectHashModuleInfo;
 
+#ifndef PH_WINDOWS_STATIC_ONLINE
 //
 // We need to define a _fltused ULONG symbol as we're working with floats and
 // doubles but not linking to the CRT.  Without this, we'll get a missing
@@ -136,6 +137,7 @@ _DllMainCRTStartup(
 
     return TRUE;
 }
+#endif // !PH_WINDOWS_STATIC_ONLINE
 #endif // PH_WINDOWS
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :
