@@ -116,7 +116,13 @@ GetProcAddress(
 // Misc.
 //
 
-DWORD LastError;
+//
+// The last error is per-thread, as it is on Windows.  The lock routines below
+// also use it to hold pthread results; a process-wide value let concurrent
+// threads overwrite each other's result between the call and the check.
+//
+
+__thread DWORD LastError;
 
 static DWORD
 PhGetNumberOfProcessors(
