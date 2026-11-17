@@ -438,9 +438,13 @@ Return Value:
             Result = PH_E_SOLVE_TIMEOUT_EXPIRED;
         } else if (Result == PH_I_CUDA_OUT_OF_MEMORY) {
             Result = PH_E_CUDA_OUT_OF_MEMORY;
-        } else if (SUCCEEDED(Result)) {
+        } else if (Result >= PH_I_CREATE_TABLE_ROUTINE_RECEIVED_SHUTDOWN_EVENT &&
+                   Result <= PH_I_TABLE_CREATED_BUT_VALUES_ARRAY_ALLOC_FAILED) {
             // Registered PH_E_ONLINE_* counterparts preserve the solve reason.
             Result = (HRESULT)((ULONG)Result | 0x80000000UL);
+        } else if (SUCCEEDED(Result)) {
+            // Any other non-S_OK success code has no failure counterpart.
+            Result = E_UNEXPECTED;
         }
         PH_ERROR(PerfectHashTableCreate, Result);
         goto Error;
