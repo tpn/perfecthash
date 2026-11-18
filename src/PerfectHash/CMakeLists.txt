@@ -5255,9 +5255,9 @@ if(PERFECTHASH_IS_LINUX OR PERFECTHASH_IS_MAC)
     else()
         set(ph_sibling_rpath "$ORIGIN")
     endif()
-    # The LLVM plugin, calling libraries and PerfectHash are installed as
-    # siblings, including under multiarch lib directories.
-    foreach(ph_library ${target} ${online_target} ${online_core_target} ${llvm_target})
+    # The calling libraries load the LLVM plugin from their own directory,
+    # including under multiarch lib directories.
+    foreach(ph_library ${target} ${online_target} ${online_core_target})
         if(TARGET ${ph_library})
             set_property(TARGET ${ph_library} APPEND PROPERTY BUILD_RPATH "${ph_sibling_rpath}")
             set_property(TARGET ${ph_library} PROPERTY INSTALL_RPATH "${ph_sibling_rpath}")
@@ -5561,8 +5561,8 @@ foreach(ph_online_target ${online_core_target} ${online_core_static_target})
 endforeach()
 
 if(TARGET ${llvm_target})
-    target_link_libraries(${llvm_target} PRIVATE ${target})
-
+    # The plugin reaches its host only through the table it is handed, so it
+    # links LLVM and the C runtime and loads without the PerfectHash library.
     target_include_directories(${llvm_target} SYSTEM PRIVATE ${LLVM_INCLUDE_DIRS})
     if(LLVM_DEFINITIONS)
         separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
