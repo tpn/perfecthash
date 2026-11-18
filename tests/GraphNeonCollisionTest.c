@@ -26,10 +26,8 @@ int main(void)
     Graph.Context = &Context;
     Context.Table = &Table;
     QueryPerformanceFrequency(&Context.Frequency);
-    Table.HashMask = 0xffff;
     Graph.Seed1 = 0xe7dd8da3;
     Graph.Seed2 = 0xa1be901b;
-    Graph.Seed3 = 0x000d1f10;  // Shift 16, rotate 31 and 13.
     Graph.Seed4 = 0xd445a349;
     Graph.Seed5 = 0x85bc199b;
 
@@ -37,6 +35,9 @@ int main(void)
         Table.HashFunctionId = Hashes[Hash];
         for (ULONG Bits = 16; Bits <= 32; Bits += 16) {
             Graph.Flags.UsingAssigned16 = (Bits == 16);
+            Table.HashMask = (Bits == 16 ? 0xffff : 0x1ffff);
+            // Rotate 31 and 13, then retain 16 or 17 bits per vertex.
+            Graph.Seed3 = (Bits == 16 ? 0x000d1f10 : 0x000d1f0f);
             size_t PairSize = (Bits == 16 ? sizeof(VERTEX16_PAIR) : sizeof(VERTEX_PAIR));
             Graph.VertexPairs = Scalar;
             HRESULT Result = (Bits == 16 ? GraphHashKeys16 : GraphHashKeys)(
@@ -44,6 +45,11 @@ int main(void)
             if (Result != S_OK) {
                 fprintf(stderr, "Scalar fixture failed for hash %u, %u bits\n",
                         (unsigned)Table.HashFunctionId, (unsigned)Bits);
+                return 1;
+            }
+            if (Bits == 32 && (Scalar[0].Vertex1 <= 0xffff || Scalar[0].Vertex2 <= 0xffff)) {
+                fprintf(stderr, "Expected two 17-bit vertices at the first edge for hash %u\n",
+                        (unsigned)Table.HashFunctionId);
                 return 1;
             }
 

@@ -14,10 +14,10 @@ if(DEFINED TEST_ENABLE_DEBUG)
 endif()
 
 file(TO_NATIVE_PATH "${TEST_EXE}" test_exe_native)
-file(TO_NATIVE_PATH "${TEST_KEYS}" test_keys_native)
 file(TO_NATIVE_PATH "${TEST_OUTPUT}" test_output_native)
 
 file(MAKE_DIRECTORY "${test_output_native}")
+include("${CMAKE_CURRENT_LIST_DIR}/copy_cli_test_keys.cmake")
 
 set(test_algorithm "Chm02")
 if(DEFINED TEST_ALGORITHM)
