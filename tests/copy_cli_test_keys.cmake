@@ -1,0 +1,17 @@
+# The CLI writes a table-size cache beside its input. Give each test its own
+# copy so concurrent scalar, NEON and code generation runs can share a fixture.
+set(test_input_dir "${TEST_OUTPUT}/input")
+file(MAKE_DIRECTORY "${test_input_dir}")
+if(IS_DIRECTORY "${TEST_KEYS}")
+  file(GLOB key_files "${TEST_KEYS}/*.keys")
+  set(test_input "${test_input_dir}")
+else()
+  set(key_files "${TEST_KEYS}")
+  get_filename_component(key_name "${TEST_KEYS}" NAME)
+  set(test_input "${test_input_dir}/${key_name}")
+endif()
+foreach(key_file IN LISTS key_files)
+  get_filename_component(key_name "${key_file}" NAME)
+  configure_file("${key_file}" "${test_input_dir}/${key_name}" COPYONLY)
+endforeach()
+file(TO_NATIVE_PATH "${test_input}" test_keys_native)

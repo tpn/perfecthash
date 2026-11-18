@@ -85,6 +85,15 @@ if(PERFECTHASH_HAS_RAWDOG_JIT)
 endif()
 
 include(GoogleTest)
+if(PERFECTHASH_ARCH_ARM64)
+    add_executable(perfecthash_neon_collision_test GraphNeonCollisionTest.c)
+    target_link_libraries(perfecthash_neon_collision_test PRIVATE PerfectHashOnlineCoreStatic)
+    target_compile_definitions(perfecthash_neon_collision_test PRIVATE _PERFECT_HASH_INTERNAL_BUILD)
+    target_include_directories(perfecthash_neon_collision_test PRIVATE "${PERFECTHASH_SRC_DIR}/PerfectHash")
+    add_test(NAME perfecthash.arm64.neon_collision_prefix COMMAND perfecthash_neon_collision_test)
+    set_tests_properties(perfecthash.arm64.neon_collision_prefix PROPERTIES SKIP_RETURN_CODE 77)
+endif()
+
 if((WIN32 OR PERFECTHASH_IS_LINUX) AND PERFECTHASH_ARCH_ARM64 AND PERFECTHASH_HAS_RAWDOG_JIT AND TARGET PerfectHashLLVM)
     # Exercise the slim API through the shared library used by installed Core clients.
     add_executable(perfecthash_arm64_online_core_tests PerfectHashOnlineJitTests.cpp)

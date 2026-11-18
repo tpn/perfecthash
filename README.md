@@ -221,12 +221,14 @@ Windows ARM64 RawDog provides scalar and 4-, 8-, and 16-key batch lookup for
 MultiplyShiftR, MultiplyShiftRX, and Mulshrolate1RX through Mulshrolate3RX.
 LLVM also supports Mulshrolate4RX and can generate SIMD lookup kernels.
 
-With `HashAllKeysFirst`, the ARM64 solver hashes four keys at a time using
-NEON for MultiplyShiftR, MultiplyShiftRX, and Mulshrolate1RX through
-Mulshrolate4RX. This applies to both 16-bit and 32-bit vertex pairs. Use
-`--DoNotTryUseNeonHashFunction` for a scalar comparison and check
-`UsedNeonHashFunction` in the resulting CSV. Lookups in an already solved
-table use the backend and batch width chosen by the caller.
+With `--HashAllKeysFirst`, the ARM64 solver can hash four keys at a time
+using NEON for MultiplyShiftR, MultiplyShiftRX, and Mulshrolate1RX through
+Mulshrolate4RX. Both 16-bit and 32-bit vertex pairs are supported. A hash
+JIT selected with `--TryUseJitHashFunction` takes precedence. To benchmark
+NEON against scalar, leave that option off in both runs and add
+`--DoNotTryUseNeonHashFunction` to the scalar run. The CSV field
+`UsedNeonHashFunction` shows whether the winning graph used NEON. Lookups
+in a solved table use the backend and batch width chosen by the caller.
 [Grace lookup and solver benchmarks](docs/benchmarks/windows-arm64-grace-jit/README.md)
 
 You can also download the latest binaries from the [Releases](https://github.com/tpn/perfecthash/releases/)
