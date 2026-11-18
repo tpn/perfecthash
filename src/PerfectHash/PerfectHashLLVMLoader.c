@@ -90,6 +90,7 @@ End:
     return Runtime;
 }
 
+// The load is attempted once per process, so each failure is reported once.
 static HMODULE
 LoadPerfectHashLLVMModule(VOID)
 {
@@ -97,44 +98,73 @@ LoadPerfectHashLLVMModule(VOID)
     HMODULE Module = NULL;
     HMODULE Runtime;
     DWORD Length;
+    DWORD LastError;
     PWSTR Path;
     PWSTR Name;
 
     if (!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
                             GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
                             PluginName, &Host)) {
-        return NULL;
+        goto NoPath;
     }
     Path = malloc(PH_LLVM_PATH_CAPACITY * sizeof(*Path));
     if (!Path) {
-        return NULL;
+        goto NoPath;
     }
     Length = GetModuleFileNameW(Host, Path, PH_LLVM_PATH_CAPACITY);
     if (!Length || Length >= PH_LLVM_PATH_CAPACITY) {
-        goto End;
+        free(Path);
+        goto NoPath;
     }
     Name = Path + Length;
     while (Name > Path && Name[-1] != L'\\' && Name[-1] != L'/') {
         Name--;
     }
     if (Name == Path || (Name - Path) + ARRAYSIZE(PluginName) > PH_LLVM_PATH_CAPACITY) {
-        goto End;
+        free(Path);
+        goto NoPath;
     }
     memcpy(Name, PluginName, sizeof(PluginName));
     Module = LoadLibraryExW(Path, NULL, PH_LLVM_LOAD_FLAGS);
-    if (!Module && GetLastError() == ERROR_MOD_NOT_FOUND &&
-        GetFileAttributesW(Path) != INVALID_FILE_ATTRIBUTES) {
-        // The official LLVM archive ships LLVM-C.dll in its own bin directory.
-        // Hold it by absolute path while the plugin resolves its import.
-        Runtime = LoadLlvmCRuntimeFromPath();
-        if (Runtime) {
-            Module = LoadLibraryExW(Path, NULL, PH_LLVM_LOAD_FLAGS);
-            FreeLibrary(Runtime);
+    if (!Module) {
+        LastError = GetLastError();
+        if (GetFileAttributesW(Path) == INVALID_FILE_ATTRIBUTES) {
+            fprintf(stderr,
+                    "LLVM JIT support is unavailable: %ls was not found.\n",
+                    Path);
+            goto End;
+        }
+        if (LastError == ERROR_MOD_NOT_FOUND) {
+            // The official LLVM archive ships LLVM-C.dll in its own bin
+            // directory. Hold it by absolute path while the plugin resolves
+            // its import.
+            Runtime = LoadLlvmCRuntimeFromPath();
+            if (Runtime) {
+                Module = LoadLibraryExW(Path, NULL, PH_LLVM_LOAD_FLAGS);
+                LastError = GetLastError();
+                FreeLibrary(Runtime);
+            }
+        }
+        if (!Module) {
+            fprintf(stderr,
+                    "LLVM JIT support is unavailable: %ls could not be loaded "
+                    "(error %lu).%s\n",
+                    Path,
+                    LastError,
+                    LastError == ERROR_MOD_NOT_FOUND ?
+                        " LLVM-C.dll must be beside it or in a directory "
+                        "that PATH names by absolute path." : "");
         }
     }
 End:
     free(Path);
     return Module;
+
+NoPath:
+    fprintf(stderr,
+            "LLVM JIT support is unavailable: the directory of the "
+            "PerfectHash module could not be determined.\n");
+    return NULL;
 }
 #endif
 
@@ -162,11 +192,18 @@ LoadPerfectHashLLVMFunctions(VOID)
     Module = LoadLibraryA("libPerfectHashLLVM.so");
 #endif
     if (!IsValidHandle(Module)) {
+        // The platform loader above has already reported why.
         return;
     }
     if (!LoadSymbols(Names, ARRAYSIZE(Names), (PULONG_PTR)&Functions,
                      sizeof(Functions) / sizeof(ULONG_PTR), Module,
                      &FailedBitmap, &Resolved) || Resolved != ARRAYSIZE(Names)) {
+        fprintf(stderr,
+                "LLVM JIT support is unavailable: the PerfectHashLLVM library "
+                "lacks %u of the %u expected entry points. It was built "
+                "from a different PerfectHash version.\n",
+                (unsigned)(ARRAYSIZE(Names) - Resolved),
+                (unsigned)ARRAYSIZE(Names));
         FreeLibrary(Module);
         return;
     }
