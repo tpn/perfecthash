@@ -213,8 +213,8 @@ RawDog uses `clang` and `llvm-objcopy` at build time. The LLVM backend uses
 directory on `PATH` when running the examples, tests or benchmarks.
 Windows loads `PerfectHashLLVM.dll` from the directory containing the
 PerfectHash host DLL. When linking Online or OnlineCore statically into an
-executable, deploy `PerfectHashLLVM.dll` and its `PerfectHash.dll` dependency
-beside the executable. A build without the optional tools
+executable, deploy `PerfectHashLLVM.dll` beside the executable. The plugin
+needs no other PerfectHash DLL. A build without the optional tools
 continues to support native lookup.
 
 Windows ARM64 RawDog provides scalar and 4-, 8-, and 16-key batch lookup for

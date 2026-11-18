@@ -20,9 +20,10 @@ foreach(core IN LISTS clients)
     set(plugin "$<TARGET_FILE:PerfectHash::PerfectHashLLVM>")
     if(WIN32 AND core MATCHES "Static$")
         # Each static client loads its plugin beside the consumer executable.
+        # The plugin is deployed alone to show it needs no PerfectHash.dll.
         set_target_properties(${core}-client PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/static/${core}")
         add_custom_command(TARGET ${core}-client POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${plugin}" "$<TARGET_FILE:PerfectHash::PerfectHash>"
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${plugin}"
                 "$<TARGET_FILE_DIR:${core}-client>" VERBATIM)
         set(plugin "$<TARGET_FILE_DIR:${core}-client>/$<TARGET_FILE_NAME:PerfectHash::PerfectHashLLVM>")
     endif()

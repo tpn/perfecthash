@@ -53,7 +53,7 @@ cmake --build build\examples\cpp-console-online-jit --config Release
 
 ### Local Tree Fallback (No FetchContent)
 
-Older Windows builds may have copied `PerfectHashLLVM.dll` beside the executable before CMake tracked staged files. Staging stops if it finds an untracked plugin there and the selected SDK supplies none. Move the previous SDK's DLL out of the executable directory and rebuild. To use a compatible plugin you supplied, keep its matching `PerfectHash.dll` beside it and reconfigure with `-DPERFECTHASH_ONLINE_JIT_LLVM_RUNTIME_DLL="C:/path/to/PerfectHashLLVM.dll"`.
+Older Windows builds may have copied `PerfectHashLLVM.dll` beside the executable before CMake tracked staged files. Staging stops if it finds an untracked plugin there and the selected SDK supplies none. Move the previous SDK's DLL out of the executable directory and rebuild. To use a compatible plugin you supplied, reconfigure with `-DPERFECTHASH_ONLINE_JIT_LLVM_RUNTIME_DLL="C:/path/to/PerfectHashLLVM.dll"`.
 
 When reusing a build directory with a cached `ON` or `OFF`, pass `-DPH_ONLINE_JIT_USE_FETCHCONTENT=AUTO` to select local discovery whenever `PerfectHashOnlineJit_ROOT` or `PERFECTHASH_ROOT` is set as a CMake or environment variable.
 

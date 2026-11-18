@@ -24,8 +24,7 @@ if(NOT "perfecthashllvm.dll" IN_LIST selected AND EXISTS "${plugin}" AND NOT IS_
     if(NOT "${digest} perfecthashllvm.dll" IN_LIST previous_keys)
         message(FATAL_ERROR "An untracked plugin at ${plugin} could be loaded by this executable. "
             "Move it out of the executable directory and rebuild. To use it with a local SDK, "
-            "configure with -DPERFECTHASH_ONLINE_JIT_LLVM_RUNTIME_DLL=\"${plugin}\" "
-            "and keep its matching PerfectHash.dll beside it.")
+            "configure with -DPERFECTHASH_ONLINE_JIT_LLVM_RUNTIME_DLL=\"${plugin}\".")
     endif()
 endif()
 
