@@ -75,8 +75,9 @@ jobs:
           }
           Copy-Item include $sdk -Recurse
           $examples = 'cpp-console-online-jit', 'sqlite-online-jit'
-          $sharedLib = "$sdk/lib/PerfectHashOnlineCore.lib"
-          $sharedDll = "$sdk/lib/PerfectHashOnlineCore.dll"
+          $sharedLib = "$sdk/lib/Release/PerfectHashOnlineCore.lib"
+          $sharedDll = "$sdk/bin/PerfectHashOnlineCore.dll"
+          New-Item -ItemType Directory -Path "$sdk/lib/Release", "$sdk/lib/Debug", "$sdk/bin" -Force | Out-Null
           Copy-Item build/lib/Release/PerfectHashOnlineCore.lib $sharedLib
           Copy-Item build/bin/Release/PerfectHashOnlineCore.dll $sharedDll
           foreach ($example in $examples) {
@@ -91,7 +92,18 @@ jobs:
             cmake --build $probe --config Release --target "$example-runtime"
             if (!(Test-Path -LiteralPath "$probe/Release/PerfectHashOnlineCore.dll")) { throw "$example did not select the complete shared SDK." }
           }
-          Remove-Item -LiteralPath $sharedLib, $sharedDll
+          # A flat Release DLL can accompany lib/Release, but cannot complete a Debug import.
+          $debugLib = "$sdk/lib/Debug/PerfectHashOnlineCore.lib"
+          Move-Item -LiteralPath $sharedLib -Destination $debugLib
+          foreach ($example in $examples) {
+            & {
+              $PSNativeCommandUseErrorActionPreference = $false
+              $diagnostic = cmake -S "examples/$example" -B "$scratch/$example-mismatch" -G "Ninja Multi-Config" `
+                "-DPERFECTHASH_ROOT=$sdk" -DPH_ONLINE_JIT_PREFER_SHARED=ON 2>&1 | Out-String
+              if (!$LASTEXITCODE -or $diagnostic -notmatch 'requires\s+PerfectHashOnlineCore\.dll') { throw "Expected the missing Debug runtime diagnostic. $diagnostic" }
+            }
+          }
+          Remove-Item -LiteralPath $debugLib, $sharedDll
           Copy-Item build/lib/Release/PerfectHashAsm.lib "$sdk/lib"
           foreach ($example in $examples) {
             cmake -S "examples/$example" -B "$scratch/$example" -G "Ninja Multi-Config" "-DPERFECTHASH_ROOT=$sdk"
