@@ -462,9 +462,8 @@ Return Value:
     }
 
     //
-    // For each graph instance, set the graph info, and, if we haven't reached
-    // the concurrency limit, append the graph to the context work list and
-    // submit threadpool work for it (to begin graph solving).
+    // Set the graph info for every worker, spare and CPU oracle before any
+    // worker can load its spare graph or exchange a winner.
     //
 
     ASSERT(Context->MainWorkList->Vtbl->IsEmpty(Context->MainWorkList));
@@ -507,11 +506,18 @@ Return Value:
             Graph->CpuGraph->Context = Context;
         }
 
-        if (!IsSpareGraph(Graph)) {
-            ThreadpoolAddWork(GraphThreadpool,
-                              GraphCallbackChm02Compat,
-                              Graph);
+    }
+
+    // Only the designated primary graphs enter the pool as workers.
+    for (Index = 0; Index < Concurrency; Index++) {
+        if (Index < NumberOfSolveContexts) {
+            Graph = SolveContexts->SolveContexts[Index].HostGraph;
+        } else {
+            Graph = Context->CpuGraphs[Index - NumberOfSolveContexts];
         }
+        ThreadpoolAddWork(GraphThreadpool,
+                          GraphCallbackChm02Compat,
+                          Graph);
     }
 
     //

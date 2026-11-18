@@ -3128,28 +3128,46 @@ VerifyMemoryCoverage16Invariants(
 }
 #pragma optimize("", on)
 
-static
+// Called under the best-graph critical section when a new winner is retained.
 PGRAPH
-GraphTakeSpareGraph(
-    _In_ PGRAPH Graph
+GraphGetReplacementForNewBest(
+    _In_ PGRAPH Graph,
+    _In_opt_ PGRAPH PreviousBest
     )
 {
-    PGRAPH SpareGraph;
+    PGRAPH NextGraph;
+    PPERFECT_HASH_CONTEXT Context = Graph->Context;
 
 #ifdef PH_USE_CUDA
     if (IsCuGraph(Graph)) {
-        SpareGraph = Graph->CuHostSpareGraph;
-    } else
-#endif
-    {
-        SpareGraph = Graph->Context->SpareGraph;
-        Graph->Context->SpareGraph = NULL;
+        // Each CUDA worker owns two graphs on one solve stream.  Another
+        // worker may still be using the previous winner's stream.
+        if (PreviousBest && !IsCuGraph(PreviousBest)) {
+            ASSERT(Context->SpareGraph == NULL);
+            Context->SpareGraph = PreviousBest;
+        }
+        NextGraph = (Graph == Graph->CuHostGraph ?
+                     Graph->CuHostSpareGraph : Graph->CuHostGraph);
+        ASSERT(NextGraph != NULL);
+        ASSERT(NextGraph->CuSolveContext == Graph->CuSolveContext);
+        NextGraph->Flags.IsSpare = FALSE;
+        return NextGraph;
     }
+#endif
 
-    ASSERT(SpareGraph != NULL);
-    ASSERT(IsSpareGraph(SpareGraph));
-    SpareGraph->Flags.IsSpare = FALSE;
-    return SpareGraph;
+    // A displaced CPU winner is available immediately.  When the winner
+    // was on a GPU, the CPU spare was left in the context for this worker.
+    if (PreviousBest && !IsCuGraph(PreviousBest)) {
+        ASSERT(Context->SpareGraph == NULL);
+        return PreviousBest;
+    }
+    NextGraph = Context->SpareGraph;
+    ASSERT(NextGraph != NULL);
+    Context->SpareGraph = NULL;
+    if (IsSpareGraph(NextGraph)) {
+        NextGraph->Flags.IsSpare = FALSE;
+    }
+    return NextGraph;
 }
 
 GRAPH_REGISTER_SOLVED GraphRegisterSolved;
@@ -3254,7 +3272,7 @@ Return Value:
     } else {
         ASSERT(Context->NewBestGraphCount == 0);
         ASSERT(Context->FirstAttemptSolved == 0);
-        SpareGraph = GraphTakeSpareGraph(Graph);
+        SpareGraph = GraphGetReplacementForNewBest(Graph, NULL);
         BestGraph = Context->BestGraph = Graph;
         *NewGraphPointer = SpareGraph;
         BestGraphIndex = Context->NewBestGraphCount++;
@@ -3265,11 +3283,8 @@ Return Value:
     }
 
     //
-    // There's an existing best graph set.  Verify spare graph is NULL, then
-    // initialize aliases to the previous best.
+    // Initialize aliases to the previous best graph.
     //
-
-    ASSERT(Context->SpareGraph == NULL);
     PreviousBestGraph = Context->BestGraph;
     PreviousBestCoverage = &PreviousBestGraph->AssignedMemoryCoverage;
 
@@ -3281,7 +3296,7 @@ Return Value:
 
 #define FOUND_BEST_GRAPH()                         \
     Context->BestGraph = Graph;                    \
-    *NewGraphPointer = PreviousBestGraph;          \
+    *NewGraphPointer = GraphGetReplacementForNewBest(Graph, PreviousBestGraph); \
     BestGraphIndex = Context->NewBestGraphCount++; \
     Result = PH_S_USE_NEW_GRAPH_FOR_SOLVING
 
@@ -6449,7 +6464,7 @@ Return Value:
     } else {
         ASSERT(Context->NewBestGraphCount == 0);
         ASSERT(Context->FirstAttemptSolved == 0);
-        SpareGraph = GraphTakeSpareGraph(Graph);
+        SpareGraph = GraphGetReplacementForNewBest(Graph, NULL);
         BestGraph = Context->BestGraph = Graph;
         *NewGraphPointer = SpareGraph;
         BestGraphIndex = Context->NewBestGraphCount++;
@@ -6460,11 +6475,8 @@ Return Value:
     }
 
     //
-    // There's an existing best graph set.  Verify spare graph is NULL, then
-    // initialize aliases to the previous best.
+    // Initialize aliases to the previous best graph.
     //
-
-    ASSERT(Context->SpareGraph == NULL);
     PreviousBestGraph = Context->BestGraph;
     PreviousBestCoverage = &PreviousBestGraph->Assigned16MemoryCoverage;
 
@@ -6476,7 +6488,7 @@ Return Value:
 
 #define FOUND_BEST_GRAPH()                         \
     Context->BestGraph = Graph;                    \
-    *NewGraphPointer = PreviousBestGraph;          \
+    *NewGraphPointer = GraphGetReplacementForNewBest(Graph, PreviousBestGraph); \
     BestGraphIndex = Context->NewBestGraphCount++; \
     Result = PH_S_USE_NEW_GRAPH_FOR_SOLVING
 

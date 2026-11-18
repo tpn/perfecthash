@@ -2191,6 +2191,11 @@ extern GRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE
 extern GRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE_FOR_KEYS_SUBSET
     GraphCalculateAssignedMemoryCoverageForKeysSubset;
 extern GRAPH_REGISTER_SOLVED GraphRegisterSolved;
+PGRAPH
+GraphGetReplacementForNewBest(
+    _In_ PGRAPH Graph,
+    _In_opt_ PGRAPH PreviousBest
+    );
 #ifdef _M_X64
 extern GRAPH_REGISTER_SOLVED GraphRegisterSolvedTsx;
 #endif

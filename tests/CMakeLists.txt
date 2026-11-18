@@ -162,6 +162,13 @@ add_test(
 set_tests_properties(perfecthash.fast.unit PROPERTIES LABELS fast)
 
 if(PERFECTHASH_HAS_CUDA)
+    add_executable(perfecthash_cuda_best_graph_test GraphCuBestGraphTest.c)
+    target_link_libraries(perfecthash_cuda_best_graph_test PRIVATE PerfectHashOnlineCoreStatic)
+    target_compile_definitions(perfecthash_cuda_best_graph_test PRIVATE _PERFECT_HASH_INTERNAL_BUILD)
+    target_include_directories(perfecthash_cuda_best_graph_test PRIVATE "${PERFECTHASH_SRC_DIR}/PerfectHash")
+    add_test(NAME perfecthash.cuda.best-graph-ownership COMMAND perfecthash_cuda_best_graph_test)
+    set_tests_properties(perfecthash.cuda.best-graph-ownership PROPERTIES LABELS "cuda")
+
     add_executable(perfecthash_cuda_threshold2_bitset_tests
         PerfectHashCudaThreshold2BitsetTests.cu
     )
@@ -432,6 +439,11 @@ if(TARGET PerfectHashCreateExe AND TARGET PerfectHashBulkCreateExe)
                 COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/check_cuda_retained_graph.py
                     $<TARGET_FILE:PerfectHashCreateExe> ${TEST_KEYS_FILE} ${width}
             )
+            add_test(
+                NAME perfecthash.cuda.chm02.retained-graph.mixed.assigned${width}
+                COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/check_cuda_retained_graph.py
+                    $<TARGET_FILE:PerfectHashCreateExe> ${TEST_KEYS_FILE} ${width} --mixed
+            )
         endforeach()
 
         add_test(
@@ -451,6 +463,8 @@ if(TARGET PerfectHashCreateExe AND TARGET PerfectHashBulkCreateExe)
             perfecthash.cuda.chm02.generated33000.nofileio
             perfecthash.cuda.chm02.retained-graph.assigned16
             perfecthash.cuda.chm02.retained-graph.assigned32
+            perfecthash.cuda.chm02.retained-graph.mixed.assigned16
+            perfecthash.cuda.chm02.retained-graph.mixed.assigned32
             perfecthash.cuda.chm02.perf-surface
             PROPERTIES
                 LABELS "cuda"
