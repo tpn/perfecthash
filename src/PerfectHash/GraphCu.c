@@ -1758,7 +1758,7 @@ GraphCuIsAcyclic(
         InterlockedIncrement64(&Context->GpuAndCpuAddKeysSuccess);
     }
 
-        if (IsCudaDebugGraph(Graph)) {
+    if (IsCudaDebugGraph(Graph)) {
         HRESULT CpuAcyclicResult;
         HRESULT GpuOrderValidationResult;
         LONG InvalidEdge;
@@ -1768,6 +1768,46 @@ GraphCuIsAcyclic(
         ULONG CpuOrder;
         ULONG GpuOrder;
         PCSTR Reason;
+
+        // Validate against the original degrees before the CPU oracle peels edges.
+        MismatchIndex = (ULONG)-1;
+        InvalidEdge = -1;
+        Degree1 = 0;
+        Degree2 = 0;
+        Reason = "unknown";
+
+        if (IsUsingAssigned16(Graph)) {
+            GpuOrderValidationResult = ValidateGpuOrder16(Graph,
+                                                          &MismatchIndex,
+                                                          &InvalidEdge,
+                                                          &Degree1,
+                                                          &Degree2,
+                                                          &Reason);
+        } else {
+            GpuOrderValidationResult = ValidateGpuOrder32(Graph,
+                                                          &MismatchIndex,
+                                                          &InvalidEdge,
+                                                          &Degree1,
+                                                          &Degree2,
+                                                          &Reason);
+        }
+
+        if (SUCCEEDED(GpuOrderValidationResult)) {
+            fprintf(stderr,
+                    "[GraphCuIsAcyclic] GpuOrderValidationResult=0x%08x\n",
+                    (unsigned)GpuOrderValidationResult);
+            fprintf(stderr, "PH_CHM02_CUDA_ORDER_OK\n");
+        } else {
+            fprintf(stderr,
+                    "[GraphCuIsAcyclic] GpuOrderValidationResult=0x%08x "
+                    "reason=%s index=%u edge=%ld degree1=%u degree2=%u\n",
+                    (unsigned)GpuOrderValidationResult,
+                    Reason,
+                    (unsigned)MismatchIndex,
+                    (long)InvalidEdge,
+                    (unsigned)Degree1,
+                    (unsigned)Degree2);
+        }
 
         CpuAcyclicResult = Graph->CpuGraph->Vtbl->IsAcyclic(Graph->CpuGraph);
         fprintf(stderr,
@@ -1813,57 +1853,6 @@ GraphCuIsAcyclic(
                 fprintf(stderr,
                         "[GraphCuIsAcyclic] Order arrays match CPU oracle.\n");
             }
-        }
-
-        Result = Graph->CpuGraph->Vtbl->Reset(Graph->CpuGraph);
-        if (FAILED(Result)) {
-            return Result;
-        }
-
-        Result = Graph->CpuGraph->Vtbl->AddKeys(Graph->CpuGraph,
-                                                NumberOfKeys,
-                                                Keys);
-        if (FAILED(Result)) {
-            return Result;
-        }
-
-        MismatchIndex = (ULONG)-1;
-        InvalidEdge = -1;
-        Degree1 = 0;
-        Degree2 = 0;
-        Reason = "unknown";
-
-        if (IsUsingAssigned16(Graph)) {
-            GpuOrderValidationResult = ValidateGpuOrder16(Graph,
-                                                          &MismatchIndex,
-                                                          &InvalidEdge,
-                                                          &Degree1,
-                                                          &Degree2,
-                                                          &Reason);
-        } else {
-            GpuOrderValidationResult = ValidateGpuOrder32(Graph,
-                                                          &MismatchIndex,
-                                                          &InvalidEdge,
-                                                          &Degree1,
-                                                          &Degree2,
-                                                          &Reason);
-        }
-
-        if (SUCCEEDED(GpuOrderValidationResult)) {
-            fprintf(stderr,
-                    "[GraphCuIsAcyclic] GpuOrderValidationResult=0x%08x\n",
-                    (unsigned)GpuOrderValidationResult);
-            fprintf(stderr, "PH_CHM02_CUDA_ORDER_OK\n");
-        } else {
-            fprintf(stderr,
-                    "[GraphCuIsAcyclic] GpuOrderValidationResult=0x%08x "
-                    "reason=%s index=%u edge=%ld degree1=%u degree2=%u\n",
-                    (unsigned)GpuOrderValidationResult,
-                    Reason,
-                    (unsigned)MismatchIndex,
-                    (long)InvalidEdge,
-                    (unsigned)Degree1,
-                    (unsigned)Degree2);
         }
     }
 
