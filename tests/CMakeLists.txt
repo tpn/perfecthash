@@ -105,6 +105,42 @@ if((WIN32 OR PERFECTHASH_IS_LINUX) AND PERFECTHASH_ARCH_ARM64 AND PERFECTHASH_HA
     add_test(NAME perfecthash_unit_tests.Arm64OnlineCoreJit COMMAND perfecthash_arm64_online_core_tests)
 endif()
 
+if(TARGET PerfectHashLLVM)
+    # A static client loads PerfectHashLLVM from its own directory on Windows
+    # and through its rpath elsewhere. Give this one a plugin that lacks the
+    # hash JIT entry points, in a directory of its own.
+    add_library(perfecthash_stale_llvm_plugin SHARED StaleLlvmPlugin.c)
+    add_executable(perfecthash_stale_llvm_plugin_client StaleLlvmPluginClient.cpp)
+    set(ph_stale_dir "${CMAKE_CURRENT_BINARY_DIR}/stale-llvm-plugin")
+    set(ph_stale_dirs)
+    foreach(ph_kind RUNTIME LIBRARY ARCHIVE)
+        list(APPEND ph_stale_dirs ${ph_kind}_OUTPUT_DIRECTORY "${ph_stale_dir}")
+        foreach(config ${CMAKE_CONFIGURATION_TYPES})
+            string(TOUPPER "${config}" config_upper)
+            list(APPEND ph_stale_dirs
+                ${ph_kind}_OUTPUT_DIRECTORY_${config_upper} "${ph_stale_dir}/${config}")
+        endforeach()
+    endforeach()
+    set_target_properties(
+        perfecthash_stale_llvm_plugin perfecthash_stale_llvm_plugin_client
+        PROPERTIES ${ph_stale_dirs}
+    )
+    set_target_properties(perfecthash_stale_llvm_plugin PROPERTIES OUTPUT_NAME PerfectHashLLVM)
+    target_link_libraries(perfecthash_stale_llvm_plugin_client PRIVATE PerfectHashOnlineCoreStatic)
+    target_compile_features(perfecthash_stale_llvm_plugin_client PRIVATE cxx_std_17)
+    add_dependencies(perfecthash_stale_llvm_plugin_client perfecthash_stale_llvm_plugin)
+    if(NOT WIN32)
+        # A target's own link options precede the archive's rpath to the real plugin.
+        target_link_options(perfecthash_stale_llvm_plugin_client PRIVATE
+            "LINKER:-rpath,$<TARGET_FILE_DIR:perfecthash_stale_llvm_plugin>")
+    endif()
+    add_test(
+        NAME perfecthash.llvm.stale_plugin
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/check_stale_llvm_plugin.py
+            $<TARGET_FILE:perfecthash_stale_llvm_plugin_client>
+    )
+endif()
+
 gtest_discover_tests(perfecthash_unit_tests
     TEST_PREFIX "perfecthash_unit_tests."
 )
