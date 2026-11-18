@@ -1,7 +1,10 @@
 # CMake package roots form an ordered list. The project root names one checkout or SDK.
 set(_ph_sdk_roots "${PerfectHashOnlineJit_ROOT}")
-if(NOT _ph_sdk_roots)
-    file(TO_CMAKE_PATH "$ENV{PerfectHashOnlineJit_ROOT}" _ph_sdk_roots)
+list(FILTER _ph_sdk_roots EXCLUDE REGEX "^$")
+if(NOT WIN32 OR NOT _ph_sdk_roots)
+    file(TO_CMAKE_PATH "$ENV{PerfectHashOnlineJit_ROOT}" _ph_env_roots)
+    list(APPEND _ph_sdk_roots ${_ph_env_roots})
+    list(FILTER _ph_sdk_roots EXCLUDE REGEX "^$")
 endif()
 set(_ph_project_root "${PERFECTHASH_ROOT}")
 if(NOT _ph_project_root)
