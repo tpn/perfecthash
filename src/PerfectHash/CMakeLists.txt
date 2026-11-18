@@ -5594,8 +5594,6 @@ if(TARGET ${llvm_target})
                 PRIVATE
                 $<$<CONFIG:Debug>:msvcprtd>
                 $<$<NOT:$<CONFIG:Debug>>:msvcprt>
-                $<$<CONFIG:Debug>:msvcrtd>
-                $<$<NOT:$<CONFIG:Debug>>:msvcrt>
                 oldnames
             )
         endif()
@@ -5605,6 +5603,8 @@ if(TARGET ${llvm_target})
         target_link_libraries(
             ${llvm_target}
             PRIVATE
+            $<$<CONFIG:Debug>:msvcrtd>
+            $<$<NOT:$<CONFIG:Debug>>:msvcrt>
             $<$<CONFIG:Debug>:vcruntimed>
             $<$<NOT:$<CONFIG:Debug>>:vcruntime>
             $<$<CONFIG:Debug>:ucrtd>
