@@ -417,6 +417,40 @@ End:
     return Result;
 }
 
+static
+CU_RESULT
+CuAllocateSolverManagedMemory(
+    _In_ PCU Cu,
+    _In_ CU_STREAM Stream,
+    _In_ SIZE_T Size,
+    _Out_ PCU_DEVICE_POINTER Address
+    )
+{
+    CU_RESULT Result;
+    CU_DEVICE_POINTER Allocation;
+
+    *Address = 0;
+
+    // A worker reads its graph on the CPU after its stream completes.
+    // A different worker can still be running on a basic Unified Memory GPU.
+    Result = Cu->MemAllocManaged(&Allocation, Size, CU_MEM_ATTACH_HOST);
+    if (CU_FAILED(Result)) {
+        return Result;
+    }
+
+    Result = Cu->StreamAttachMemAsync(Stream, Allocation, 0, CU_MEM_ATTACH_SINGLE);
+    if (CU_FAILED(Result)) {
+        CU_RESULT FreeResult = Cu->MemFree(Allocation);
+        if (CU_FAILED(FreeResult)) {
+            CU_ERROR(CuAllocateSolverManagedMemory_MemFree, FreeResult);
+        }
+        return Result;
+    }
+
+    *Address = Allocation;
+    return CUDA_SUCCESS;
+}
+
 GRAPH_LOAD_INFO GraphCuLoadInfo;
 
 _Use_decl_annotations_
@@ -659,10 +693,10 @@ Return Value:
 
 #define ALLOC_MANAGED_ARRAY(Name)                                   \
     ASSERT(Graph->Name == NULL);                                    \
-    CuResult = Cu->MemAllocManaged(                                 \
-        (PCU_DEVICE_POINTER)&Graph->Name,                           \
+    CuResult = CuAllocateSolverManagedMemory(                       \
+        Cu, SolveContext->Stream,                                   \
         (SIZE_T)Info->Name##SizeInBytes,                            \
-        CU_MEM_ATTACH_GLOBAL                                        \
+        (PCU_DEVICE_POINTER)&Graph->Name                            \
     );                                                              \
     if (CU_FAILED(CuResult)) {                                      \
         CU_ERROR(GraphCuLoadInfo_MemAllocManaged_##Name, CuResult); \
@@ -736,10 +770,10 @@ Return Value:
             }                                                             \
             Graph->Name.Buffer = NULL;                                    \
         }                                                                 \
-        CuResult = Cu->MemAllocManaged(                                   \
-            (PCU_DEVICE_POINTER)&Graph->Name.Buffer,                      \
+        CuResult = CuAllocateSolverManagedMemory(                         \
+            Cu, SolveContext->Stream,                                     \
             (SIZE_T)Info->Name##BufferSizeInBytes,                        \
-            CU_MEM_ATTACH_GLOBAL                                          \
+            (PCU_DEVICE_POINTER)&Graph->Name.Buffer                       \
         );                                                                \
         if (CU_FAILED(CuResult)) {                                        \
             CU_ERROR(GraphCuLoadInfo_MemAllocManaged_##Name##_Bitmap,     \
@@ -785,10 +819,10 @@ Return Value:
 
 #define ALLOC_MANAGED_ASSIGNED_ARRAY(Coverage_, Name)                    \
     ASSERT(Coverage_->Name == NULL);                                     \
-    CuResult = Cu->MemAllocManaged(                                      \
-        (PCU_DEVICE_POINTER)&Coverage_->Name,                            \
+    CuResult = CuAllocateSolverManagedMemory(                            \
+        Cu, SolveContext->Stream,                                        \
         (SIZE_T)Info->Name##SizeInBytes,                                 \
-        CU_MEM_ATTACH_GLOBAL                                             \
+        (PCU_DEVICE_POINTER)&Coverage_->Name                             \
     );                                                                   \
     if (CU_FAILED(CuResult)) {                                           \
         CU_ERROR(GraphCuLoadInfo_MemAllocManaged_##Name##_AssignedArray, \

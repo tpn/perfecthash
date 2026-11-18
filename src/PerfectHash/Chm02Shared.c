@@ -52,7 +52,6 @@ Return Value:
     PCU Cu;
     ULONG Index;
     ULONG Inner;
-    LONG Ordinal;
     BOOLEAN Found;
     CU_RESULT CuResult;
     ULONG NumberOfDevices;
@@ -65,7 +64,6 @@ Return Value:
     PGRAPH *Graphs;
     PGRAPH *CpuGraphs;
     PGRAPH *GpuGraphs;
-    PGRAPH DeviceGraph;
     PGRAPH DeviceGraphs;
     PCHAR LinkedModule;
     SIZE_T LinkedModuleSizeInBytes;
@@ -74,12 +72,10 @@ Return Value:
     PCU_LINK_STATE LinkState;
     PUNICODE_STRING CuPtxPath;
     PUNICODE_STRING CuCudaDevRuntimeLibPath;
-    PVALUE_ARRAY Ordinals;
     ULONG NumberOfGpuGraphs;
     ULONG NumberOfCpuGraphs;
     ULONG TotalNumberOfGraphs;
     ULONG SpareGraphCount;
-    ULONG MatchedGraphCount;
     ULONG NumberOfGraphsForDevice;
     ULONG NumberOfSolveContexts;
     CU_STREAM_FLAGS StreamFlags;
@@ -514,7 +510,7 @@ Return Value:
     // Wire up the solve contexts to their respective device context.
     //
 
-    Ordinals = CuRuntimeContext->Ordinals;
+    ASSERT(NumberOfSolveContexts == NumberOfContexts);
 
     for (Index = 0; Index < NumberOfSolveContexts; Index++) {
         PCU_STREAM FirstStream;
@@ -524,41 +520,11 @@ Return Value:
         SolveContext = &SolveContexts->SolveContexts[Index];
 
         //
-        // Resolve the ordinal and kernel launch parameters.
+        // Device contexts are initialized in solver order, including when
+        // several workers select the same physical device.
         //
 
-        if (Ordinals == NULL) {
-            Ordinal = 0;
-        } else if (Index+1 > Ordinals->NumberOfValues) {
-            Ordinal = (LONG)Ordinals->Values[Ordinals->NumberOfValues - 1];
-        } else {
-            Ordinal = (LONG)Ordinals->Values[Index];
-        }
-
-        //
-        // Find the device context for this device ordinal.
-        //
-
-        Found = FALSE;
-        DeviceContext = NULL;
-        for (Inner = 0; Inner < NumberOfContexts; Inner++) {
-            DeviceContext = &DeviceContexts->DeviceContexts[Inner];
-            if (DeviceContext->Ordinal == Ordinal) {
-                if (DeviceContext->NumberOfSolveContexts == 0) {
-                    Found = TRUE;
-                    break;
-                }
-            }
-        }
-
-        if (!Found) {
-            Result = PH_E_INVARIANT_CHECK_FAILED;
-            PH_ERROR(PerfectHashContextInitializeCuda_ContextOrdinalNotFound,
-                     Result);
-            PH_RAISE(Result);
-        }
-
-        ASSERT(DeviceContext != NULL);
+        DeviceContext = &DeviceContexts->DeviceContexts[Index];
 
         //
         // Increment the count of solve contexts for this device context.
@@ -641,33 +607,17 @@ Return Value:
         CuResult = Cu->CtxPushCurrent(DeviceContext->Context);
         CU_CHECK(CuResult, CtxPushCurrent);
 
-        CuResult = Cu->MemAllocManaged((PCU_DEVICE_POINTER)&DeviceGraphs,
-                                       AllocSizeInBytes.LowPart,
-                                       CU_MEM_ATTACH_GLOBAL);
+        SolveContext = &SolveContexts->SolveContexts[Index];
+        ASSERT(SolveContext->DeviceContext == DeviceContext);
+        CuResult = Cu->MemAlloc((PCU_DEVICE_POINTER)&DeviceGraphs,
+                                AllocSizeInBytes.LowPart);
         CU_CHECK(CuResult, MemAlloc);
 
-        DeviceContext->DeviceGraphs = DeviceGraph = DeviceGraphs;
-
-        //
-        // Loop over the solve contexts pointing to this device context and
-        // wire up matching ones to the device graph memory we just allocated.
-        //
-
-        MatchedGraphCount = 0;
-        for (Inner = 0; Inner < NumberOfSolveContexts; Inner++) {
-            SolveContext = &SolveContexts->SolveContexts[Inner];
-
-            if (SolveContext->DeviceContext == DeviceContext) {
-                SolveContext->DeviceGraph = DeviceGraph++;
-                MatchedGraphCount++;
-                if (FindBestGraph(Context)) {
-                    SolveContext->DeviceSpareGraph = DeviceGraph++;
-                    MatchedGraphCount++;
-                }
-            }
+        DeviceContext->DeviceGraphs = DeviceGraphs;
+        SolveContext->DeviceGraph = DeviceGraphs;
+        if (FindBestGraph(Context)) {
+            SolveContext->DeviceSpareGraph = DeviceGraphs + 1;
         }
-
-        ASSERT(MatchedGraphCount == NumberOfGraphsForDevice);
 
         //
         // Allocate device memory to hold the CU_DEVICE_ATTRIBUTES structure.

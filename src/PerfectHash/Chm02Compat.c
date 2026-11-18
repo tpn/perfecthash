@@ -136,7 +136,6 @@ Return Value:
     PGRAPH Graph;
     BOOLEAN Silent;
     BOOLEAN Success;
-    ULONG Attempt = 0;
     BYTE NumberOfEvents;
     SIZE_T KeysSizeInBytes;
     HRESULT Result = S_OK;
@@ -767,20 +766,15 @@ FinishedSolution:
     Context->SolvedContext = Graph;
 
     //
-    // Graphs always pass verification in normal circumstances.  The only time
-    // they don't is if there's an internal bug in our code.  So, knowing that
-    // the graph is probably correct, we can dispatch the file work required to
-    // save it to disk to the file work threadpool whilst we verify it has been
-    // solved correctly.
+    // CPU winners can be saved while verification runs. CUDA winners use
+    // managed memory, so host file workers must wait for the verification
+    // stream to finish reading the same assigned array.
     //
 
     if (!NoFileIo(Table)) {
-
-        //
-        // Dispatch save file work for the table data.
-        //
-
-        SUBMIT_SAVE_FILE_WORK();
+        if (!IsCuGraph(Graph)) {
+            SUBMIT_SAVE_FILE_WORK();
+        }
 
     } else {
 
@@ -954,6 +948,10 @@ FinishedSolution:
         goto End;
     }
 
+    if (IsCuGraph(Graph)) {
+        SUBMIT_SAVE_FILE_WORK();
+    }
+
     //
     // Wait on the saved file events before returning.
     //
@@ -984,8 +982,10 @@ Error:
     }
 
     SetEvent(Context->ShutdownEvent);
-    ThreadpoolWait(GraphThreadpool);
-    if (!NoFileIo(Table)) {
+    if (GraphThreadpool != NULL) {
+        ThreadpoolWait(GraphThreadpool);
+    }
+    if (FileWorkThreadpool != NULL) {
         ThreadpoolWait(FileWorkThreadpool);
     }
 
@@ -1006,12 +1006,10 @@ End:
     }
 
     //
-    // If no attempts were made, no file work was submitted, which means we
-    // can skip the close logic below and jump straight to releasing graphs.
-    // Likewise for no file I/O.
+    // Close every file prepared by the file workers, including on error.
     //
 
-    if (Attempt == 0 || NoFileIo(Table)) {
+    if (FileWorkThreadpool == NULL) {
         goto ReleaseGraphs;
     }
 

@@ -730,20 +730,15 @@ Return Value:
     }
 
     //
-    // Graphs always pass verification in normal circumstances.  The only time
-    // they don't is if there's an internal bug in our code.  So, knowing that
-    // the graph is probably correct, we can dispatch the file work required to
-    // save it to disk to the file work threadpool whilst we verify it has been
-    // solved correctly.
+    // CPU winners can be saved while verification runs. CUDA winners use
+    // managed memory, so host file workers must wait for the verification
+    // stream to finish reading the same assigned array.
     //
 
     if (!NoFileIo(Table)) {
-
-        //
-        // Dispatch save file work for the table data.
-        //
-
-        SUBMIT_SAVE_FILE_WORK();
+        if (!IsCuGraph(Graph)) {
+            SUBMIT_SAVE_FILE_WORK();
+        }
 
     } else {
 
@@ -962,6 +957,10 @@ Return Value:
             fprintf(stderr, "[Chm02] NoFileIo exit after verify.\n");
         }
         goto End;
+    }
+
+    if (IsCuGraph(Graph)) {
+        SUBMIT_SAVE_FILE_WORK();
     }
 
     //

@@ -408,6 +408,16 @@ if(TARGET PerfectHashCreateExe AND TARGET PerfectHashBulkCreateExe)
         )
 
         add_test(
+            NAME perfecthash.cuda.chm02.device-selection
+            COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/check_cuda_device_selection.py
+                $<TARGET_FILE:PerfectHashCreateExe> ${TEST_KEYS_FILE}
+        )
+        set_tests_properties(perfecthash.cuda.chm02.device-selection PROPERTIES
+            LABELS "cuda"
+            SKIP_RETURN_CODE 77
+        )
+
+        add_test(
             NAME perfecthash.cuda.chm02.hologram.fileio
             COMMAND ${CMAKE_COMMAND}
                 -DTEST_EXE=$<TARGET_FILE:PerfectHashCreateExe>
