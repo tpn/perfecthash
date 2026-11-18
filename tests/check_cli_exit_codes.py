@@ -20,8 +20,15 @@ def command(exe, source, output, *flags):
             "--NoFileIo", "--Quiet", *flags]
 
 
+def exit_status(hresult):
+    if sys.platform == "win32":
+        return hresult
+    # POSIX keeps the low byte. A failure that ends in a zero byte exits with 1.
+    return hresult & 0xff or (1 if hresult & 0x80000000 else 0)
+
+
 def check_status(result, expected_hresult):
-    expected = expected_hresult if sys.platform == "win32" else expected_hresult & 0xff
+    expected = exit_status(expected_hresult)
     if result.returncode != expected:
         raise AssertionError(
             f"{result.args} returned {result.returncode:#x}, expected {expected:#x}"

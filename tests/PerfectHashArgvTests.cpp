@@ -114,6 +114,20 @@ protected:
   HMODULE module_ = nullptr;
 };
 
+#ifndef PH_WINDOWS
+// A POSIX exit status keeps the low byte of the HRESULT. No failure may
+// exit with status zero, including the two error codes that end in 0x00.
+TEST(PerfectHashCompatTests, ExitStatusKeepsEveryFailureNonZero) {
+  EXPECT_EQ(PerfectHashExitStatus(S_OK) & 0xff, 0);
+  EXPECT_EQ(PerfectHashExitStatus((unsigned)PH_E_SYSTEM_CALL_FAILED) & 0xff, 0x24);
+  EXPECT_EQ(PerfectHashExitStatus((unsigned)PH_I_SOLVE_TIMEOUT_EXPIRED) & 0xff, 0x88);
+  EXPECT_EQ((unsigned)PH_E_INVALID_PATH & 0xff, 0u);
+  EXPECT_NE(PerfectHashExitStatus((unsigned)PH_E_INVALID_PATH) & 0xff, 0);
+  EXPECT_NE(PerfectHashExitStatus(
+                (unsigned)PH_E_CONTEXT_MAIN_WORK_LIST_EMPTY) & 0xff, 0);
+}
+#endif
+
 TEST_F(PerfectHashArgvTests, InvalidNumArgs) {
   const std::vector<std::string> args = {
       "PerfectHashCreate",
