@@ -733,7 +733,8 @@ Table Compile Flags:
     --JitIndex32x16
 
         Compiles the 2-wide, 4-wide, 8-wide, or 16-wide Index32() routines.
-        The x16 variant requires AVX-512 support from the JIT backend.
+        On x86-64 the x16 variant requires AVX-512 support from the JIT
+        backend; on ARM64 it requires only NEON.
 
     --JitVectorIndex32x2
     --JitVectorIndex32x4
