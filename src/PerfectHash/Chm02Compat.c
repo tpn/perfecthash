@@ -671,6 +671,7 @@ FinishedSolution:
         LeaveCriticalSection(&Context->BestGraphCriticalSection);
 
         ASSERT(Graph != NULL);
+        Table->Coverage->Attempt = Graph->Attempt;
     }
 
     //

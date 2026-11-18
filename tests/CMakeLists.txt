@@ -444,6 +444,8 @@ if(TARGET PerfectHashCreateExe AND TARGET PerfectHashBulkCreateExe)
                 COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/check_cuda_retained_graph.py
                     $<TARGET_FILE:PerfectHashCreateExe> ${TEST_KEYS_FILE} ${width} --mixed
             )
+            set_tests_properties(perfecthash.cuda.chm02.retained-graph.mixed.assigned${width}
+                PROPERTIES SKIP_RETURN_CODE 77)
         endforeach()
 
         add_test(

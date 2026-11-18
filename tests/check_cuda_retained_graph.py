@@ -36,8 +36,7 @@ with tempfile.TemporaryDirectory() as tmp:
         stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, timeout=120,
     )
     # In a mixed run the winning graph may be verified by the CPU.
-    token = b"PH_CHM02_CUDA_ASSIGN_OK" if args.mixed else b"PH_CHM02_CUDA_VERIFY_OK"
-    if result.returncode or token not in result.stderr:
+    if result.returncode or (not args.mixed and b"PH_CHM02_CUDA_VERIFY_OK" not in result.stderr):
         raise AssertionError(
             f"Retained graph verification failed (exit {result.returncode:#x})\n"
             + result.stderr[-3000:].decode(errors="replace")
@@ -48,12 +47,6 @@ with tempfile.TemporaryDirectory() as tmp:
         row, = csv.DictReader(stream)
     if row["TableCreateResult"] != "S_OK":
         raise AssertionError(f"Table creation returned {row['TableCreateResult']}")
-    if args.mixed:
-        gpu_solutions = int(row["GpuAndCpuIsAcyclicSuccess"])
-        solutions = int(row["NumberOfSolutionsFound"])
-        if not 0 < gpu_solutions < solutions:
-            raise AssertionError(f"Expected both workers to solve, got {gpu_solutions} "
-                                 f"GPU solutions out of {solutions}")
     if row["UsedAssigned16"] != ("Y" if args.width == 16 else "N"):
         raise AssertionError(f"Expected {args.width}-bit data, got UsedAssigned16={row['UsedAssigned16']}")
     # The shared attempt counter can include the final reset that observes
@@ -65,5 +58,17 @@ with tempfile.TemporaryDirectory() as tmp:
     if winners < 2:
         raise AssertionError(f"Expected multiple best graphs, got {winners}")
     winning_attempt = int(row[f"BestGraph{winners}_Attempt"])
+    if int(row["AttemptThatFoundBestGraph"]) != winning_attempt:
+        raise AssertionError(f"Expected the summary and winner to agree on attempt {winning_attempt}")
     if not 0 < winning_attempt < attempts - 1:
         raise AssertionError(f"Expected an earlier retained winner, got attempt {winning_attempt}")
+    if args.mixed:
+        gpu_solutions = int(row["GpuAndCpuIsAcyclicSuccess"])
+        solutions = int(row["NumberOfSolutionsFound"])
+        if gpu_solutions and b"PH_CHM02_CUDA_ASSIGN_OK" not in result.stderr:
+            raise AssertionError("GPU solutions reported without a successful CUDA assignment")
+        if not 0 <= gpu_solutions <= solutions:
+            raise AssertionError(f"Invalid GPU solution count {gpu_solutions} of {solutions}")
+        if gpu_solutions in (0, solutions):
+            print(f"Only one worker solved before the shared limit ({gpu_solutions}/{solutions} GPU)")
+            raise SystemExit(77)

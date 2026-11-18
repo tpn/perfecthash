@@ -1151,40 +1151,7 @@ GraphCuIsAcyclic(
     //
 
     if (IsAcyclic) {
-
         Graph->Flags.IsAcyclic = TRUE;
-
-    } else {
-
-        ULONG HighestDeletedEdges;
-        ULONG NumberOfEdgesDeleted;
-        PPERFECT_HASH_CONTEXT Context;
-
-        Context = Graph->Info->Context;
-        NumberOfEdgesDeleted = Graph->DeletedEdgeCount;
-
-        if (NumberOfEdgesDeleted > Context->HighestDeletedEdgesCount) {
-
-            //
-            // Register as the highest deleted edges count if applicable.
-            //
-
-            while (TRUE) {
-
-                HighestDeletedEdges = Context->HighestDeletedEdgesCount;
-
-                if (NumberOfEdgesDeleted <= HighestDeletedEdges) {
-                    break;
-                }
-
-                InterlockedCompareExchange(
-                    (PLONG)&Context->HighestDeletedEdgesCount,
-                    NumberOfEdgesDeleted,
-                    HighestDeletedEdges
-                );
-
-            }
-        }
     }
 
     return (IsAcyclic ? S_OK : PH_E_GRAPH_CYCLIC_FAILURE);

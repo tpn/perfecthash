@@ -1689,6 +1689,22 @@ GraphCuIsAcyclic(
     // If we weren't acyclic, return.
     //
 
+    if (Result == PH_E_GRAPH_CYCLIC_FAILURE) {
+        ULONG Deleted = Graph->DeletedEdgeCount;
+        ULONG Highest = Graph->Context->HighestDeletedEdgesCount;
+
+        while (Highest < Deleted) {
+            ULONG Previous = (ULONG)InterlockedCompareExchange(
+                (PLONG)&Graph->Context->HighestDeletedEdgesCount,
+                (LONG)Deleted,
+                (LONG)Highest
+            );
+            if (Previous == Highest) {
+                break;
+            }
+            Highest = Previous;
+        }
+    }
     if (FAILED(Result)) {
         return Result;
     }
