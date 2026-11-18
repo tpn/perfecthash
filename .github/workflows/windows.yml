@@ -74,8 +74,26 @@ jobs:
             Copy-Item "build/lib/$config/static/PerfectHashOnlineCore.lib" $archives
           }
           Copy-Item include $sdk -Recurse
+          $examples = 'cpp-console-online-jit', 'sqlite-online-jit'
+          $sharedLib = "$sdk/lib/PerfectHashOnlineCore.lib"
+          $sharedDll = "$sdk/lib/PerfectHashOnlineCore.dll"
+          Copy-Item build/lib/Release/PerfectHashOnlineCore.lib $sharedLib
+          Copy-Item build/bin/Release/PerfectHashOnlineCore.dll $sharedDll
+          foreach ($example in $examples) {
+            $probe = "$scratch/$example-missing-asm"
+            $options = @('-S', "examples/$example", '-B', $probe, '-G', 'Ninja Multi-Config', "-DPERFECTHASH_ROOT=$sdk", '-DPH_ONLINE_JIT_PREFER_SHARED=OFF')
+            & {
+              $PSNativeCommandUseErrorActionPreference = $false
+              $diagnostic = cmake @options "-DPERFECTHASH_ONLINE_JIT_LIBRARY=$sdk/lib/static/Release/PerfectHashOnlineCore.lib" 2>&1 | Out-String
+              if (!$LASTEXITCODE -or $diagnostic -notmatch 'requires\s+PerfectHashAsm\.lib') { throw "Expected the missing ASM dependency diagnostic. $diagnostic" }
+            }
+            cmake @options -U PERFECTHASH_ONLINE_JIT_LIBRARY
+            cmake --build $probe --config Release --target "$example-runtime"
+            if (!(Test-Path -LiteralPath "$probe/Release/PerfectHashOnlineCore.dll")) { throw "$example did not select the complete shared SDK." }
+          }
+          Remove-Item -LiteralPath $sharedLib, $sharedDll
           Copy-Item build/lib/Release/PerfectHashAsm.lib "$sdk/lib"
-          foreach ($example in 'cpp-console-online-jit', 'sqlite-online-jit') {
+          foreach ($example in $examples) {
             cmake -S "examples/$example" -B "$scratch/$example" -G "Ninja Multi-Config" "-DPERFECTHASH_ROOT=$sdk"
           }
           foreach ($config in $configs) {

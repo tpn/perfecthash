@@ -62,6 +62,8 @@ When reusing a build directory with a cached `ON` or `OFF`, pass `-DPH_ONLINE_JI
 
 To rediscover SDK paths cached by an older finder, add `-U "PERFECTHASH_ONLINE_JIT_*" -U PERFECTHASH_ASM_LIBRARY` to the configure command and repeat any intentional path overrides after those options.
 
+If a Windows repository contains builds for several target architectures, set `PERFECTHASH_ROOT` to the intended build or install directory. For a build tree without headers, also pass `-DPERFECTHASH_ONLINE_JIT_INCLUDE_DIR=<repository>/include`.
+
 For a Windows SDK with a static archive outside a `static` directory, pass `-DPERFECTHASH_ONLINE_JIT_STATIC_LIBRARY=C:/sdk/lib/Debug/PerfectHashOnlineCore.lib` with the path to the archive.
 
 ```bash
