@@ -204,6 +204,12 @@ if(TARGET PerfectHashCreateExe AND TARGET PerfectHashBulkCreateExe)
             $<TARGET_FILE:PerfectHashCreateExe> $<TARGET_FILE:PerfectHashBulkCreateExe>
     )
 
+    add_test(
+        NAME perfecthash.cli.usage-in-sync
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/check_usage_in_sync.py
+            $<TARGET_FILE:PerfectHashCreateExe> ${PERFECTHASH_ROOT_DIR}/USAGE.txt
+    )
+
     if(TARGET PerfectHashLLVM)
         # Parallel solves hash through the LLVM hash JIT, one set of seeds per graph.
         add_test(

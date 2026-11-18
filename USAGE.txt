@@ -351,6 +351,20 @@ Table Create Flags:
 
         N.B. Only applies when HashAllKeysFirst is set.
 
+    --TryUseJitHashFunction
+
+        When set, tries to hash keys with routines compiled for the table by
+        the LLVM JIT.  Applies to Chm01 with 32-bit keys, the And mask function,
+        and the MultiplyShiftR, MultiplyShiftLR, MultiplyShiftRMultiply,
+        MultiplyShiftR2, MultiplyShiftRX and Mulshrolate1RX through
+        Mulshrolate4RX hash functions.  When the JIT routines are available,
+        they take precedence over the AVX2, AVX512 and NEON routines; when
+        they are not (for example, if LLVM support is absent), solving
+        continues with those routines.  The UsedJitHashFunction column of the
+        .csv output file reports whether the JIT routines were used.
+
+        N.B. Only applies when HashAllKeysFirst is set.
+
     --DoNotTryUseNeonHashFunction
 
         Disables ARM64 NEON key hashing for MultiplyShiftR, MultiplyShiftRX, and
@@ -401,7 +415,38 @@ Table Create Flags:
 
 Table Compile Flags:
 
-    N/A
+    --Jit
+
+        Compiles an in-memory, online JIT representation of the table using
+        LLVM.
+
+    --JitIndex64
+
+        Also compiles the Index64() routine (keys must have been
+        downsized from 64-bit to 32-bit for this to be valid).
+
+    --JitIndex32x2
+    --JitIndex32x4
+    --JitIndex32x8
+    --JitIndex32x16
+
+        Compiles the 2-wide, 4-wide, 8-wide, or 16-wide Index32() routines.
+        The x16 variant requires AVX-512 support from the JIT backend.
+
+    --JitVectorIndex32x2
+    --JitVectorIndex32x4
+    --JitVectorIndex32x8
+
+        Compiles vectorized 2-wide, 4-wide, or 8-wide Index32() routines.
+        These imply --JitIndex32x2/--JitIndex32x4 and are intended to map
+        to NEON/SVE/SSE on the active CPU architecture. The 8-wide variant
+        follows the same behavior.
+
+    --JitMaxIsa=Auto|Avx|Avx2|Avx512|Neon|Sve|Sve2
+
+        Caps the maximum ISA used by the LLVM JIT backend. Auto selects the
+        host CPU features. Avx/Avx2/Avx512 downgrade the maximum ISA even if
+        the host CPU supports higher levels. Neon/Sve/Sve2 apply to AArch64.
 
 Table Create Parameters:
 
@@ -795,8 +840,16 @@ All Hash Functions:
 
    ID | Name (Number of Seeds)
     2   Jenkins (2)
+    4   RotateXor (4)
+    7   Dummy (3)
+    8   Crc32RotateXor (3)
+   10   Djb (2)
+   11   DjbXor (2)
    12   Fnv (2)
+   13   Crc32Not (2)
    14   Crc32RotateX (3)
+   15   Crc32RotateXY (3)
+   16   Crc32RotateWXYZ (3)
    17   RotateMultiplyXorRotate (3)
    18   ShiftMultiplyXorShift (3)
    19   ShiftMultiplyXorShift2 (6)
@@ -805,14 +858,22 @@ All Hash Functions:
    22   MultiplyRotateLR (3)
    23   MultiplyShiftR (3)
    24   MultiplyShiftLR (3)
+   25   Multiply (2)
+   26   MultiplyXor (4)
    27   MultiplyRotateRMultiply (5)
    28   MultiplyRotateR2 (5)
    29   MultiplyShiftRMultiply (5)
    30   MultiplyShiftR2 (5)
+   31   RotateRMultiply (3)
    32   RotateRMultiplyRotateR (3)
-   33   Multiply643ShiftR (3)
-   33   Multiply644ShiftR (3)
-   34   MultiplyShiftRX (3)
+   33   Multiply643ShiftR (5)
+   34   Multiply644ShiftR (5)
+   35   MultiplyShiftRX (3)
+   36   Mulshrolate1RX (3)
+   37   Mulshrolate2RX (3)
+   38   Mulshrolate3RX (4)
+   39   Mulshrolate4RX (5)
+   40   Scratch (8)
 
 Mask Functions:
 

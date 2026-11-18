@@ -704,6 +704,20 @@ Abstract:
 // 
 //         N.B. Only applies when HashAllKeysFirst is set.
 // 
+//     --TryUseJitHashFunction
+// 
+//         When set, tries to hash keys with routines compiled for the table by
+//         the LLVM JIT.  Applies to Chm01 with 32-bit keys, the And mask function,
+//         and the MultiplyShiftR, MultiplyShiftLR, MultiplyShiftRMultiply,
+//         MultiplyShiftR2, MultiplyShiftRX and Mulshrolate1RX through
+//         Mulshrolate4RX hash functions.  When the JIT routines are available,
+//         they take precedence over the AVX2, AVX512 and NEON routines; when
+//         they are not (for example, if LLVM support is absent), solving
+//         continues with those routines.  The UsedJitHashFunction column of the
+//         .csv output file reports whether the JIT routines were used.
+// 
+//         N.B. Only applies when HashAllKeysFirst is set.
+// 
 //     --DoNotTryUseNeonHashFunction
 // 
 //         Disables ARM64 NEON key hashing for MultiplyShiftR, MultiplyShiftRX, and
