@@ -5097,16 +5097,29 @@ if(WIN32)
     set(PERFECTHASH_ERRORS_DBG
         "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashErrors.dbg"
     )
+    set(PERFECTHASH_ERRORS_RC_INPUTS
+        "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashErrors.rc"
+        ${PERFECTHASH_ERRORS_BIN}
+        "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashErrorsTEMP.BIN"
+    )
 
     add_custom_command(
         OUTPUT ${PERFECTHASH_ERRORS_HEADER}
                "${PERFECTHASH_ROOT_DIR}/include/PerfectHash/PerfectHashEvents.h"
         COMMAND mc.exe -v -o -c -b -h "${PERFECTHASH_ROOT_DIR}/include/PerfectHash" -x .
                 -km PerfectHashEvents.man PerfectHashErrors.mc
-        BYPRODUCTS ${PERFECTHASH_ERRORS_BIN} ${PERFECTHASH_ERRORS_DBG}
+        BYPRODUCTS ${PERFECTHASH_ERRORS_RC_INPUTS} ${PERFECTHASH_ERRORS_DBG}
         DEPENDS PerfectHashErrors.mc PerfectHashEvents.man
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
         COMMENT "Compiling PerfectHashErrors.mc and PerfectHashEvents.man..."
+    )
+
+    # rc.exe embeds what mc.exe writes. Without this, a build that runs mc.exe
+    # links the previous message table and only the next build picks it up.
+    set_source_files_properties(
+        "PerfectHash.rc"
+        PROPERTIES
+        OBJECT_DEPENDS "${PERFECTHASH_ERRORS_RC_INPUTS}"
     )
 
     add_custom_target(PerfectHashResources ALL DEPENDS ${PERFECTHASH_ERRORS_HEADER})
