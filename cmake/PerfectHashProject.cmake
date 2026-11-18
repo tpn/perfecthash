@@ -10,6 +10,16 @@ if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
     set(PERFECTHASH_IS_TOP_LEVEL_PROJECT ON)
 endif()
 
+# Honor the older USE_CUDA and HookPenter spellings (the ninja-multi-cuda preset
+# sets USE_CUDA) unless the current option was given as well. This has to run
+# before option() defines the current names.
+if(DEFINED USE_CUDA AND NOT DEFINED PERFECTHASH_USE_CUDA)
+    set(PERFECTHASH_USE_CUDA "${USE_CUDA}" CACHE BOOL "Enable CUDA support if available" FORCE)
+endif()
+if(DEFINED HookPenter AND NOT DEFINED PERFECTHASH_ENABLE_PENTER)
+    set(PERFECTHASH_ENABLE_PENTER "${HookPenter}" CACHE BOOL "Enable FunctionHook support" FORCE)
+endif()
+
 option(PERFECTHASH_USE_CUDA "Enable CUDA support if available" OFF)
 option(PERFECTHASH_ENABLE_PENTER "Enable FunctionHook support" OFF)
 option(PERFECTHASH_ENABLE_NATIVE_ARCH "Enable -march=native on supported compilers" ON)
@@ -87,14 +97,7 @@ else()
     )
 endif()
 
-if(DEFINED USE_CUDA AND NOT DEFINED PERFECTHASH_USE_CUDA)
-    set(PERFECTHASH_USE_CUDA "${USE_CUDA}" CACHE BOOL "" FORCE)
-endif()
 set(USE_CUDA "${PERFECTHASH_USE_CUDA}" CACHE BOOL "" FORCE)
-
-if(DEFINED HookPenter AND NOT DEFINED PERFECTHASH_ENABLE_PENTER)
-    set(PERFECTHASH_ENABLE_PENTER "${HookPenter}" CACHE BOOL "" FORCE)
-endif()
 set(HookPenter "${PERFECTHASH_ENABLE_PENTER}" CACHE BOOL "" FORCE)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
