@@ -3362,7 +3362,7 @@ IsValidTableCreateFlags(
             return PH_E_TRY_USE_AVX2_HASH_FUNC_FLAG_REQUIRE_HASH_ALL_KEYS_FIRST;
         }
 
-        if (TableCreateFlags->TryUseAvx2HashFunction) {
+        if (TableCreateFlags->TryUseAvx512HashFunction) {
             return PH_E_TRY_USE_AVX512_HASH_FUNC_FLAG_REQUIRE_HASH_ALL_KEYS_FIRST;
         }
 

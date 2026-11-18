@@ -11,6 +11,9 @@ PH_E_SYSTEM_CALL_FAILED = 0xE0040224
 PH_E_NO_KEYS_FOUND_IN_DIRECTORY = 0xE0040344
 PH_E_DUPLICATE_KEYS_DETECTED = 0xE0040211
 PH_E_CTRL_C_PRESSED = 0xE0040352
+PH_E_TRY_USE_AVX2_HASH_FUNC_FLAG_REQUIRE_HASH_ALL_KEYS_FIRST = 0xE00403D1
+PH_E_TRY_USE_AVX512_HASH_FUNC_FLAG_REQUIRE_HASH_ALL_KEYS_FIRST = 0xE00403D2
+PH_E_TRY_USE_JIT_HASH_FUNC_FLAG_REQUIRE_HASH_ALL_KEYS_FIRST = 0xE004041D
 PH_I_SOLVE_TIMEOUT_EXPIRED = 0x60040088
 
 
@@ -65,6 +68,15 @@ with tempfile.TemporaryDirectory() as tmp:
     path.write_bytes(struct.pack("<4I", 1, 3, 5, 7))
     check(create, path, root / "create", 0)
     check(bulk_create, keys, root / "bulk", 0)
+
+    # Each of these ways to hash keys needs them all hashed up front.
+    for flag, expected in (
+        ("Avx2", PH_E_TRY_USE_AVX2_HASH_FUNC_FLAG_REQUIRE_HASH_ALL_KEYS_FIRST),
+        ("Avx512", PH_E_TRY_USE_AVX512_HASH_FUNC_FLAG_REQUIRE_HASH_ALL_KEYS_FIRST),
+        ("Jit", PH_E_TRY_USE_JIT_HASH_FUNC_FLAG_REQUIRE_HASH_ALL_KEYS_FIRST),
+    ):
+        check(create, path, root / f"hash-keys-later-{flag}", expected,
+              "--DoNotHashAllKeysFirst", f"--TryUse{flag}HashFunction")
 
     # Equal multipliers and shifts select identical vertices on every attempt.
     bad_seeds = ("--DoNotTryUseHash16Impl", "--Seeds=1,1,0x1010")
