@@ -90,14 +90,6 @@ PerfectHashTableCompileJit(
         return PH_E_LLVM_BACKEND_NOT_FOUND;
     }
 
-#if defined(PH_HAS_RAWDOG_JIT)
-    // Only the host module can release a RawDog code allocation. The LLVM
-    // module treats an existing execution engine as an LLVM MCJIT instance.
-    if (Table && Table->Jit && Table->Jit->Flags.BackendRawDog) {
-        PerfectHashTableJitRundownRawDog(Table);
-    }
-#endif
-
 #if defined(PH_WINDOWS)
     __try {
         return Functions->TableCompileJit(Table, CompileFlags);
