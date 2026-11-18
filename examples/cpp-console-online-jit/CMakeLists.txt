@@ -154,12 +154,36 @@ if(WIN32)
         set(_ph_runtime_files "${PERFECTHASH_ONLINE_JIT_RUNTIME_FILES}")
     endif()
 
-    # Staging is a build dependency so switching SDKs also updates an up-to-date executable.
-    add_custom_target(cpp-console-online-jit-runtime
+    set(_ph_runtime_state "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/perfecthash-runtime")
+    set(_ph_runtime_selection "${_ph_runtime_state}/$<CONFIG>.selection")
+    set(_ph_stage_script "${CMAKE_CURRENT_SOURCE_DIR}/cmake/StagePerfectHashRuntime.cmake")
+    # The stamp lives in the executable's default output directory, so removing
+    # that directory also stages its runtime again.
+    get_target_property(_ph_runtime_dir cpp-console-online-jit RUNTIME_OUTPUT_DIRECTORY)
+    if(NOT _ph_runtime_dir)
+        set(_ph_runtime_dir "${CMAKE_CURRENT_BINARY_DIR}")
+    endif()
+    get_property(_ph_multi_config GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+    if(_ph_multi_config)
+        string(APPEND _ph_runtime_dir "/$<CONFIG>")
+    endif()
+    set(_ph_runtime_stamp "${_ph_runtime_dir}/cpp-console-online-jit.runtime.stamp")
+    # Rewritten only when the selected files or their destination change.
+    file(GENERATE OUTPUT "${_ph_runtime_selection}"
+        CONTENT "$<TARGET_FILE_DIR:cpp-console-online-jit>\n${_ph_runtime_files}\n")
+
+    # Staging is a build dependency so switching SDKs also updates an up-to-date
+    # executable. It reruns when the selection, a selected file or the script
+    # changes. The quoted list keeps each configuration's files in one expression.
+    add_custom_command(OUTPUT "${_ph_runtime_stamp}"
         COMMAND ${CMAKE_COMMAND} "-Dfiles=${_ph_runtime_files}"
                 "-Ddestination=$<TARGET_FILE_DIR:cpp-console-online-jit>"
-                "-Dstate_dir=${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/perfecthash-runtime"
-                -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/StagePerfectHashRuntime.cmake"
+                "-Dstate_dir=${_ph_runtime_state}"
+                -P "${_ph_stage_script}"
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${_ph_runtime_dir}"
+        COMMAND ${CMAKE_COMMAND} -E touch "${_ph_runtime_stamp}"
+        DEPENDS "${_ph_runtime_files}" "${_ph_runtime_selection}" "${_ph_stage_script}"
         VERBATIM)
+    add_custom_target(cpp-console-online-jit-runtime DEPENDS "${_ph_runtime_stamp}")
     add_dependencies(cpp-console-online-jit cpp-console-online-jit-runtime)
 endif()
