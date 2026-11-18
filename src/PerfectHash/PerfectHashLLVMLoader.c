@@ -16,7 +16,10 @@ Abstract:
 
 #ifdef PH_USE_LLVMLIB
 
-extern LOAD_SYMBOLS LoadSymbols;
+#ifndef PH_WINDOWS
+#include <dlfcn.h>
+#endif
+
 static PERFECT_HASH_LLVM_FUNCTIONS Functions;
 static const PERFECT_HASH_LLVM_FUNCTIONS *LoadedFunctions;
 
@@ -177,13 +180,13 @@ LoadPerfectHashLLVMFunctions(VOID)
         "PerfectHashTableCompileHashJit",
         "PerfectHashTableHashJitRundown",
     };
-    ULONG FailedBits = 0;
-    RTL_BITMAP FailedBitmap;
-    ULONG Resolved = 0;
+    PULONG_PTR Addresses = (PULONG_PTR)&Functions;
+    ULONG Missing = 0;
+    ULONG Index;
     HMODULE Module;
 
-    FailedBitmap.SizeOfBitMap = ARRAYSIZE(Names) + 1;
-    FailedBitmap.Buffer = &FailedBits;
+    C_ASSERT(sizeof(Functions) == sizeof(Names));
+
 #if defined(PH_WINDOWS)
     Module = LoadPerfectHashLLVMModule();
 #elif defined(PH_MAC)
@@ -195,15 +198,26 @@ LoadPerfectHashLLVMFunctions(VOID)
         // The platform loader above has already reported why.
         return;
     }
-    if (!LoadSymbols(Names, ARRAYSIZE(Names), (PULONG_PTR)&Functions,
-                     sizeof(Functions) / sizeof(ULONG_PTR), Module,
-                     &FailedBitmap, &Resolved) || Resolved != ARRAYSIZE(Names)) {
+    for (Index = 0; Index < ARRAYSIZE(Names); Index++) {
+#ifdef PH_WINDOWS
+        Addresses[Index] = (ULONG_PTR)GetProcAddress(Module, Names[Index]);
+#else
+        // GetProcAddress here reports every failed lookup on its own line.
+        Addresses[Index] = (ULONG_PTR)dlsym(Module, Names[Index]);
+#endif
+        if (!Addresses[Index]) {
+            fprintf(stderr,
+                    "%s%s",
+                    Missing++ ?
+                        ", " :
+                        "LLVM JIT support is unavailable: the PerfectHashLLVM "
+                        "library lacks these entry points: ",
+                    Names[Index]);
+        }
+    }
+    if (Missing) {
         fprintf(stderr,
-                "LLVM JIT support is unavailable: the PerfectHashLLVM library "
-                "lacks %u of the %u expected entry points. It was built "
-                "from a different PerfectHash version.\n",
-                (unsigned)(ARRAYSIZE(Names) - Resolved),
-                (unsigned)ARRAYSIZE(Names));
+                ". It was built from a different PerfectHash version.\n");
         FreeLibrary(Module);
         return;
     }
