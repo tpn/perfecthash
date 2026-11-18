@@ -1418,6 +1418,7 @@ Name(                                                            \
     ULONG NumberOfKeys;                                          \
     ULONG NumberOfVertices;                                      \
     PGRAPH CpuGraph;                                             \
+    PRTL Rtl = Graph->Rtl;                                       \
     PBYTE Seen = NULL;                                           \
     HRESULT Result = S_OK;                                       \
     OrderType *Order;                                            \
@@ -1908,6 +1909,7 @@ GraphCuAssign(
     LARGE_INTEGER Start;
     LARGE_INTEGER End;
     PCU Cu;
+    PRTL Rtl = Graph->Rtl;
     HRESULT Result;
 
     if (IsCudaDebugGraph(Graph)) {
@@ -1963,7 +1965,9 @@ GraphCuVerify(
     LARGE_INTEGER Start;
     LARGE_INTEGER End;
     PCU Cu;
+    CU_RESULT CuResult;
     HRESULT Result;
+    PPH_CU_DEVICE_CONTEXT DeviceContext;
 
     if (IsCudaDebugGraph(Graph)) {
         fprintf(stderr, "[GraphCuVerify] Enter\n");
@@ -1973,7 +1977,15 @@ GraphCuVerify(
         return PH_S_GRAPH_VERIFICATION_SKIPPED;
     }
 
-    Cu = Graph->CuSolveContext->DeviceContext->Cu;
+    // Verification runs on the caller's thread after the solver workers finish.
+    // The stream and graph allocations belong to the winning device context.
+    DeviceContext = Graph->CuSolveContext->DeviceContext;
+    Cu = DeviceContext->Cu;
+    CuResult = Cu->CtxPushCurrent(DeviceContext->Context);
+    if (CU_FAILED(CuResult)) {
+        CU_ERROR(GraphCuVerify_CtxPushCurrent, CuResult);
+        return PH_E_CUDA_DRIVER_API_CALL_FAILED;
+    }
 
     QueryPerformanceCounter(&Start);
 
@@ -1987,6 +1999,14 @@ GraphCuVerify(
                                  Start,
                                  End,
                                  &Graph->CuVerifyElapsedMicroseconds);
+
+    CuResult = Cu->CtxPopCurrent(NULL);
+    if (CU_FAILED(CuResult)) {
+        CU_ERROR(GraphCuVerify_CtxPopCurrent, CuResult);
+        if (SUCCEEDED(Result)) {
+            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+        }
+    }
 
     if (IsCudaDebugGraph(Graph)) {
         fprintf(stderr, "[GraphCuVerify] GpuVerifyResult=0x%08x\n", (unsigned)Result);
