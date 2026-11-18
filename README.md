@@ -224,8 +224,9 @@ LLVM also supports Mulshrolate4RX and can generate SIMD lookup kernels.
 With `--HashAllKeysFirst`, the ARM64 solver can hash four keys at a time
 using NEON for MultiplyShiftR, MultiplyShiftRX, and Mulshrolate1RX through
 Mulshrolate4RX. Both 16-bit and 32-bit vertex pairs are supported. A hash
-JIT selected with `--TryUseJitHashFunction` takes precedence. To benchmark
-NEON against scalar, leave that option off in both runs and add
+JIT selected with `--TryUseJitHashFunction` takes precedence in a
+single-worker solve; solves with more than one worker ignore that option. To
+benchmark NEON against scalar, leave that option off in both runs and add
 `--DoNotTryUseNeonHashFunction` to the scalar run. The CSV field
 `UsedNeonHashFunction` shows whether the winning graph used NEON. Lookups
 in a solved table use the backend and batch width chosen by the caller.
