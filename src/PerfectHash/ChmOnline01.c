@@ -267,22 +267,6 @@ BuildSplatVectorConstant(
     return LLVMConstVector(Values, Lanes);
 }
 
-static
-LLVMValueRef
-AddGlobalI32(
-    _In_ LLVMModuleRef Module,
-    _In_ LLVMTypeRef I32,
-    _In_ PCSTR Name
-    )
-{
-    LLVMValueRef Global;
-
-    Global = LLVMAddGlobal(Module, I32, Name);
-    LLVMSetInitializer(Global, LLVMConstInt(I32, 0, FALSE));
-
-    return Global;
-}
-
 FORCEINLINE
 LLVMValueRef
 BuildConstIntLike(
@@ -508,16 +492,15 @@ typedef struct _CHM01_JIT_CONTEXT {
     LLVMValueRef HashMaskConst;
     LLVMValueRef IndexMaskConst;
     LLVMValueRef TableDataConst;
-    LLVMValueRef Seed1Global;
-    LLVMValueRef Seed2Global;
-    LLVMValueRef Seed3Global;
-    LLVMValueRef Seed3Byte1Global;
-    LLVMValueRef Seed3Byte2Global;
-    LLVMValueRef Seed3Byte3Global;
-    LLVMValueRef Seed3Byte4Global;
-    LLVMValueRef Seed4Global;
-    LLVMValueRef Seed5Global;
-    LLVMValueRef HashMaskGlobal;
+    LLVMValueRef Seed1Pointer;
+    LLVMValueRef Seed2Pointer;
+    LLVMValueRef Seed3Byte1Pointer;
+    LLVMValueRef Seed3Byte2Pointer;
+    LLVMValueRef Seed3Byte3Pointer;
+    LLVMValueRef Seed3Byte4Pointer;
+    LLVMValueRef Seed4Pointer;
+    LLVMValueRef Seed5Pointer;
+    LLVMValueRef HashMaskPointer;
     PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId;
     BOOLEAN UseAssigned16;
     BYTE Padding1[3];
@@ -1305,6 +1288,65 @@ BuildChm01IndexFunction(
     return Function;
 }
 
+//
+// Every hash routine takes a PERFECT_HASH_HASH_JIT_SEEDS pointer as its final
+// parameter, so that each caller hashes with its own seeds.  Point the context
+// at that parameter's fields before emitting the loads.
+//
+
+static
+LLVMValueRef
+BuildHashSeedPointer(
+    _In_ PCHM01_JIT_CONTEXT Ctx,
+    _In_ LLVMValueRef Seeds,
+    _In_ ULONG FieldOffset,
+    _In_ PCSTR Name
+    )
+{
+    LLVMValueRef Index;
+
+    Index = LLVMConstInt(Ctx->I64, FieldOffset / sizeof(ULONG), FALSE);
+
+    return LLVMBuildInBoundsGEP2(Ctx->Builder,
+                                 Ctx->I32,
+                                 Seeds,
+                                 &Index,
+                                 1,
+                                 Name);
+}
+
+static
+VOID
+SetHashSeedPointers(
+    _In_ PCHM01_JIT_CONTEXT Ctx,
+    _In_ LLVMValueRef Function
+    )
+{
+    LLVMValueRef Seeds;
+
+    Seeds = LLVMGetLastParam(Function);
+
+#define SEED_POINTER(Name)                                            \
+    Ctx->Name##Pointer = BuildHashSeedPointer(                        \
+        Ctx,                                                          \
+        Seeds,                                                        \
+        (ULONG)FIELD_OFFSET(PERFECT_HASH_HASH_JIT_SEEDS, Name),       \
+        #Name ".ptr"                                                  \
+    )
+
+    SEED_POINTER(Seed1);
+    SEED_POINTER(Seed2);
+    SEED_POINTER(Seed3Byte1);
+    SEED_POINTER(Seed3Byte2);
+    SEED_POINTER(Seed3Byte3);
+    SEED_POINTER(Seed3Byte4);
+    SEED_POINTER(Seed4);
+    SEED_POINTER(Seed5);
+    SEED_POINTER(HashMask);
+
+#undef SEED_POINTER
+}
+
 static
 LLVMValueRef
 BuildChm01HashFunction(
@@ -1314,6 +1356,7 @@ BuildChm01HashFunction(
     )
 {
     LLVMTypeRef FunctionType;
+    LLVMTypeRef Params[2];
     LLVMValueRef Function;
     LLVMValueRef Key;
     LLVMValueRef Key32;
@@ -1335,7 +1378,12 @@ BuildChm01HashFunction(
     LLVMValueRef Shift32;
     BOOLEAN UseHashMask;
 
-    FunctionType = LLVMFunctionType(Ctx->I64, &KeyType, 1, FALSE);
+    Params[0] = KeyType;
+    Params[1] = Ctx->I32Ptr;
+    FunctionType = LLVMFunctionType(Ctx->I64,
+                                    Params,
+                                    ARRAYSIZE(Params),
+                                    FALSE);
     Function = LLVMAddFunction(Ctx->Module, Name, FunctionType);
 
     LLVMPositionBuilderAtEnd(
@@ -1344,6 +1392,7 @@ BuildChm01HashFunction(
     );
 
     Key = LLVMGetParam(Function, 0);
+    SetHashSeedPointers(Ctx, Function);
 
     if (KeyType == Ctx->I64) {
         Key32 = LLVMBuildTrunc(Ctx->Builder, Key, Ctx->I32, "key32");
@@ -1353,39 +1402,39 @@ BuildChm01HashFunction(
 
     Seed1 = LLVMBuildLoad2(Ctx->Builder,
                            Ctx->I32,
-                           Ctx->Seed1Global,
+                           Ctx->Seed1Pointer,
                            "seed1");
     Seed2 = LLVMBuildLoad2(Ctx->Builder,
                            Ctx->I32,
-                           Ctx->Seed2Global,
+                           Ctx->Seed2Pointer,
                            "seed2");
     Seed3Byte1 = LLVMBuildLoad2(Ctx->Builder,
                                 Ctx->I32,
-                                Ctx->Seed3Byte1Global,
+                                Ctx->Seed3Byte1Pointer,
                                 "seed3_b1");
     Seed3Byte2 = LLVMBuildLoad2(Ctx->Builder,
                                 Ctx->I32,
-                                Ctx->Seed3Byte2Global,
+                                Ctx->Seed3Byte2Pointer,
                                 "seed3_b2");
     Seed3Byte3 = LLVMBuildLoad2(Ctx->Builder,
                                 Ctx->I32,
-                                Ctx->Seed3Byte3Global,
+                                Ctx->Seed3Byte3Pointer,
                                 "seed3_b3");
     Seed3Byte4 = LLVMBuildLoad2(Ctx->Builder,
                                 Ctx->I32,
-                                Ctx->Seed3Byte4Global,
+                                Ctx->Seed3Byte4Pointer,
                                 "seed3_b4");
     Seed4 = LLVMBuildLoad2(Ctx->Builder,
                            Ctx->I32,
-                           Ctx->Seed4Global,
+                           Ctx->Seed4Pointer,
                            "seed4");
     Seed5 = LLVMBuildLoad2(Ctx->Builder,
                            Ctx->I32,
-                           Ctx->Seed5Global,
+                           Ctx->Seed5Pointer,
                            "seed5");
     HashMask = LLVMBuildLoad2(Ctx->Builder,
                               Ctx->I32,
-                              Ctx->HashMaskGlobal,
+                              Ctx->HashMaskPointer,
                               "hash_mask");
 
     UseHashMask = FALSE;
@@ -1679,7 +1728,7 @@ BuildChm01HashGroupFunction(
     )
 {
     LLVMTypeRef FunctionType;
-    LLVMTypeRef Params[2];
+    LLVMTypeRef Params[3];
     LLVMTypeRef I64Ptr;
     LLVMValueRef Function;
     LLVMValueRef KeysPtr;
@@ -1687,6 +1736,7 @@ BuildChm01HashGroupFunction(
     LLVMValueRef KeyPtr;
     LLVMValueRef PairPtr;
     LLVMValueRef Key;
+    LLVMValueRef Args[2];
     LLVMValueRef Pair;
     LLVMValueRef LaneConst;
     ULONG Index;
@@ -1698,6 +1748,7 @@ BuildChm01HashGroupFunction(
     I64Ptr = LLVMPointerType(Ctx->I64, 0);
     Params[0] = Ctx->I32Ptr;
     Params[1] = I64Ptr;
+    Params[2] = Ctx->I32Ptr;
 
     FunctionType = LLVMFunctionType(LLVMVoidTypeInContext(Ctx->Context),
                                     Params,
@@ -1713,6 +1764,7 @@ BuildChm01HashGroupFunction(
 
     KeysPtr = LLVMGetParam(Function, 0);
     PairsPtr = LLVMGetParam(Function, 1);
+    Args[1] = LLVMGetParam(Function, 2);
 
     for (Index = 0; Index < Lanes; Index++) {
         LaneConst = LLVMConstInt(Ctx->I64, Index, FALSE);
@@ -1724,11 +1776,12 @@ BuildChm01HashGroupFunction(
                                        1,
                                        "key_ptr");
         Key = LLVMBuildLoad2(Ctx->Builder, Ctx->I32, KeyPtr, "key");
+        Args[0] = Key;
         Pair = LLVMBuildCall2(Ctx->Builder,
                               HashFunctionType,
                               HashFunction,
-                              &Key,
-                              1,
+                              Args,
+                              ARRAYSIZE(Args),
                               "pair");
         PairPtr = LLVMBuildInBoundsGEP2(Ctx->Builder,
                                         Ctx->I64,
@@ -1754,7 +1807,7 @@ BuildChm01HashVectorFunction(
 {
     LLVMTypeRef FunctionType;
     LLVMTypeRef VecType;
-    LLVMTypeRef Params[2];
+    LLVMTypeRef Params[3];
     LLVMTypeRef I64Ptr;
     LLVMValueRef Function;
     LLVMValueRef KeysPtr;
@@ -1801,6 +1854,7 @@ BuildChm01HashVectorFunction(
     I64Ptr = LLVMPointerType(Ctx->I64, 0);
     Params[0] = Ctx->I32Ptr;
     Params[1] = I64Ptr;
+    Params[2] = Ctx->I32Ptr;
 
     FunctionType = LLVMFunctionType(LLVMVoidTypeInContext(Ctx->Context),
                                     Params,
@@ -1816,6 +1870,7 @@ BuildChm01HashVectorFunction(
 
     KeysPtr = LLVMGetParam(Function, 0);
     PairsPtr = LLVMGetParam(Function, 1);
+    SetHashSeedPointers(Ctx, Function);
 
     VecType = LLVMVectorType(Ctx->I32, Lanes);
     KeyVec = LLVMGetUndef(VecType);
@@ -1839,39 +1894,39 @@ BuildChm01HashVectorFunction(
 
     Seed1 = LLVMBuildLoad2(Ctx->Builder,
                            Ctx->I32,
-                           Ctx->Seed1Global,
+                           Ctx->Seed1Pointer,
                            "seed1");
     Seed2 = LLVMBuildLoad2(Ctx->Builder,
                            Ctx->I32,
-                           Ctx->Seed2Global,
+                           Ctx->Seed2Pointer,
                            "seed2");
     Seed3Byte1 = LLVMBuildLoad2(Ctx->Builder,
                                 Ctx->I32,
-                                Ctx->Seed3Byte1Global,
+                                Ctx->Seed3Byte1Pointer,
                                 "seed3_b1");
     Seed3Byte2 = LLVMBuildLoad2(Ctx->Builder,
                                 Ctx->I32,
-                                Ctx->Seed3Byte2Global,
+                                Ctx->Seed3Byte2Pointer,
                                 "seed3_b2");
     Seed3Byte3 = LLVMBuildLoad2(Ctx->Builder,
                                 Ctx->I32,
-                                Ctx->Seed3Byte3Global,
+                                Ctx->Seed3Byte3Pointer,
                                 "seed3_b3");
     Seed3Byte4 = LLVMBuildLoad2(Ctx->Builder,
                                 Ctx->I32,
-                                Ctx->Seed3Byte4Global,
+                                Ctx->Seed3Byte4Pointer,
                                 "seed3_b4");
     Seed4 = LLVMBuildLoad2(Ctx->Builder,
                            Ctx->I32,
-                           Ctx->Seed4Global,
+                           Ctx->Seed4Pointer,
                            "seed4");
     Seed5 = LLVMBuildLoad2(Ctx->Builder,
                            Ctx->I32,
-                           Ctx->Seed5Global,
+                           Ctx->Seed5Pointer,
                            "seed5");
     HashMask = LLVMBuildLoad2(Ctx->Builder,
                               Ctx->I32,
-                              Ctx->HashMaskGlobal,
+                              Ctx->HashMaskPointer,
                               "hash_mask");
 
     Seed1Vec = BuildSplatVectorValue(Ctx, VecType, Seed1, Lanes);
@@ -2200,6 +2255,7 @@ BuildChm01Hash16Function(
     )
 {
     LLVMTypeRef FunctionType;
+    LLVMTypeRef Params[2];
     LLVMValueRef Function;
     LLVMValueRef Key;
     LLVMValueRef Key32;
@@ -2223,7 +2279,12 @@ BuildChm01Hash16Function(
     LLVMValueRef Shift16;
     BOOLEAN UseHashMask;
 
-    FunctionType = LLVMFunctionType(Ctx->I32, &KeyType, 1, FALSE);
+    Params[0] = KeyType;
+    Params[1] = Ctx->I32Ptr;
+    FunctionType = LLVMFunctionType(Ctx->I32,
+                                    Params,
+                                    ARRAYSIZE(Params),
+                                    FALSE);
     Function = LLVMAddFunction(Ctx->Module, Name, FunctionType);
 
     LLVMPositionBuilderAtEnd(
@@ -2232,6 +2293,7 @@ BuildChm01Hash16Function(
     );
 
     Key = LLVMGetParam(Function, 0);
+    SetHashSeedPointers(Ctx, Function);
 
     if (KeyType == Ctx->I64) {
         Key32 = LLVMBuildTrunc(Ctx->Builder, Key, Ctx->I32, "key32");
@@ -2241,39 +2303,39 @@ BuildChm01Hash16Function(
 
     Seed1 = LLVMBuildLoad2(Ctx->Builder,
                            Ctx->I32,
-                           Ctx->Seed1Global,
+                           Ctx->Seed1Pointer,
                            "seed1");
     Seed2 = LLVMBuildLoad2(Ctx->Builder,
                            Ctx->I32,
-                           Ctx->Seed2Global,
+                           Ctx->Seed2Pointer,
                            "seed2");
     Seed3Byte1 = LLVMBuildLoad2(Ctx->Builder,
                                 Ctx->I32,
-                                Ctx->Seed3Byte1Global,
+                                Ctx->Seed3Byte1Pointer,
                                 "seed3_b1");
     Seed3Byte2 = LLVMBuildLoad2(Ctx->Builder,
                                 Ctx->I32,
-                                Ctx->Seed3Byte2Global,
+                                Ctx->Seed3Byte2Pointer,
                                 "seed3_b2");
     Seed3Byte3 = LLVMBuildLoad2(Ctx->Builder,
                                 Ctx->I32,
-                                Ctx->Seed3Byte3Global,
+                                Ctx->Seed3Byte3Pointer,
                                 "seed3_b3");
     Seed3Byte4 = LLVMBuildLoad2(Ctx->Builder,
                                 Ctx->I32,
-                                Ctx->Seed3Byte4Global,
+                                Ctx->Seed3Byte4Pointer,
                                 "seed3_b4");
     Seed4 = LLVMBuildLoad2(Ctx->Builder,
                            Ctx->I32,
-                           Ctx->Seed4Global,
+                           Ctx->Seed4Pointer,
                            "seed4");
     Seed5 = LLVMBuildLoad2(Ctx->Builder,
                            Ctx->I32,
-                           Ctx->Seed5Global,
+                           Ctx->Seed5Pointer,
                            "seed5");
     HashMask = LLVMBuildLoad2(Ctx->Builder,
                               Ctx->I32,
-                              Ctx->HashMaskGlobal,
+                              Ctx->HashMaskPointer,
                               "hash_mask");
 
     UseHashMask = FALSE;
@@ -2581,13 +2643,14 @@ BuildChm01Hash16GroupFunction(
     )
 {
     LLVMTypeRef FunctionType;
-    LLVMTypeRef Params[2];
+    LLVMTypeRef Params[3];
     LLVMValueRef Function;
     LLVMValueRef KeysPtr;
     LLVMValueRef PairsPtr;
     LLVMValueRef KeyPtr;
     LLVMValueRef PairPtr;
     LLVMValueRef Key;
+    LLVMValueRef Args[2];
     LLVMValueRef Pair;
     LLVMValueRef LaneConst;
     ULONG Index;
@@ -2598,6 +2661,7 @@ BuildChm01Hash16GroupFunction(
 
     Params[0] = Ctx->I32Ptr;
     Params[1] = Ctx->I32Ptr;
+    Params[2] = Ctx->I32Ptr;
 
     FunctionType = LLVMFunctionType(LLVMVoidTypeInContext(Ctx->Context),
                                     Params,
@@ -2613,6 +2677,7 @@ BuildChm01Hash16GroupFunction(
 
     KeysPtr = LLVMGetParam(Function, 0);
     PairsPtr = LLVMGetParam(Function, 1);
+    Args[1] = LLVMGetParam(Function, 2);
 
     for (Index = 0; Index < Lanes; Index++) {
         LaneConst = LLVMConstInt(Ctx->I64, Index, FALSE);
@@ -2624,11 +2689,12 @@ BuildChm01Hash16GroupFunction(
                                        1,
                                        "key_ptr");
         Key = LLVMBuildLoad2(Ctx->Builder, Ctx->I32, KeyPtr, "key");
+        Args[0] = Key;
         Pair = LLVMBuildCall2(Ctx->Builder,
                               HashFunctionType,
                               HashFunction,
-                              &Key,
-                              1,
+                              Args,
+                              ARRAYSIZE(Args),
                               "pair");
         PairPtr = LLVMBuildInBoundsGEP2(Ctx->Builder,
                                         Ctx->I32,
@@ -2654,7 +2720,7 @@ BuildChm01Hash16VectorFunction(
 {
     LLVMTypeRef FunctionType;
     LLVMTypeRef VecType;
-    LLVMTypeRef Params[2];
+    LLVMTypeRef Params[3];
     LLVMValueRef Function;
     LLVMValueRef KeysPtr;
     LLVMValueRef PairsPtr;
@@ -2701,6 +2767,7 @@ BuildChm01Hash16VectorFunction(
 
     Params[0] = Ctx->I32Ptr;
     Params[1] = Ctx->I32Ptr;
+    Params[2] = Ctx->I32Ptr;
 
     FunctionType = LLVMFunctionType(LLVMVoidTypeInContext(Ctx->Context),
                                     Params,
@@ -2716,6 +2783,7 @@ BuildChm01Hash16VectorFunction(
 
     KeysPtr = LLVMGetParam(Function, 0);
     PairsPtr = LLVMGetParam(Function, 1);
+    SetHashSeedPointers(Ctx, Function);
 
     VecType = LLVMVectorType(Ctx->I32, Lanes);
     KeyVec = LLVMGetUndef(VecType);
@@ -2739,39 +2807,39 @@ BuildChm01Hash16VectorFunction(
 
     Seed1 = LLVMBuildLoad2(Ctx->Builder,
                            Ctx->I32,
-                           Ctx->Seed1Global,
+                           Ctx->Seed1Pointer,
                            "seed1");
     Seed2 = LLVMBuildLoad2(Ctx->Builder,
                            Ctx->I32,
-                           Ctx->Seed2Global,
+                           Ctx->Seed2Pointer,
                            "seed2");
     Seed3Byte1 = LLVMBuildLoad2(Ctx->Builder,
                                 Ctx->I32,
-                                Ctx->Seed3Byte1Global,
+                                Ctx->Seed3Byte1Pointer,
                                 "seed3_b1");
     Seed3Byte2 = LLVMBuildLoad2(Ctx->Builder,
                                 Ctx->I32,
-                                Ctx->Seed3Byte2Global,
+                                Ctx->Seed3Byte2Pointer,
                                 "seed3_b2");
     Seed3Byte3 = LLVMBuildLoad2(Ctx->Builder,
                                 Ctx->I32,
-                                Ctx->Seed3Byte3Global,
+                                Ctx->Seed3Byte3Pointer,
                                 "seed3_b3");
     Seed3Byte4 = LLVMBuildLoad2(Ctx->Builder,
                                 Ctx->I32,
-                                Ctx->Seed3Byte4Global,
+                                Ctx->Seed3Byte4Pointer,
                                 "seed3_b4");
     Seed4 = LLVMBuildLoad2(Ctx->Builder,
                            Ctx->I32,
-                           Ctx->Seed4Global,
+                           Ctx->Seed4Pointer,
                            "seed4");
     Seed5 = LLVMBuildLoad2(Ctx->Builder,
                            Ctx->I32,
-                           Ctx->Seed5Global,
+                           Ctx->Seed5Pointer,
                            "seed5");
     HashMask = LLVMBuildLoad2(Ctx->Builder,
                               Ctx->I32,
-                              Ctx->HashMaskGlobal,
+                              Ctx->HashMaskPointer,
                               "hash_mask");
 
     Seed1Vec = BuildSplatVectorValue(Ctx, VecType, Seed1, Lanes);
@@ -4483,6 +4551,80 @@ Error:
     return Result;
 }
 
+//
+// Build BoundName: the routine Name with the table-wide bound seeds supplied
+// as its final argument.
+//
+
+static
+BOOLEAN
+BuildBoundHashFunction(
+    _In_ PCHM01_JIT_CONTEXT Ctx,
+    _In_ PCSTR Name,
+    _In_ PCSTR BoundName,
+    _In_ LLVMValueRef BoundSeeds
+    )
+{
+    ULONG Index;
+    ULONG NumberOfParams;
+    LLVMTypeRef Type;
+    LLVMTypeRef ReturnType;
+    LLVMTypeRef Params[3];
+    LLVMValueRef Args[3];
+    LLVMValueRef Function;
+    LLVMValueRef Bound;
+
+    Function = LLVMGetNamedFunction(Ctx->Module, Name);
+    if (!Function) {
+        return FALSE;
+    }
+
+    Type = LLVMGlobalGetValueType(Function);
+    NumberOfParams = LLVMCountParamTypes(Type);
+    if (NumberOfParams < 2 || NumberOfParams > ARRAYSIZE(Params)) {
+        return FALSE;
+    }
+
+    LLVMGetParamTypes(Type, Params);
+    ReturnType = LLVMGetReturnType(Type);
+
+    Bound = LLVMAddFunction(Ctx->Module,
+                            BoundName,
+                            LLVMFunctionType(ReturnType,
+                                             Params,
+                                             NumberOfParams - 1,
+                                             FALSE));
+
+    LLVMPositionBuilderAtEnd(
+        Ctx->Builder,
+        LLVMAppendBasicBlockInContext(Ctx->Context, Bound, "entry")
+    );
+
+    for (Index = 0; Index < NumberOfParams - 1; Index++) {
+        Args[Index] = LLVMGetParam(Bound, Index);
+    }
+
+    Args[Index] = LLVMBuildBitCast(Ctx->Builder,
+                                   BoundSeeds,
+                                   Ctx->I32Ptr,
+                                   "bound_seeds");
+
+    if (LLVMGetTypeKind(ReturnType) == LLVMVoidTypeKind) {
+        LLVMBuildCall2(Ctx->Builder, Type, Function, Args, NumberOfParams, "");
+        LLVMBuildRetVoid(Ctx->Builder);
+    } else {
+        LLVMBuildRet(Ctx->Builder,
+                     LLVMBuildCall2(Ctx->Builder,
+                                    Type,
+                                    Function,
+                                    Args,
+                                    NumberOfParams,
+                                    "pair"));
+    }
+
+    return TRUE;
+}
+
 _Must_inspect_result_
 static
 HRESULT
@@ -4532,7 +4674,17 @@ CompileChm01HashJit(
     LLVMTypeRef HashFunctionType = NULL;
     LLVMValueRef Hash16Function = NULL;
     LLVMTypeRef Hash16FunctionType = NULL;
+    LLVMTypeRef ScalarParams[2];
+    LLVMTypeRef BoundSeedsType;
+    LLVMValueRef BoundSeeds;
     PERFECT_HASH_JIT_MAX_ISA_ID JitMaxIsa;
+    ULONG Index;
+    ULONG NumberOfRoutines = 0;
+    CHAR BoundName[64];
+    struct {
+        PCSTR Name;
+        PVOID *BoundFunction;
+    } Routines[8];
 
     HashFunctionId = Table->HashFunctionId;
     Rtl = Table->Rtl;
@@ -4652,50 +4804,27 @@ CompileChm01HashJit(
     JitContext.I32Ptr = LLVMPointerType(JitContext.I32, 0);
     JitContext.HashFunctionId = HashFunctionId;
     JitContext.UseAssigned16 = FALSE;
+    ScalarParams[0] = JitContext.I32;
+    ScalarParams[1] = JitContext.I32Ptr;
 
-    JitContext.Seed1Global = AddGlobalI32(Module,
-                                          JitContext.I32,
-                                          "PerfectHashJitHashSeed1");
-    JitContext.Seed2Global = AddGlobalI32(Module,
-                                          JitContext.I32,
-                                          "PerfectHashJitHashSeed2");
-    JitContext.Seed3Global = AddGlobalI32(Module,
-                                          JitContext.I32,
-                                          "PerfectHashJitHashSeed3");
-    JitContext.Seed3Byte1Global = AddGlobalI32(
-        Module,
+    //
+    // The Bind methods of the hash JIT interface apply the routines below to
+    // this one table-wide copy of the seeds.  The solver passes its own.
+    //
+
+    BoundSeedsType = LLVMArrayType(
         JitContext.I32,
-        "PerfectHashJitHashSeed3Byte1"
+        sizeof(PERFECT_HASH_HASH_JIT_SEEDS) / sizeof(ULONG)
     );
-    JitContext.Seed3Byte2Global = AddGlobalI32(
-        Module,
-        JitContext.I32,
-        "PerfectHashJitHashSeed3Byte2"
-    );
-    JitContext.Seed3Byte3Global = AddGlobalI32(
-        Module,
-        JitContext.I32,
-        "PerfectHashJitHashSeed3Byte3"
-    );
-    JitContext.Seed3Byte4Global = AddGlobalI32(
-        Module,
-        JitContext.I32,
-        "PerfectHashJitHashSeed3Byte4"
-    );
-    JitContext.Seed4Global = AddGlobalI32(Module,
-                                          JitContext.I32,
-                                          "PerfectHashJitHashSeed4");
-    JitContext.Seed5Global = AddGlobalI32(Module,
-                                          JitContext.I32,
-                                          "PerfectHashJitHashSeed5");
-    JitContext.HashMaskGlobal = AddGlobalI32(Module,
-                                             JitContext.I32,
-                                             "PerfectHashJitHashMask");
+    BoundSeeds = LLVMAddGlobal(Module,
+                               BoundSeedsType,
+                               "PerfectHashJitHashBoundSeeds");
+    LLVMSetInitializer(BoundSeeds, LLVMConstNull(BoundSeedsType));
 
     if (CompileHashEx) {
         HashFunctionType = LLVMFunctionType(JitContext.I64,
-                                            &JitContext.I32,
-                                            1,
+                                            ScalarParams,
+                                            ARRAYSIZE(ScalarParams),
                                             FALSE);
         HashFunction = BuildChm01HashFunction(&JitContext,
                                               "PerfectHashJitHashEx",
@@ -4708,8 +4837,8 @@ CompileChm01HashJit(
 
     if (CompileHash16Ex) {
         Hash16FunctionType = LLVMFunctionType(JitContext.I32,
-                                              &JitContext.I32,
-                                              1,
+                                              ScalarParams,
+                                              ARRAYSIZE(ScalarParams),
                                               FALSE);
         Hash16Function = BuildChm01Hash16Function(&JitContext,
                                                   "PerfectHashJitHash16Ex",
@@ -4846,6 +4975,70 @@ CompileChm01HashJit(
                 Result = PH_E_TABLE_COMPILATION_FAILED;
                 goto Error;
             }
+        }
+    }
+
+    //
+    // Add the routine each Bind method hands out: the corresponding routine
+    // above applied to the table-wide bound seeds.
+    //
+
+#define ADD_BOUND_ROUTINE(Compile, RoutineName, Field)                  \
+    if (Compile) {                                                      \
+        Routines[NumberOfRoutines].Name = RoutineName;                  \
+        Routines[NumberOfRoutines].BoundFunction = &HashJit->Field;     \
+        NumberOfRoutines++;                                             \
+    }
+
+#define BATCH_ROUTINE_NAME(Vector, BaseName) (                          \
+    (Vector) ? BaseName "Vector" : BaseName                             \
+)
+
+    ADD_BOUND_ROUTINE(CompileHashEx,
+                      "PerfectHashJitHashEx",
+                      BoundHashExFunction);
+    ADD_BOUND_ROUTINE(CompileHashEx32x4,
+                      BATCH_ROUTINE_NAME(CompileVectorHashEx32x4,
+                                         "PerfectHashJitHashEx32x4"),
+                      BoundHashEx32x4Function);
+    ADD_BOUND_ROUTINE(CompileHashEx32x8,
+                      BATCH_ROUTINE_NAME(CompileVectorHashEx32x8,
+                                         "PerfectHashJitHashEx32x8"),
+                      BoundHashEx32x8Function);
+    ADD_BOUND_ROUTINE(CompileHashEx32x16,
+                      BATCH_ROUTINE_NAME(CompileVectorHashEx32x16,
+                                         "PerfectHashJitHashEx32x16"),
+                      BoundHashEx32x16Function);
+    ADD_BOUND_ROUTINE(CompileHash16Ex,
+                      "PerfectHashJitHash16Ex",
+                      BoundHash16ExFunction);
+    ADD_BOUND_ROUTINE(CompileHash16Ex32x4,
+                      BATCH_ROUTINE_NAME(CompileVectorHash16Ex32x4,
+                                         "PerfectHashJitHash16Ex32x4"),
+                      BoundHash16Ex32x4Function);
+    ADD_BOUND_ROUTINE(CompileHash16Ex32x8,
+                      BATCH_ROUTINE_NAME(CompileVectorHash16Ex32x8,
+                                         "PerfectHashJitHash16Ex32x8"),
+                      BoundHash16Ex32x8Function);
+    ADD_BOUND_ROUTINE(CompileHash16Ex32x16,
+                      BATCH_ROUTINE_NAME(CompileVectorHash16Ex32x16,
+                                         "PerfectHashJitHash16Ex32x16"),
+                      BoundHash16Ex32x16Function);
+
+#undef BATCH_ROUTINE_NAME
+#undef ADD_BOUND_ROUTINE
+
+    for (Index = 0; Index < NumberOfRoutines; Index++) {
+        snprintf(BoundName,
+                 sizeof(BoundName),
+                 "%sBound",
+                 Routines[Index].Name);
+        if (!BuildBoundHashFunction(&JitContext,
+                                    Routines[Index].Name,
+                                    BoundName,
+                                    BoundSeeds)) {
+            Result = PH_E_TABLE_COMPILATION_FAILED;
+            goto Error;
         }
     }
 
@@ -4994,26 +5187,25 @@ CompileChm01HashJit(
             (CompileVectorHash16Ex32x16 != FALSE);
     }
 
-    HashJit->Seed1 = (PULONG)(ULONG_PTR)
-        LLVMGetGlobalValueAddress(Engine, "PerfectHashJitHashSeed1");
-    HashJit->Seed2 = (PULONG)(ULONG_PTR)
-        LLVMGetGlobalValueAddress(Engine, "PerfectHashJitHashSeed2");
-    HashJit->Seed3 = (PULONG)(ULONG_PTR)
-        LLVMGetGlobalValueAddress(Engine, "PerfectHashJitHashSeed3");
-    HashJit->Seed3Byte1 = (PULONG)(ULONG_PTR)
-        LLVMGetGlobalValueAddress(Engine, "PerfectHashJitHashSeed3Byte1");
-    HashJit->Seed3Byte2 = (PULONG)(ULONG_PTR)
-        LLVMGetGlobalValueAddress(Engine, "PerfectHashJitHashSeed3Byte2");
-    HashJit->Seed3Byte3 = (PULONG)(ULONG_PTR)
-        LLVMGetGlobalValueAddress(Engine, "PerfectHashJitHashSeed3Byte3");
-    HashJit->Seed3Byte4 = (PULONG)(ULONG_PTR)
-        LLVMGetGlobalValueAddress(Engine, "PerfectHashJitHashSeed3Byte4");
-    HashJit->Seed4 = (PULONG)(ULONG_PTR)
-        LLVMGetGlobalValueAddress(Engine, "PerfectHashJitHashSeed4");
-    HashJit->Seed5 = (PULONG)(ULONG_PTR)
-        LLVMGetGlobalValueAddress(Engine, "PerfectHashJitHashSeed5");
-    HashJit->HashMask = (PULONG)(ULONG_PTR)
-        LLVMGetGlobalValueAddress(Engine, "PerfectHashJitHashMask");
+    for (Index = 0; Index < NumberOfRoutines; Index++) {
+        snprintf(BoundName,
+                 sizeof(BoundName),
+                 "%sBound",
+                 Routines[Index].Name);
+        *Routines[Index].BoundFunction = (PVOID)(ULONG_PTR)
+            LLVMGetFunctionAddress(Engine, BoundName);
+        if (!*Routines[Index].BoundFunction) {
+            Result = PH_E_TABLE_COMPILATION_FAILED;
+            goto Error;
+        }
+    }
+
+    HashJit->BoundSeeds = (PPERFECT_HASH_HASH_JIT_SEEDS)(ULONG_PTR)
+        LLVMGetGlobalValueAddress(Engine, "PerfectHashJitHashBoundSeeds");
+    if (!HashJit->BoundSeeds) {
+        Result = PH_E_TABLE_COMPILATION_FAILED;
+        goto Error;
+    }
 
     HashJit->ExecutionEngine = Engine;
     HashJit->Context = Context;
@@ -5250,7 +5442,18 @@ PerfectHashTableCompileHashJit(
         CompileFlags.JitBackendLlvm = TRUE;
     }
 
-    if (Table->HashJit) {
+    //
+    // Every graph requests the hash JIT as it is created.  The generated code
+    // depends only on the request, so the first graph's compilation serves
+    // them all; replacing it would free code other graphs still call.
+    //
+
+    HashJit = Table->HashJit;
+    if (HashJit) {
+        if (HashJit->Flags.Valid &&
+            HashJit->CompileFlags.AsULong == CompileFlags.AsULong) {
+            return S_OK;
+        }
         PerfectHashTableHashJitRundown(Table);
     }
 
@@ -5284,6 +5487,7 @@ PerfectHashTableCompileHashJit(
         return Result;
     }
 
+    HashJit->CompileFlags.AsULong = CompileFlags.AsULong;
     HashJit->Flags.BackendLlvm = TRUE;
     HashJit->Flags.Valid = TRUE;
 
@@ -5454,43 +5658,13 @@ UpdateHashJitSeedsAndMask(
     _In_ ULONG Mask
     )
 {
-    ULONG Seed3;
-
-    if (!ARGUMENT_PRESENT(HashJit) || !ARGUMENT_PRESENT(Seeds)) {
+    if (!ARGUMENT_PRESENT(HashJit) ||
+        !ARGUMENT_PRESENT(HashJit->BoundSeeds) ||
+        !ARGUMENT_PRESENT(Seeds)) {
         return E_POINTER;
     }
 
-    if (HashJit->Seed1) {
-        *HashJit->Seed1 = Seeds[0];
-    }
-    if (HashJit->Seed2) {
-        *HashJit->Seed2 = Seeds[1];
-    }
-    Seed3 = Seeds[2];
-    if (HashJit->Seed3) {
-        *HashJit->Seed3 = Seed3;
-    }
-    if (HashJit->Seed3Byte1) {
-        *HashJit->Seed3Byte1 = (Seed3 & 0xff);
-    }
-    if (HashJit->Seed3Byte2) {
-        *HashJit->Seed3Byte2 = ((Seed3 >> 8) & 0xff);
-    }
-    if (HashJit->Seed3Byte3) {
-        *HashJit->Seed3Byte3 = ((Seed3 >> 16) & 0xff);
-    }
-    if (HashJit->Seed3Byte4) {
-        *HashJit->Seed3Byte4 = ((Seed3 >> 24) & 0xff);
-    }
-    if (HashJit->Seed4) {
-        *HashJit->Seed4 = Seeds[3];
-    }
-    if (HashJit->Seed5) {
-        *HashJit->Seed5 = Seeds[4];
-    }
-    if (HashJit->HashMask) {
-        *HashJit->HashMask = Mask;
-    }
+    InitializeHashJitSeeds(HashJit->BoundSeeds, Seeds, Mask);
 
     return S_OK;
 }
@@ -5609,7 +5783,9 @@ PerfectHashTableHashJitInterfaceBindHashEx(
         return Result;
     }
 
-    *HashEx = (PPERFECT_HASH_SEEDED_HASH_EX_BOUND)HashJit->HashExFunction;
+    *HashEx = (PPERFECT_HASH_SEEDED_HASH_EX_BOUND)(
+        HashJit->BoundHashExFunction
+    );
     return S_OK;
 }
 
@@ -5650,7 +5826,9 @@ PerfectHashTableHashJitInterfaceBindHashEx32x4(
     }
 
     *HashEx32x4 =
-        (PPERFECT_HASH_SEEDED_HASH_EX_BOUND32X4)HashJit->HashEx32x4Function;
+        (PPERFECT_HASH_SEEDED_HASH_EX_BOUND32X4)(
+            HashJit->BoundHashEx32x4Function
+        );
     return S_OK;
 }
 
@@ -5691,7 +5869,9 @@ PerfectHashTableHashJitInterfaceBindHashEx32x8(
     }
 
     *HashEx32x8 =
-        (PPERFECT_HASH_SEEDED_HASH_EX_BOUND32X8)HashJit->HashEx32x8Function;
+        (PPERFECT_HASH_SEEDED_HASH_EX_BOUND32X8)(
+            HashJit->BoundHashEx32x8Function
+        );
     return S_OK;
 }
 
@@ -5732,7 +5912,9 @@ PerfectHashTableHashJitInterfaceBindHashEx32x16(
     }
 
     *HashEx32x16 =
-        (PPERFECT_HASH_SEEDED_HASH_EX_BOUND32X16)HashJit->HashEx32x16Function;
+        (PPERFECT_HASH_SEEDED_HASH_EX_BOUND32X16)(
+            HashJit->BoundHashEx32x16Function
+        );
     return S_OK;
 }
 
@@ -5773,7 +5955,9 @@ PerfectHashTableHashJitInterfaceBindHash16Ex(
     }
 
     *Hash16Ex =
-        (PPERFECT_HASH_SEEDED_HASH16_EX_BOUND)HashJit->Hash16ExFunction;
+        (PPERFECT_HASH_SEEDED_HASH16_EX_BOUND)(
+            HashJit->BoundHash16ExFunction
+        );
     return S_OK;
 }
 
@@ -5814,7 +5998,7 @@ PerfectHashTableHashJitInterfaceBindHash16Ex32x4(
     }
 
     *Hash16Ex32x4 = (PPERFECT_HASH_SEEDED_HASH16_EX_BOUND32X4)
-        HashJit->Hash16Ex32x4Function;
+        HashJit->BoundHash16Ex32x4Function;
     return S_OK;
 }
 
@@ -5855,7 +6039,7 @@ PerfectHashTableHashJitInterfaceBindHash16Ex32x8(
     }
 
     *Hash16Ex32x8 = (PPERFECT_HASH_SEEDED_HASH16_EX_BOUND32X8)
-        HashJit->Hash16Ex32x8Function;
+        HashJit->BoundHash16Ex32x8Function;
     return S_OK;
 }
 
@@ -5896,7 +6080,7 @@ PerfectHashTableHashJitInterfaceBindHash16Ex32x16(
     }
 
     *Hash16Ex32x16 = (PPERFECT_HASH_SEEDED_HASH16_EX_BOUND32X16)
-        HashJit->Hash16Ex32x16Function;
+        HashJit->BoundHash16Ex32x16Function;
     return S_OK;
 }
 

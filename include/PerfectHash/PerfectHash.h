@@ -3199,8 +3199,7 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         ULONGLONG TryUseAvx512HashFunction:1;
 
         //
-        // When set, tries to use the hash JIT interface for hashing keys
-        // during a single-worker solve.
+        // When set, tries to use the hash JIT interface for hashing keys.
         //
         // N.B. Only applies when HashAllKeysFirst is set.
         //
@@ -4655,7 +4654,13 @@ typedef union _PERFECT_HASH_TABLE_FLAGS {
         //
 
         ULONG UsedNeonHashFunction:1;
-        ULONG Unused:18;
+
+        //
+        // The winning graph hashed its keys using JIT-compiled routines.
+        //
+
+        ULONG UsedJitHashFunction:1;
+        ULONG Unused:17;
     };
 
     LONG AsLong;
@@ -5164,6 +5169,11 @@ typedef PERFECT_HASH_TABLE_JIT_INTERFACE
 
 //
 // Define the PERFECT_HASH_TABLE_HASH_JIT_INTERFACE.
+//
+// A table keeps one set of bound seeds.  Every Bind call replaces it, and
+// every routine a Bind call returned then hashes with the new seeds, so the
+// bound routines serve one caller at a time.  The solver does not use them;
+// each of its graphs passes its own seeds to the compiled routines.
 //
 
 DECLARE_COMPONENT(TableHashJitInterface, PERFECT_HASH_TABLE_HASH_JIT_INTERFACE);

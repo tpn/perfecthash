@@ -918,7 +918,13 @@ typedef union _GRAPH_FLAGS {
         //
 
         ULONG UsedNeonHashFunction:1;
-        ULONG Unused:8;
+
+        //
+        // The solver hashed its keys using the table's JIT-compiled routines.
+        //
+
+        ULONG UsedJitHashFunction:1;
+        ULONG Unused:7;
     };
     LONG AsLong;
     ULONG AsULong;

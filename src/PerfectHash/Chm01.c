@@ -441,10 +441,6 @@ Return Value:
     //
 
     TlsContext->TableCreateFlags.AsULongLong = TableCreateFlags.AsULongLong;
-    // The bound hash JIT stores the current graph's seeds in table-wide globals.
-    if (Concurrency > 1) {
-        TlsContext->TableCreateFlags.TryUseJitHashFunction = FALSE;
-    }
 
     //
     // ....and, many years later, we find ourselves in the position of wanting
@@ -1198,6 +1194,7 @@ FinishedSolution:
     Table->Flags.UsedAvx2HashFunction = Graph->Flags.UsedAvx2HashFunction;
     Table->Flags.UsedAvx512HashFunction = Graph->Flags.UsedAvx512HashFunction;
     Table->Flags.UsedNeonHashFunction = Graph->Flags.UsedNeonHashFunction;
+    Table->Flags.UsedJitHashFunction = Graph->Flags.UsedJitHashFunction;
     Table->Flags.UsedAvx2MemoryCoverageFunction =
         Graph->Flags.UsedAvx2MemoryCoverageFunction;
 

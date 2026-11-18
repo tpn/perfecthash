@@ -176,6 +176,8 @@ GraphInitializeRoutines(
                     ARGUMENT_PRESENT(Table->HashJit) &&
                     Table->HashJit->Flags.Valid) {
                     Graph->Vtbl->HashKeys = GraphHashKeys16JitBound;
+                    Graph->Flags.UsedAvx2HashFunction = FALSE;
+                    Graph->Flags.UsedAvx512HashFunction = FALSE;
                 }
             }
         }
@@ -261,6 +263,8 @@ GraphInitializeRoutines(
                     ARGUMENT_PRESENT(Table->HashJit) &&
                     Table->HashJit->Flags.Valid) {
                     Graph->Vtbl->HashKeys = GraphHashKeysJitBound;
+                    Graph->Flags.UsedAvx2HashFunction = FALSE;
+                    Graph->Flags.UsedAvx512HashFunction = FALSE;
                 }
             }
         }
@@ -1034,9 +1038,12 @@ GraphHashKeysJitBound(
 
 Routine Description:
 
-    Hashes all keys into vertex pairs using a bound hash JIT interface, when
-    available.  Falls back to GraphHashKeys() if the hash JIT is unavailable
-    or binding fails.  Intended for use with HashAllKeysFirst.
+    Hashes all keys into vertex pairs using the table's JIT-compiled hash
+    routines, when available.  Falls back to GraphHashKeys() if the hash JIT
+    is unavailable.  Intended for use with HashAllKeysFirst.
+
+    The routines take this graph's seeds as an argument, so any number of
+    graphs can hash concurrently.
 
 Arguments:
 
@@ -1058,20 +1065,17 @@ Return Value:
 {
     KEY Key = 0;
     EDGE Edge = 0;
-    ULONG Mask;
     ULONG Remaining;
     HRESULT Result;
-    PULONG Seeds;
     PULONG KeyPtr;
     PULONGLONG VertexPairs;
     PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_TABLE_HASH_JIT HashJit;
-    PPERFECT_HASH_TABLE_HASH_JIT_INTERFACE Jit;
-    PPERFECT_HASH_TABLE_HASH_JIT_INTERFACE_VTBL Vtbl;
-    PPERFECT_HASH_SEEDED_HASH_EX_BOUND HashEx;
-    PPERFECT_HASH_SEEDED_HASH_EX_BOUND32X4 HashEx32x4;
-    PPERFECT_HASH_SEEDED_HASH_EX_BOUND32X8 HashEx32x8;
-    PPERFECT_HASH_SEEDED_HASH_EX_BOUND32X16 HashEx32x16;
+    PERFECT_HASH_HASH_JIT_SEEDS JitSeeds;
+    PPERFECT_HASH_JIT_HASH_EX HashEx;
+    PPERFECT_HASH_JIT_HASH_EX_BATCH HashEx32x4;
+    PPERFECT_HASH_JIT_HASH_EX_BATCH HashEx32x8;
+    PPERFECT_HASH_JIT_HASH_EX_BATCH HashEx32x16;
 
     DECL_GRAPH_COUNTER_LOCAL_VARS();
 
@@ -1091,18 +1095,8 @@ Return Value:
         return GraphHashKeys(Graph, NumberOfKeys, Keys);
     }
 
-    Jit = &Table->HashJitInterface;
-    Vtbl = Jit->Vtbl;
-    if (!ARGUMENT_PRESENT(Vtbl) ||
-        !ARGUMENT_PRESENT(Vtbl->BindHashEx)) {
-        return GraphHashKeys(Graph, NumberOfKeys, Keys);
-    }
-
-    Mask = Table->HashMask;
-    Seeds = &Graph->FirstSeed;
-
-    Result = Vtbl->BindHashEx(Jit, Seeds, Mask, &HashEx);
-    if (FAILED(Result) || !ARGUMENT_PRESENT(HashEx)) {
+    HashEx = (PPERFECT_HASH_JIT_HASH_EX)HashJit->HashExFunction;
+    if (!HashJit->Flags.HashExCompiled || !ARGUMENT_PRESENT(HashEx)) {
         return GraphHashKeys(Graph, NumberOfKeys, Keys);
     }
 
@@ -1110,20 +1104,26 @@ Return Value:
     HashEx32x8 = NULL;
     HashEx32x16 = NULL;
 
-    if (HashJit->Flags.HashEx32x4Compiled &&
-        ARGUMENT_PRESENT(Vtbl->BindHashEx32x4)) {
-        Vtbl->BindHashEx32x4(Jit, Seeds, Mask, &HashEx32x4);
+    if (HashJit->Flags.HashEx32x4Compiled) {
+        HashEx32x4 = (PPERFECT_HASH_JIT_HASH_EX_BATCH)(
+            HashJit->HashEx32x4Function
+        );
     }
 
-    if (HashJit->Flags.HashEx32x8Compiled &&
-        ARGUMENT_PRESENT(Vtbl->BindHashEx32x8)) {
-        Vtbl->BindHashEx32x8(Jit, Seeds, Mask, &HashEx32x8);
+    if (HashJit->Flags.HashEx32x8Compiled) {
+        HashEx32x8 = (PPERFECT_HASH_JIT_HASH_EX_BATCH)(
+            HashJit->HashEx32x8Function
+        );
     }
 
-    if (HashJit->Flags.HashEx32x16Compiled &&
-        ARGUMENT_PRESENT(Vtbl->BindHashEx32x16)) {
-        Vtbl->BindHashEx32x16(Jit, Seeds, Mask, &HashEx32x16);
+    if (HashJit->Flags.HashEx32x16Compiled) {
+        HashEx32x16 = (PPERFECT_HASH_JIT_HASH_EX_BATCH)(
+            HashJit->HashEx32x16Function
+        );
     }
+
+    InitializeHashJitSeeds(&JitSeeds, &Graph->FirstSeed, Table->HashMask);
+    Graph->Flags.UsedJitHashFunction = TRUE;
 
     C_ASSERT(sizeof(*VertexPairs) == sizeof(Graph->VertexPairs));
     VertexPairs = (PULONGLONG)Graph->VertexPairs;
@@ -1133,7 +1133,7 @@ Return Value:
     START_GRAPH_COUNTER();
 
     while (Remaining >= 16 && ARGUMENT_PRESENT(HashEx32x16)) {
-        HashEx32x16(KeyPtr, VertexPairs);
+        HashEx32x16(KeyPtr, VertexPairs, &JitSeeds);
         for (ULONG Index = 0; Index < 16; Index++) {
             const ULONGLONG Pair = VertexPairs[Index];
             if ((ULONG)Pair == (ULONG)(Pair >> 32)) {
@@ -1147,7 +1147,7 @@ Return Value:
     }
 
     while (Remaining >= 8 && ARGUMENT_PRESENT(HashEx32x8)) {
-        HashEx32x8(KeyPtr, VertexPairs);
+        HashEx32x8(KeyPtr, VertexPairs, &JitSeeds);
         for (ULONG Index = 0; Index < 8; Index++) {
             const ULONGLONG Pair = VertexPairs[Index];
             if ((ULONG)Pair == (ULONG)(Pair >> 32)) {
@@ -1161,7 +1161,7 @@ Return Value:
     }
 
     while (Remaining >= 4 && ARGUMENT_PRESENT(HashEx32x4)) {
-        HashEx32x4(KeyPtr, VertexPairs);
+        HashEx32x4(KeyPtr, VertexPairs, &JitSeeds);
         for (ULONG Index = 0; Index < 4; Index++) {
             const ULONGLONG Pair = VertexPairs[Index];
             if ((ULONG)Pair == (ULONG)(Pair >> 32)) {
@@ -1176,7 +1176,7 @@ Return Value:
 
     Result = S_OK;
     while (Remaining--) {
-        const ULONGLONG Pair = HashEx(*KeyPtr++);
+        const ULONGLONG Pair = HashEx(*KeyPtr++, &JitSeeds);
         if ((ULONG)Pair == (ULONG)(Pair >> 32)) {
             Result = PH_E_GRAPH_VERTEX_COLLISION_FAILURE;
             break;
@@ -1206,9 +1206,12 @@ GraphHashKeys16JitBound(
 
 Routine Description:
 
-    Hashes all keys into vertex pairs using a bound hash JIT interface, when
-    available, for assigned16 graphs.  Falls back to GraphHashKeys16() if the
-    hash JIT is unavailable or binding fails.
+    Hashes all keys into vertex pairs using the table's JIT-compiled hash
+    routines, when available, for assigned16 graphs.  Falls back to
+    GraphHashKeys16() if the hash JIT is unavailable.
+
+    The routines take this graph's seeds as an argument, so any number of
+    graphs can hash concurrently.
 
 Arguments:
 
@@ -1230,25 +1233,22 @@ Return Value:
 {
     KEY Key = 0;
     EDGE Edge = 0;
-    ULONG Mask;
     ULONG Remaining;
     HRESULT Result;
-    PULONG Seeds;
     PULONG KeyPtr;
     PULONG VertexPairs;
     PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_TABLE_HASH_JIT HashJit;
-    PPERFECT_HASH_TABLE_HASH_JIT_INTERFACE Jit;
-    PPERFECT_HASH_TABLE_HASH_JIT_INTERFACE_VTBL Vtbl;
+    PERFECT_HASH_HASH_JIT_SEEDS JitSeeds;
     BOOLEAN UseHash16;
-    PPERFECT_HASH_SEEDED_HASH16_EX_BOUND Hash16Ex;
-    PPERFECT_HASH_SEEDED_HASH16_EX_BOUND32X4 Hash16Ex32x4;
-    PPERFECT_HASH_SEEDED_HASH16_EX_BOUND32X8 Hash16Ex32x8;
-    PPERFECT_HASH_SEEDED_HASH16_EX_BOUND32X16 Hash16Ex32x16;
-    PPERFECT_HASH_SEEDED_HASH_EX_BOUND HashEx;
-    PPERFECT_HASH_SEEDED_HASH_EX_BOUND32X4 HashEx32x4;
-    PPERFECT_HASH_SEEDED_HASH_EX_BOUND32X8 HashEx32x8;
-    PPERFECT_HASH_SEEDED_HASH_EX_BOUND32X16 HashEx32x16;
+    PPERFECT_HASH_JIT_HASH16_EX Hash16Ex;
+    PPERFECT_HASH_JIT_HASH16_EX_BATCH Hash16Ex32x4;
+    PPERFECT_HASH_JIT_HASH16_EX_BATCH Hash16Ex32x8;
+    PPERFECT_HASH_JIT_HASH16_EX_BATCH Hash16Ex32x16;
+    PPERFECT_HASH_JIT_HASH_EX HashEx;
+    PPERFECT_HASH_JIT_HASH_EX_BATCH HashEx32x4;
+    PPERFECT_HASH_JIT_HASH_EX_BATCH HashEx32x8;
+    PPERFECT_HASH_JIT_HASH_EX_BATCH HashEx32x16;
     ULONG Pairs32[16];
     ULONGLONG Pairs64[16];
 
@@ -1270,15 +1270,6 @@ Return Value:
         return GraphHashKeys16(Graph, NumberOfKeys, Keys);
     }
 
-    Jit = &Table->HashJitInterface;
-    Vtbl = Jit->Vtbl;
-    if (!ARGUMENT_PRESENT(Vtbl)) {
-        return GraphHashKeys16(Graph, NumberOfKeys, Keys);
-    }
-
-    Mask = Table->HashMask;
-    Seeds = &Graph->FirstSeed;
-
     UseHash16 = FALSE;
     Hash16Ex = NULL;
     Hash16Ex32x4 = NULL;
@@ -1289,54 +1280,56 @@ Return Value:
     HashEx32x8 = NULL;
     HashEx32x16 = NULL;
 
-    if (HashJit->Flags.Hash16ExCompiled &&
-        ARGUMENT_PRESENT(Vtbl->BindHash16Ex)) {
-        Result = Vtbl->BindHash16Ex(Jit, Seeds, Mask, &Hash16Ex);
-        if (SUCCEEDED(Result) && ARGUMENT_PRESENT(Hash16Ex)) {
-            UseHash16 = TRUE;
-        }
+    if (HashJit->Flags.Hash16ExCompiled) {
+        Hash16Ex = (PPERFECT_HASH_JIT_HASH16_EX)HashJit->Hash16ExFunction;
+        UseHash16 = ARGUMENT_PRESENT(Hash16Ex);
     }
 
     if (UseHash16) {
-        if (HashJit->Flags.Hash16Ex32x4Compiled &&
-            ARGUMENT_PRESENT(Vtbl->BindHash16Ex32x4)) {
-            Vtbl->BindHash16Ex32x4(Jit, Seeds, Mask, &Hash16Ex32x4);
+        if (HashJit->Flags.Hash16Ex32x4Compiled) {
+            Hash16Ex32x4 = (PPERFECT_HASH_JIT_HASH16_EX_BATCH)(
+                HashJit->Hash16Ex32x4Function
+            );
         }
 
-        if (HashJit->Flags.Hash16Ex32x8Compiled &&
-            ARGUMENT_PRESENT(Vtbl->BindHash16Ex32x8)) {
-            Vtbl->BindHash16Ex32x8(Jit, Seeds, Mask, &Hash16Ex32x8);
+        if (HashJit->Flags.Hash16Ex32x8Compiled) {
+            Hash16Ex32x8 = (PPERFECT_HASH_JIT_HASH16_EX_BATCH)(
+                HashJit->Hash16Ex32x8Function
+            );
         }
 
-        if (HashJit->Flags.Hash16Ex32x16Compiled &&
-            ARGUMENT_PRESENT(Vtbl->BindHash16Ex32x16)) {
-            Vtbl->BindHash16Ex32x16(Jit, Seeds, Mask, &Hash16Ex32x16);
+        if (HashJit->Flags.Hash16Ex32x16Compiled) {
+            Hash16Ex32x16 = (PPERFECT_HASH_JIT_HASH16_EX_BATCH)(
+                HashJit->Hash16Ex32x16Function
+            );
         }
     } else {
-        if (!ARGUMENT_PRESENT(Vtbl->BindHashEx)) {
+        HashEx = (PPERFECT_HASH_JIT_HASH_EX)HashJit->HashExFunction;
+        if (!HashJit->Flags.HashExCompiled || !ARGUMENT_PRESENT(HashEx)) {
             return GraphHashKeys16(Graph, NumberOfKeys, Keys);
         }
 
-        Result = Vtbl->BindHashEx(Jit, Seeds, Mask, &HashEx);
-        if (FAILED(Result) || !ARGUMENT_PRESENT(HashEx)) {
-            return GraphHashKeys16(Graph, NumberOfKeys, Keys);
+        if (HashJit->Flags.HashEx32x4Compiled) {
+            HashEx32x4 = (PPERFECT_HASH_JIT_HASH_EX_BATCH)(
+                HashJit->HashEx32x4Function
+            );
         }
 
-        if (HashJit->Flags.HashEx32x4Compiled &&
-            ARGUMENT_PRESENT(Vtbl->BindHashEx32x4)) {
-            Vtbl->BindHashEx32x4(Jit, Seeds, Mask, &HashEx32x4);
+        if (HashJit->Flags.HashEx32x8Compiled) {
+            HashEx32x8 = (PPERFECT_HASH_JIT_HASH_EX_BATCH)(
+                HashJit->HashEx32x8Function
+            );
         }
 
-        if (HashJit->Flags.HashEx32x8Compiled &&
-            ARGUMENT_PRESENT(Vtbl->BindHashEx32x8)) {
-            Vtbl->BindHashEx32x8(Jit, Seeds, Mask, &HashEx32x8);
-        }
-
-        if (HashJit->Flags.HashEx32x16Compiled &&
-            ARGUMENT_PRESENT(Vtbl->BindHashEx32x16)) {
-            Vtbl->BindHashEx32x16(Jit, Seeds, Mask, &HashEx32x16);
+        if (HashJit->Flags.HashEx32x16Compiled) {
+            HashEx32x16 = (PPERFECT_HASH_JIT_HASH_EX_BATCH)(
+                HashJit->HashEx32x16Function
+            );
         }
     }
+
+    InitializeHashJitSeeds(&JitSeeds, &Graph->FirstSeed, Table->HashMask);
+    Graph->Flags.UsedJitHashFunction = TRUE;
 
     C_ASSERT(sizeof(*VertexPairs) == sizeof(*Graph->Vertex16Pairs));
     VertexPairs = (PULONG)Graph->Vertex16Pairs;
@@ -1347,7 +1340,7 @@ Return Value:
 
     if (UseHash16) {
         while (Remaining >= 16 && ARGUMENT_PRESENT(Hash16Ex32x16)) {
-            Hash16Ex32x16(KeyPtr, Pairs32);
+            Hash16Ex32x16(KeyPtr, Pairs32, &JitSeeds);
             for (ULONG Index = 0; Index < 16; Index++) {
                 const ULONG Pair = Pairs32[Index];
                 const USHORT Vertex1 = (USHORT)Pair;
@@ -1364,7 +1357,7 @@ Return Value:
         }
 
         while (Remaining >= 8 && ARGUMENT_PRESENT(Hash16Ex32x8)) {
-            Hash16Ex32x8(KeyPtr, Pairs32);
+            Hash16Ex32x8(KeyPtr, Pairs32, &JitSeeds);
             for (ULONG Index = 0; Index < 8; Index++) {
                 const ULONG Pair = Pairs32[Index];
                 const USHORT Vertex1 = (USHORT)Pair;
@@ -1381,7 +1374,7 @@ Return Value:
         }
 
         while (Remaining >= 4 && ARGUMENT_PRESENT(Hash16Ex32x4)) {
-            Hash16Ex32x4(KeyPtr, Pairs32);
+            Hash16Ex32x4(KeyPtr, Pairs32, &JitSeeds);
             for (ULONG Index = 0; Index < 4; Index++) {
                 const ULONG Pair = Pairs32[Index];
                 const USHORT Vertex1 = (USHORT)Pair;
@@ -1399,7 +1392,7 @@ Return Value:
 
         Result = S_OK;
         while (Remaining--) {
-            const ULONG Pair = Hash16Ex(*KeyPtr++);
+            const ULONG Pair = Hash16Ex(*KeyPtr++, &JitSeeds);
             const USHORT Vertex1 = (USHORT)Pair;
             const USHORT Vertex2 = (USHORT)(Pair >> 16);
             if (Vertex1 == Vertex2) {
@@ -1410,7 +1403,7 @@ Return Value:
         }
     } else {
         while (Remaining >= 16 && ARGUMENT_PRESENT(HashEx32x16)) {
-            HashEx32x16(KeyPtr, Pairs64);
+            HashEx32x16(KeyPtr, Pairs64, &JitSeeds);
             for (ULONG Index = 0; Index < 16; Index++) {
                 const ULONGLONG Pair = Pairs64[Index];
                 const USHORT Vertex1 = (USHORT)Pair;
@@ -1428,7 +1421,7 @@ Return Value:
         }
 
         while (Remaining >= 8 && ARGUMENT_PRESENT(HashEx32x8)) {
-            HashEx32x8(KeyPtr, Pairs64);
+            HashEx32x8(KeyPtr, Pairs64, &JitSeeds);
             for (ULONG Index = 0; Index < 8; Index++) {
                 const ULONGLONG Pair = Pairs64[Index];
                 const USHORT Vertex1 = (USHORT)Pair;
@@ -1446,7 +1439,7 @@ Return Value:
         }
 
         while (Remaining >= 4 && ARGUMENT_PRESENT(HashEx32x4)) {
-            HashEx32x4(KeyPtr, Pairs64);
+            HashEx32x4(KeyPtr, Pairs64, &JitSeeds);
             for (ULONG Index = 0; Index < 4; Index++) {
                 const ULONGLONG Pair = Pairs64[Index];
                 const USHORT Vertex1 = (USHORT)Pair;
@@ -1465,7 +1458,7 @@ Return Value:
 
         Result = S_OK;
         while (Remaining--) {
-            const ULONGLONG Pair = HashEx(*KeyPtr++);
+            const ULONGLONG Pair = HashEx(*KeyPtr++, &JitSeeds);
             const USHORT Vertex1 = (USHORT)Pair;
             const USHORT Vertex2 = (USHORT)(Pair >> 32);
             if (Vertex1 == Vertex2) {
@@ -4395,6 +4388,7 @@ Return Value:
         Graph->Flags.UsedAvx2HashFunction = FALSE;
         Graph->Flags.UsedAvx512HashFunction = FALSE;
         Graph->Flags.UsedNeonHashFunction = FALSE;
+        Graph->Flags.UsedJitHashFunction = FALSE;
         Graph->Flags.UsedAvx2MemoryCoverageFunction = FALSE;
         Graph->Vtbl->HashKeys = GraphHashKeys;
         Graph->Vtbl->AddKeys = GraphAddKeys;

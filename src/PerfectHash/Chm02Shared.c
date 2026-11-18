@@ -740,11 +740,6 @@ Return Value:
     //
 
     TlsContext->TableCreateFlags.AsULongLong = TableCreateFlags.AsULongLong;
-    // The bound hash JIT stores the current graph's seeds in table-wide globals.
-    // Only CPU graphs bind it, so two CPU solver threads would share them.
-    if (Context->NumberOfCpuThreads > 1) {
-        TlsContext->TableCreateFlags.TryUseJitHashFunction = FALSE;
-    }
 
     //
     // ....and, many years later, we find ourselves in the position of wanting

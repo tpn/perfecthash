@@ -168,6 +168,15 @@ if(TARGET PerfectHashCreateExe AND TARGET PerfectHashBulkCreateExe)
             $<TARGET_FILE:PerfectHashCreateExe> $<TARGET_FILE:PerfectHashBulkCreateExe>
     )
 
+    if(TARGET PerfectHashLLVM)
+        # Parallel solves hash through the LLVM hash JIT, one set of seeds per graph.
+        add_test(
+            NAME perfecthash.cli.hash_jit
+            COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/check_cli_hash_jit.py
+                $<TARGET_FILE:PerfectHashCreateExe> ${TEST_KEYS_FILE}
+        )
+    endif()
+
     add_test(
         NAME perfecthash.cli.create
         COMMAND ${CMAKE_COMMAND}

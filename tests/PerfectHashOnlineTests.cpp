@@ -548,6 +548,122 @@ TEST_F(PerfectHashOnlineTests, NeonHashAllKeysHandlesWidthsTailsAndFallback) {
   }
 }
 
+#if defined(PH_HAS_LLVM)
+// Every solver graph hashes through the table's one hash JIT with its own
+// seeds, at the context's default concurrency. The key counts leave tails
+// for the 16-, 8- and 4-key routines and the scalar routine.
+TEST_F(PerfectHashOnlineTests, HashJitHashAllKeysServesEveryGraphAndWidth) {
+  const PERFECT_HASH_HASH_FUNCTION_ID hashes[] = {
+#define HASH_JIT_TEST_HASH(Name) PerfectHashHash##Name##FunctionId,
+      PERFECT_HASH_GOOD_HASH_FUNCTION_TABLE_ENTRY(HASH_JIT_TEST_HASH)
+#undef HASH_JIT_TEST_HASH
+  };
+  for (auto hash : hashes) {
+    for (bool assigned16 : {false, true}) {
+      for (size_t count : {5000u, 5015u}) {
+        SCOPED_TRACE(::testing::Message() << "hash " << hash << ", width "
+            << (assigned16 ? 16 : 32) << ", keys " << count);
+        auto keys = MakePseudoRandomKeys(count, 0x27182818u);
+        PERFECT_HASH_TABLE_CREATE_FLAGS createFlags = {};
+        createFlags.HashAllKeysFirst = TRUE;
+        createFlags.TryUseJitHashFunction = TRUE;
+        createFlags.Quiet = TRUE;
+        createFlags.DoNotTryUseHash16Impl = !assigned16;
+        PPERFECT_HASH_TABLE table = nullptr;
+        ASSERT_GE(online_->Vtbl->CreateTableFromKeys(
+            online_, PerfectHashChm01AlgorithmId, hash, PerfectHashAndMaskFunctionId,
+            sizeof(ULONG), keys.size(), keys.data(), nullptr, &createFlags,
+            nullptr, &table), 0);
+        ASSERT_NE(table, nullptr);
+        auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
+        PERFECT_HASH_TABLE_FLAGS flags = {};
+        EXPECT_GE(shim->Vtbl->GetFlags(table, sizeof(flags), &flags), 0);
+        EXPECT_EQ(flags.AssignedElementSizeInBits << 3, assigned16 ? 16u : 32u);
+        EXPECT_TRUE(flags.UsedJitHashFunction);
+        EXPECT_FALSE(flags.UsedNeonHashFunction);
+        std::unordered_set<ULONG> seen;
+        for (ULONG key : keys) {
+          ULONG index = 0;
+          EXPECT_GE(shim->Vtbl->Index(table, key, &index), 0);
+          EXPECT_TRUE(seen.insert(index).second);
+        }
+        shim->Vtbl->Release(table);
+      }
+    }
+  }
+}
+#endif
+
+#if defined(PH_HAS_LLVM)
+// The interface's Bind methods return routines that share one set of seeds
+// per table: every routine hashes with the seeds of the most recent Bind.
+TEST_F(PerfectHashOnlineTests, HashJitBoundRoutinesHashWithTheLatestBoundSeeds) {
+  auto keys = MakePseudoRandomKeys(5000, 0x27182818u);
+  PERFECT_HASH_TABLE_CREATE_FLAGS createFlags = {};
+  createFlags.HashAllKeysFirst = TRUE;
+  createFlags.TryUseJitHashFunction = TRUE;
+  createFlags.Quiet = TRUE;
+  createFlags.DoNotTryUseHash16Impl = TRUE;
+  PPERFECT_HASH_TABLE table = nullptr;
+  ASSERT_GE(online_->Vtbl->CreateTableFromKeys(
+      online_, PerfectHashChm01AlgorithmId,
+      PerfectHashHashMultiplyShiftRXFunctionId, PerfectHashAndMaskFunctionId,
+      sizeof(ULONG), keys.size(), keys.data(), nullptr, &createFlags,
+      nullptr, &table), 0);
+  ASSERT_NE(table, nullptr);
+  auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
+  PPERFECT_HASH_TABLE_HASH_JIT_INTERFACE jit = nullptr;
+  HRESULT result = shim->Vtbl->QueryInterface(
+      table,
+#ifdef PH_WINDOWS
+      IID_PERFECT_HASH_TABLE_HASH_JIT_INTERFACE,
+#else
+      &IID_PERFECT_HASH_TABLE_HASH_JIT_INTERFACE,
+#endif
+      reinterpret_cast<void **>(&jit));
+  ASSERT_GE(result, 0);
+  ASSERT_NE(jit, nullptr);
+
+  ULONG seeds[2][MAX_NUMBER_OF_SEEDS] = {
+      {0x9E3779B1u, 0x85EBCA77u, 0x00000B07u},
+      {0xC2B2AE3Du, 0x27D4EB2Fu, 0x00000311u},
+  };
+  PPERFECT_HASH_SEEDED_HASH_EX_BOUND hashEx = nullptr;
+  PPERFECT_HASH_SEEDED_HASH_EX_BOUND32X4 hashEx32x4 = nullptr;
+  PPERFECT_HASH_SEEDED_HASH_EX_BOUND32X8 hashEx32x8 = nullptr;
+  for (auto &bound : seeds) {
+    // Rebinding the scalar routine alone also redirects the batch routines.
+    if (!hashEx32x4) {
+      ASSERT_GE(jit->Vtbl->BindHashEx32x4(jit, bound, ~0u, &hashEx32x4), 0);
+      ASSERT_GE(jit->Vtbl->BindHashEx32x8(jit, bound, ~0u, &hashEx32x8), 0);
+    }
+    ASSERT_GE(jit->Vtbl->BindHashEx(jit, bound, ~0u, &hashEx), 0);
+    ASSERT_NE(hashEx, nullptr);
+    ASSERT_NE(hashEx32x4, nullptr);
+    ASSERT_NE(hashEx32x8, nullptr);
+    for (size_t i = 0; i < 64; i += 8) {
+      ULONGLONG pairs4[4] = {};
+      ULONGLONG pairs8[8] = {};
+      hashEx32x4(&keys[i], pairs4);
+      hashEx32x8(&keys[i], pairs8);
+      for (size_t lane = 0; lane < 8; ++lane) {
+        ULONGLONG expected = 0;
+        ASSERT_GE(shim->Vtbl->SeededHash(table, keys[i + lane],
+                                         MAX_NUMBER_OF_SEEDS, bound,
+                                         &expected), 0);
+        EXPECT_EQ(hashEx(keys[i + lane]), expected);
+        EXPECT_EQ(pairs8[lane], expected);
+        if (lane < 4) {
+          EXPECT_EQ(pairs4[lane], expected);
+        }
+      }
+    }
+  }
+  jit->Vtbl->Release(jit);
+  shim->Vtbl->Release(table);
+}
+#endif
+
 TEST_F(PerfectHashOnlineTests, CreateTableFromUnsortedKeysReturnsUniqueIndexes) {
   const std::vector<ULONG> keys = {
       37, 13, 1, 53, 7, 19, 41, 3, 47, 11, 29, 23, 5, 31, 17, 43,
