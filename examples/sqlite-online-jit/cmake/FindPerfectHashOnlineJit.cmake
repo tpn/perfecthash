@@ -301,6 +301,11 @@ if(WIN32)
         get_filename_component(override_config "${override_dir}" NAME)
         string(TOLOWER "${override_config}" override_config_lower)
         set(directories "${lib_dir}" "${bin_dir}" ${ARGN})
+        # Older Release SDKs installed the import library in lib/Release and
+        # the Core DLL in bin. Other configurations need their own runtime.
+        if(NOT companion AND config_lower STREQUAL "release" AND parent_lower STREQUAL "lib")
+            list(APPEND directories "${parent}/../bin")
+        endif()
         set(pinned FALSE)
         if(EXISTS "${${output}}" AND NOT IS_DIRECTORY "${${output}}" AND actual STREQUAL expected AND
            NOT (config_lower IN_LIST _ph_configs_lower AND override_config_lower IN_LIST _ph_configs_lower
@@ -522,8 +527,11 @@ function(_ph_probe_sdk root)
     if(root)
         file(GLOB build_paths LIST_DIRECTORIES TRUE "${root}/build*")
         _ph_filter_dirs(build_dirs "${root}" ${build_paths})
-        _ph_owned_dirs(_ph_search_hints CMAKE_LIBRARY_PATH "${root}")
-        _ph_owned_dirs(_ph_include_hints CMAKE_INCLUDE_PATH "${root}")
+        if(_ph_sdk_roots)
+            # Explicit SDKs may use custom directories inside the selected root.
+            _ph_owned_dirs(_ph_search_hints CMAKE_LIBRARY_PATH "${root}")
+            _ph_owned_dirs(_ph_include_hints CMAKE_INCLUDE_PATH "${root}")
+        endif()
         list(APPEND _ph_search_hints "${root}" ${build_dirs})
         list(APPEND _ph_include_hints "${root}" ${build_dirs})
         set(_ph_sdk_search_scope NO_DEFAULT_PATH)
