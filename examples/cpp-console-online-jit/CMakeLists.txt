@@ -13,7 +13,7 @@ option(
 )
 set(
     PH_ONLINE_JIT_USE_FETCHCONTENT AUTO CACHE STRING
-    "Fetch PerfectHash via FetchContent (AUTO uses a local tree if PERFECTHASH_ROOT is set)."
+    "Fetch PerfectHash via FetchContent (AUTO uses a local tree when an SDK root is set)."
 )
 set_property(CACHE PH_ONLINE_JIT_USE_FETCHCONTENT PROPERTY STRINGS AUTO ON OFF)
 
@@ -46,8 +46,9 @@ set(PH_ONLINE_JIT_TARGET "")
 set(PH_ONLINE_JIT_RUNTIME_TARGET "")
 set(PH_ONLINE_JIT_LLVM_TARGET "")
 
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/PerfectHashOnlineJitRoots.cmake")
 if(PH_ONLINE_JIT_USE_FETCHCONTENT STREQUAL "AUTO")
-    if(PERFECTHASH_ROOT)
+    if(_ph_sdk_roots)
         set(PH_ONLINE_JIT_USE_FETCHCONTENT OFF)
     else()
         set(PH_ONLINE_JIT_USE_FETCHCONTENT ON)
