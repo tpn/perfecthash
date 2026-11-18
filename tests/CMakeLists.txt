@@ -407,3 +407,18 @@ if(TARGET PerfectHashCreateExe AND TARGET PerfectHashBulkCreateExe)
 else()
     message(STATUS "Skipping PerfectHash CLI tests for profile '${PERFECTHASH_BUILD_PROFILE_NORMALIZED}' (CLI executable targets are not available).")
 endif()
+
+# Each online JIT example carries its own copy of these modules so that it can
+# be copied out of the tree. Fail when the two copies drift apart.
+set(ph_console_cmake "${PERFECTHASH_ROOT_DIR}/examples/cpp-console-online-jit/cmake")
+set(ph_sqlite_cmake "${PERFECTHASH_ROOT_DIR}/examples/sqlite-online-jit/cmake")
+if(IS_DIRECTORY "${ph_console_cmake}" AND IS_DIRECTORY "${ph_sqlite_cmake}")
+    foreach(ph_module FindPerfectHashOnlineJit PerfectHashOnlineJitRoots StagePerfectHashRuntime)
+        add_test(
+            NAME perfecthash.examples.online-jit-cmake-in-sync.${ph_module}
+            COMMAND ${CMAKE_COMMAND} -E compare_files
+                "${ph_console_cmake}/${ph_module}.cmake"
+                "${ph_sqlite_cmake}/${ph_module}.cmake"
+        )
+    endforeach()
+endif()

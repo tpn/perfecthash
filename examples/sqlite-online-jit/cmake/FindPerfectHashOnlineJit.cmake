@@ -164,7 +164,16 @@ function(_ph_owned_dirs output variable root)
     set(${output} "${found}" PARENT_SCOPE)
 endfunction()
 
-set(_ph_online_names PerfectHashOnline PerfectHashOnlineCore)
+# Each example chooses its preferred library and the header spellings it
+# accepts before calling find_package. These defaults suit an installed SDK.
+set(_ph_online_names PerfectHashOnlineCore PerfectHashOnline)
+if(PH_ONLINE_JIT_LIBRARY_NAMES)
+    set(_ph_online_names ${PH_ONLINE_JIT_LIBRARY_NAMES})
+endif()
+set(_ph_header_names PerfectHash/PerfectHashOnlineJit.h)
+if(PH_ONLINE_JIT_HEADER_NAMES)
+    set(_ph_header_names ${PH_ONLINE_JIT_HEADER_NAMES})
+endif()
 set(_ph_lib_suffixes)
 if(WIN32)
     set(_ph_configs ${CMAKE_BUILD_TYPE} Release RelWithDebInfo Debug MinSizeRel ${CMAKE_CONFIGURATION_TYPES})
@@ -597,9 +606,9 @@ function(_ph_probe_sdk root)
     endif()
     _ph_find(find_path
         PERFECTHASH_ONLINE_JIT_INCLUDE_DIR
-        NAMES PerfectHash/PerfectHashOnlineJit.h
+        NAMES ${_ph_header_names}
         HINTS ${_ph_include_hints}
-        PATH_SUFFIXES ${include_suffixes}
+        PATH_SUFFIXES ${include_suffixes} ${PH_ONLINE_JIT_HEADER_SUFFIXES}
         ${_ph_sdk_search_scope}
     )
     if(NOT PERFECTHASH_ONLINE_JIT_INCLUDE_DIR)
