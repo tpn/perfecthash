@@ -139,36 +139,22 @@ if(_ph_runtime_dirs AND (APPLE OR UNIX))
 endif()
 
 if(WIN32)
-    set(_ph_runtime_dlls)
-    if(PH_ONLINE_JIT_RUNTIME_TARGET)
-        list(APPEND _ph_runtime_dlls "$<TARGET_FILE:${PH_ONLINE_JIT_RUNTIME_TARGET}>")
-    elseif(NOT PH_ONLINE_JIT_USE_FETCHCONTENT AND EXISTS "${PERFECTHASH_ONLINE_JIT_RUNTIME_DLL}")
-        list(APPEND _ph_runtime_dlls "${PERFECTHASH_ONLINE_JIT_RUNTIME_DLL}")
-    endif()
-
-    if(PH_ONLINE_JIT_LLVM_TARGET)
-        list(APPEND _ph_runtime_dlls "$<TARGET_FILE:${PH_ONLINE_JIT_LLVM_TARGET}>"
-                                     "$<TARGET_FILE:PerfectHash::PerfectHash>")
-    elseif(NOT PH_ONLINE_JIT_USE_FETCHCONTENT AND EXISTS "${PERFECTHASH_ONLINE_JIT_LLVM_RUNTIME_DLL}")
-        get_filename_component(_ph_llvm_dir "${PERFECTHASH_ONLINE_JIT_LLVM_RUNTIME_DLL}" DIRECTORY)
-        if(EXISTS "${_ph_llvm_dir}/PerfectHash.dll")
-            list(APPEND _ph_runtime_dlls "${PERFECTHASH_ONLINE_JIT_LLVM_RUNTIME_DLL}"
-                                         "${_ph_llvm_dir}/PerfectHash.dll")
-        else()
-            message(WARNING "Skipping the optional LLVM plugin: ${_ph_llvm_dir}/PerfectHash.dll is missing.")
+    if(PH_ONLINE_JIT_USE_FETCHCONTENT)
+        set(_ph_runtime_files "$<TARGET_FILE:${PH_ONLINE_JIT_RUNTIME_TARGET}>")
+        if(PH_ONLINE_JIT_LLVM_TARGET)
+            list(APPEND _ph_runtime_files "$<TARGET_FILE:${PH_ONLINE_JIT_LLVM_TARGET}>"
+                                          "$<TARGET_FILE:PerfectHash::PerfectHash>")
         endif()
+    else()
+        set(_ph_runtime_files "${PERFECTHASH_ONLINE_JIT_RUNTIME_FILES}")
     endif()
 
-    if(NOT PH_ONLINE_JIT_USE_FETCHCONTENT AND PERFECTHASH_ONLINE_JIT_STATIC_DEPLOY_ARGS)
-        add_custom_command(TARGET cpp-console-online-jit POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E "${PERFECTHASH_ONLINE_JIT_STATIC_DEPLOY_ARGS}"
-            WORKING_DIRECTORY "$<TARGET_FILE_DIR:cpp-console-online-jit>"
-            COMMAND_EXPAND_LISTS VERBATIM)
-    elseif(_ph_runtime_dlls)
-        add_custom_command(TARGET cpp-console-online-jit POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different ${_ph_runtime_dlls}
-                    "$<TARGET_FILE_DIR:cpp-console-online-jit>"
-            COMMENT "Copying PerfectHash runtime DLLs next to cpp-console-online-jit."
-            VERBATIM)
-    endif()
+    # Staging is a build dependency so switching SDKs also updates an up-to-date executable.
+    add_custom_target(cpp-console-online-jit-runtime
+        COMMAND ${CMAKE_COMMAND} "-Dfiles=${_ph_runtime_files}"
+                "-Ddestination=$<TARGET_FILE_DIR:cpp-console-online-jit>"
+                "-Dstate_dir=${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/perfecthash-runtime"
+                -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/StagePerfectHashRuntime.cmake"
+        VERBATIM)
+    add_dependencies(cpp-console-online-jit cpp-console-online-jit-runtime)
 endif()

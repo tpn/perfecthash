@@ -702,8 +702,6 @@ Return Value:
             goto ReleaseTable;
         }
 
-        CHECK_CTRL_C();
-
         PRINT_CHAR_FOR_TABLE_CREATE_RESULT(Result);
 
         if (Result != S_OK) {
@@ -716,6 +714,7 @@ Return Value:
 
         } else {
 
+            CHECK_CTRL_C();
             Coverage = Table->Coverage;
 
             //
@@ -839,9 +838,12 @@ Return Value:
 
     NEWLINE();
 
-    Result = BatchResult;
-    if (SUCCEEDED(Result) && CtrlCPressed) {
+    // A signal can stop the batch after Create returned a timeout. Keep
+    // the completed input's outcome, just as single-table creation does.
+    if (Result == S_OK && SUCCEEDED(BatchResult) && CtrlCPressed) {
         Result = PH_E_CTRL_C_PRESSED;
+    } else {
+        Result = BatchResult;
     }
     goto End;
 

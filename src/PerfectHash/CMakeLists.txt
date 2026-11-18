@@ -5613,11 +5613,13 @@ if(TARGET ${llvm_target})
     endif()
 endif()
 
-if(WIN32)
-    foreach(ph_rpc_target ${target} ${online_target} ${online_static_target}
+foreach(ph_runtime_target ${target} ${online_target} ${online_static_target}
                           ${online_core_target} ${online_core_static_target})
-        target_link_libraries(${ph_rpc_target} PRIVATE rpcrt4)
-    endforeach()
-endif()
+    if(WIN32)
+        target_link_libraries(${ph_runtime_target} PRIVATE rpcrt4)
+    elseif(CMAKE_DL_LIBS)
+        target_link_libraries(${ph_runtime_target} PRIVATE ${CMAKE_DL_LIBS})
+    endif()
+endforeach()
 
 # vim:set ts=8 sw=4 sts=4 tw=80 expandtab syntax=cmake                        :

@@ -11,7 +11,12 @@ if(WIN32 AND TARGET PerfectHash::PerfectHashOnlineStatic)
 endif()
 foreach(core IN LISTS clients)
     add_executable(${core}-client main.c)
-    target_link_libraries(${core}-client PRIVATE PerfectHash::${core} ${CMAKE_DL_LIBS})
+    target_link_libraries(${core}-client PRIVATE PerfectHash::${core})
+    if(CMAKE_DL_LIBS AND NOT core MATCHES "Static$")
+        # The shared client calls dlopen itself to check the plugin path.
+        # The static client receives this link dependency from the archive.
+        target_link_libraries(${core}-client PRIVATE ${CMAKE_DL_LIBS})
+    endif()
     set(plugin "$<TARGET_FILE:PerfectHash::PerfectHashLLVM>")
     if(WIN32 AND core MATCHES "Static$")
         # Each static client loads its plugin beside the consumer executable.
