@@ -90,6 +90,8 @@ with tempfile.TemporaryDirectory() as tmp:
                     proc.send_signal(signal.SIGINT)
                     proc.wait(timeout=15)
                     check_status(proc, PH_E_CTRL_C_PRESSED)
+                    if any(interrupted.glob("*.csv")):
+                        raise AssertionError(f"{exe} retained a report for its cancelled first input")
                 finally:
                     if proc.poll() is None:
                         proc.kill()
