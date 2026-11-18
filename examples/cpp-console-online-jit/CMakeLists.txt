@@ -99,6 +99,7 @@ add_executable(cpp-console-online-jit
 target_link_libraries(cpp-console-online-jit
     PRIVATE
         ${PH_ONLINE_JIT_TARGET}
+        ${CMAKE_DL_LIBS}
 )
 
 if(PH_ONLINE_JIT_LLVM_TARGET)

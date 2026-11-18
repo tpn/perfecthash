@@ -131,6 +131,7 @@ target_link_libraries(sqlite-online-jit
     PRIVATE
         sqlite3-amalgamation
         ${PH_ONLINE_JIT_TARGET}
+        ${CMAKE_DL_LIBS}
 )
 
 if(PH_ONLINE_JIT_LLVM_TARGET)

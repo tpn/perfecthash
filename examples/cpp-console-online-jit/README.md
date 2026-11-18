@@ -53,7 +53,11 @@ cmake --build build\examples\cpp-console-online-jit --config Release
 
 ### Local Tree Fallback (No FetchContent)
 
+Older Windows builds may have copied `PerfectHashLLVM.dll` beside the executable before CMake tracked staged files. If the build reports an untracked plugin there, move the previous SDK's copy out of the executable directory and rebuild once. Keep a plugin you supplied for the current SDK.
+
 When reusing a build directory with a cached `ON` or `OFF`, pass `-DPH_ONLINE_JIT_USE_FETCHCONTENT=AUTO` to select from the current `PERFECTHASH_ROOT`.
+
+To rediscover SDK paths cached by an older Windows finder, add `-U "PERFECTHASH_ONLINE_JIT_*" -U PERFECTHASH_ASM_LIBRARY` to the configure command and repeat any intentional path overrides after those options.
 
 ```bash
 cmake -S examples/cpp-console-online-jit \
