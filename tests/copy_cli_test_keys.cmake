@@ -2,6 +2,10 @@
 # copy so concurrent scalar, NEON and code generation runs can share a fixture.
 set(test_input_dir "${TEST_OUTPUT}/input")
 file(MAKE_DIRECTORY "${test_input_dir}")
+file(GLOB old_inputs LIST_DIRECTORIES FALSE "${test_input_dir}/*.keys" "${test_input_dir}/*.TableSize")
+if(old_inputs)
+  file(REMOVE ${old_inputs})
+endif()
 if(IS_DIRECTORY "${TEST_KEYS}")
   file(GLOB key_files "${TEST_KEYS}/*.keys")
   set(test_input "${test_input_dir}")
