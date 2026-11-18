@@ -41,12 +41,49 @@ endforeach()
 
 list(REMOVE_DUPLICATES _ph_search_hints)
 
+set(_ph_library_roots ${_ph_root_hints})
+set(_ph_library_hints ${_ph_search_hints})
+set(_ph_include_hints ${_ph_search_hints})
+if(WIN32 AND (PerfectHashOnlineJit_ROOT OR PERFECTHASH_ROOT))
+    if(PerfectHashOnlineJit_ROOT)
+        set(_ph_root "${PerfectHashOnlineJit_ROOT}")
+    else()
+        set(_ph_root "${PERFECTHASH_ROOT}")
+    endif()
+    set(_ph_library_roots "${_ph_root}")
+    set(_ph_include_hints "${_ph_root}" ${_ph_build_dirs_${_ph_root}})
+    set(_ph_library_hints)
+    get_filename_component(_ph_root_path "${_ph_root}" ABSOLUTE)
+    string(TOLOWER "${_ph_root_path}" _ph_root_lower)
+    # Keep custom archive layouts from the selected SDK (e.g. lib/Checked/static).
+    foreach(_ph_dir IN LISTS CMAKE_LIBRARY_PATH)
+        get_filename_component(_ph_dir "${_ph_dir}" ABSOLUTE)
+        string(TOLOWER "${_ph_dir}" _ph_dir_lower)
+        cmake_path(IS_PREFIX _ph_root_lower "${_ph_dir_lower}" NORMALIZE _ph_owned)
+        if(_ph_owned)
+            list(APPEND _ph_library_hints "${_ph_dir}")
+        endif()
+    endforeach()
+    list(APPEND _ph_library_hints ${_ph_include_hints})
+    # A named checkout can supply the public headers for its named build tree.
+    if(PerfectHashOnlineJit_ROOT AND PERFECTHASH_ROOT)
+        get_filename_component(_ph_checkout "${PERFECTHASH_ROOT}" ABSOLUTE)
+        string(TOLOWER "${_ph_checkout}" _ph_checkout_lower)
+        cmake_path(IS_PREFIX _ph_checkout_lower "${_ph_root_lower}" NORMALIZE _ph_owned)
+        if(_ph_owned)
+            list(APPEND _ph_include_hints "${_ph_checkout}")
+        endif()
+    endif()
+    set(_ph_sdk_search_scope NO_DEFAULT_PATH)
+endif()
+
 _ph_find(find_path
     PERFECTHASH_ONLINE_JIT_INCLUDE_DIR
     NAMES PerfectHash/PerfectHashOnlineJit.h
-    HINTS ${_ph_search_hints}
+    HINTS ${_ph_include_hints}
     PATH_SUFFIXES
         include
+    ${_ph_sdk_search_scope}
 )
 
 set(_ph_online_names PerfectHashOnline PerfectHashOnlineCore)
@@ -123,12 +160,8 @@ if(WIN32 AND PERFECTHASH_ONLINE_JIT_LIBRARY AND
     set(_ph_invalid_library "${PERFECTHASH_ONLINE_JIT_LIBRARY}")
     set(PERFECTHASH_ONLINE_JIT_LIBRARY "PERFECTHASH_ONLINE_JIT_LIBRARY-NOTFOUND")
 else()
-    _ph_find(find_library
-        PERFECTHASH_ONLINE_JIT_LIBRARY
-        NAMES ${_ph_online_names}
-        HINTS ${_ph_search_hints}
-        PATH_SUFFIXES ${_ph_lib_suffixes}
-    )
+    _ph_find(find_library PERFECTHASH_ONLINE_JIT_LIBRARY NAMES ${_ph_online_names}
+        HINTS ${_ph_library_hints} PATH_SUFFIXES ${_ph_lib_suffixes} ${_ph_sdk_search_scope})
 endif()
 
 if(NOT WIN32)
@@ -260,7 +293,7 @@ if(WIN32)
         set(bases "${_ph_lib_base}")
         string(TOLOWER "${_ph_lib_base}" initial_base)
         string(TOLOWER "${PERFECTHASH_ONLINE_JIT_INCLUDE_DIR}" include_dir)
-        foreach(hint IN LISTS _ph_root_hints)
+        foreach(hint IN LISTS _ph_library_roots)
             get_filename_component(root "${hint}" ABSOLUTE)
             string(TOLOWER "${root}" root_lower)
             cmake_path(IS_PREFIX root_lower "${include_dir}" NORMALIZE owns_header)
@@ -278,8 +311,8 @@ if(WIN32)
                 break()
             endif()
         endforeach()
-        foreach(base IN LISTS bases)
-            foreach(linkage IN LISTS _ph_linkages)
+        foreach(linkage IN LISTS _ph_linkages)
+            foreach(base IN LISTS bases)
                 foreach(name IN LISTS _ph_online_names)
                     foreach(layout IN LISTS _ph_${linkage}_layouts)
                         unset(candidate)
