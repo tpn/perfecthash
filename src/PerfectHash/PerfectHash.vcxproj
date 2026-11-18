@@ -161,6 +161,7 @@
     <ClInclude Include="PerfectHashNames.h" />
     <ClInclude Include="PerfectHashPath.h" />
     <ClInclude Include="PerfectHashPrimes.h" />
+    <ClInclude Include="PerfectHashOnlineJitPrivate.h" />
     <ClInclude Include="PerfectHashPrivate.h" />
     <ClInclude Include="PerfectHashTable.h" />
     <ClInclude Include="PerfectHashConstants.h" />

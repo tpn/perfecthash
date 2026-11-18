@@ -15,20 +15,12 @@ Abstract:
 
 #include "stdafx.h"
 #include <PerfectHash/PerfectHashOnlineJit.h>
+#include "PerfectHashOnlineJitPrivate.h"
 
 #include <stdint.h>
 #include <stdlib.h>
 
 extern DLL_GET_CLASS_OBJECT PerfectHashDllGetClassObject;
-
-struct PH_ONLINE_JIT_CONTEXT {
-    PICLASSFACTORY ClassFactory;
-    PPERFECT_HASH_ONLINE Online;
-};
-
-struct PH_ONLINE_JIT_TABLE {
-    PPERFECT_HASH_TABLE Table;
-};
 
 // The table owns this interface and its executable code. Callers quiesce
 // lookups before recompiling or releasing the table (see the public API).
@@ -927,6 +919,7 @@ PhOnlineJitCompileTableEx(
 {
     HRESULT Result;
     HRESULT LastResult;
+    HRESULT RawDogFailure = S_OK;
     const PH_ONLINE_JIT_BACKEND Backends[] = {
         PhOnlineJitBackendRawDogJit,
         PhOnlineJitBackendLlvmJit,
@@ -1031,13 +1024,20 @@ PhOnlineJitCompileTableEx(
             if (Result != PH_E_TABLE_LOCKED &&
                 Backend == PhOnlineJitBackendAuto &&
                 CandidateBackend == PhOnlineJitBackendRawDogJit) {
+                RawDogFailure = Result;
+                break;
+            }
+            if (Result == PH_E_LLVM_BACKEND_NOT_FOUND &&
+                FAILED(RawDogFailure)) {
                 break;
             }
             return Result;
         }
     }
 
-    return LastResult;
+    // RawDog failed outright and LLVM is absent or has no routine for the
+    // request. Neither of those explains the failure, so report RawDog's.
+    return FAILED(RawDogFailure) ? RawDogFailure : LastResult;
 }
 
 PH_ONLINE_JIT_API

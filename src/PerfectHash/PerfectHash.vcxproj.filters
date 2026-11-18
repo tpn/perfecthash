@@ -477,6 +477,9 @@
     <ClInclude Include="PerfectHashPath.h">
       <Filter>Private Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="PerfectHashOnlineJitPrivate.h">
+      <Filter>Private Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="PerfectHashPrivate.h">
       <Filter>Private Header Files</Filter>
     </ClInclude>

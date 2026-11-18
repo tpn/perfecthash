@@ -49,6 +49,7 @@ set(Private_Header_Files
     "PerfectHashKeys.h"
     "PerfectHashNames.h"
     "PerfectHashOnline.h"
+    "PerfectHashOnlineJitPrivate.h"
     "PerfectHashPath.h"
     "PerfectHashPrimes.h"
     "PerfectHashPrivate.h"
