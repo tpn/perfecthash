@@ -95,9 +95,10 @@ This runs:
   `mulshrolate2rx`, `mulshrolate3rx`, `mulshrolate4rx`
 - vector widths: `1`, `2`, `4`, `8`, `16`
 
-Matrix mode requests each batch width strictly. A width of `16` means 16 keys
-per call. On ARM64, RawDog batches scalar lookups and LLVM can emit NEON
-instructions. The instruction set depends on the backend and host.
+Matrix mode strictly requests each width when compiling the JIT. SQLite builds
+its index map and probes it one key at a time through `PhOnlineJitIndex32`.
+Callers of the 16-key batch API can use scalar batches with RawDog on ARM64
+or vector instructions with LLVM.
 
 ### Single Configuration
 
