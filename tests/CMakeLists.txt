@@ -233,6 +233,8 @@ if(TARGET PerfectHashCreateExe AND TARGET PerfectHashBulkCreateExe)
             COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/check_cli_hash_jit.py
                 $<TARGET_FILE:PerfectHashCreateExe> ${TEST_KEYS_FILE}
         )
+        # Ten solves in one test. A shorter ctest --timeout must not cut it off.
+        set_tests_properties(perfecthash.cli.hash_jit PROPERTIES TIMEOUT 600)
     endif()
 
     add_test(
