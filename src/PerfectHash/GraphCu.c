@@ -122,6 +122,7 @@ Return Value:
     }
 
     Graph->SizeOfStruct = sizeof(*Graph);
+    Graph->Flags.DebugCudaChm02 = IsPerfectHashCudaDebugEnabled();
 
     //
     // Create Rtl and Allocator components.
@@ -200,6 +201,8 @@ Return Value:
     //
 
     Vtbl = Graph->CpuGraph->Vtbl;
+
+    Graph->Vtbl->RegisterSolved = Vtbl->RegisterSolved;
 
     Graph->Vtbl->CalculateAssignedMemoryCoverage =
         Vtbl->CalculateAssignedMemoryCoverage;
@@ -605,10 +608,11 @@ Return Value:
 
             SpareGraph->CuHostGraph = Graph;
             SpareGraph->CuHostSpareGraph = SpareGraph;
-            SpareGraph->CuDeviceGraph = DeviceGraph;
+            // Keep the device descriptor with this graph when it becomes best.
+            SpareGraph->CuDeviceGraph = SolveContext->DeviceSpareGraph;
             SpareGraph->CuDeviceSpareGraph = SolveContext->DeviceSpareGraph;
         } else {
-            DeviceGraph = SolveContext->DeviceSpareGraph;
+            DeviceGraph = Graph->CuDeviceGraph;
             ASSERT(Graph->CuHostGraph != NULL);
             ASSERT(Graph->CuHostSpareGraph == Graph);
             ASSERT(Graph->CuDeviceGraph != NULL);
@@ -1278,7 +1282,7 @@ Return Value:
     // copy the entire structure over to the GPU device.
     //
 
-    DeviceGraph = SolveContext->DeviceGraph;
+    DeviceGraph = Graph->CuDeviceGraph;
     CuResult = Cu->MemcpyHtoDAsync((CU_DEVICE_POINTER)DeviceGraph,
                                    Graph,
                                    Graph->SizeOfStruct,
@@ -1346,7 +1350,7 @@ GraphCuLoadNewSeeds(
     }
 
     Cu = Graph->CuSolveContext->DeviceContext->Cu;
-    DeviceGraph = Graph->CuSolveContext->DeviceGraph;
+    DeviceGraph = Graph->CuDeviceGraph;
     CuResult = Cu->MemcpyHtoDAsync((CU_DEVICE_POINTER)&DeviceGraph->Seeds[0],
                                    Graph->Seeds,
                                    Graph->NumberOfSeeds * sizeof(ULONG),
@@ -1701,7 +1705,7 @@ GraphCuIsAcyclic(
     // correctly.
     //
 
-    DeviceGraph = Graph->CuSolveContext->DeviceGraph;
+    DeviceGraph = Graph->CuDeviceGraph;
     DeviceVertexPairs = (CU_DEVICE_POINTER)DeviceGraph->VertexPairs;
     if (IsUsingAssigned16(Graph)) {
         SizeInBytes = Graph->NumberOfVertices * sizeof(VERTEX16_PAIR);

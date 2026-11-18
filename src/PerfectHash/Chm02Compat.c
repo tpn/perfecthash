@@ -709,8 +709,6 @@ FinishedSolution:
         Graph->CuIsAcyclicElapsedMicroseconds.QuadPart;
     Table->CuAssignElapsedMicroseconds.QuadPart =
         Graph->CuAssignElapsedMicroseconds.QuadPart;
-    Table->CuVerifyElapsedMicroseconds.QuadPart =
-        Graph->CuVerifyElapsedMicroseconds.QuadPart;
 #endif
 
     //
@@ -924,6 +922,10 @@ FinishedSolution:
     }
 
     CONTEXT_END_TIMERS(Verify);
+#ifdef PH_USE_CUDA
+    Table->CuVerifyElapsedMicroseconds.QuadPart =
+        Graph->CuVerifyElapsedMicroseconds.QuadPart;
+#endif
 
     //
     // Set the verified table event (regardless of whether or not we succeeded

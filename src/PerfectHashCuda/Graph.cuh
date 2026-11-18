@@ -463,7 +463,7 @@ struct ATOMIC_VERTEX {
 };
 
 template<typename ResultType, typename KeyType, typename VertexType>
-using HashFunctionType = ResultType(*)(KeyType, PULONG Seeds, VertexType);
+using HashFunctionType = ResultType(*)(KeyType, VertexType, const GRAPH_SEEDS &);
 
 
 template<

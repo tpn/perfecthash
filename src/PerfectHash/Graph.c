@@ -3128,6 +3128,30 @@ VerifyMemoryCoverage16Invariants(
 }
 #pragma optimize("", on)
 
+static
+PGRAPH
+GraphTakeSpareGraph(
+    _In_ PGRAPH Graph
+    )
+{
+    PGRAPH SpareGraph;
+
+#ifdef PH_USE_CUDA
+    if (IsCuGraph(Graph)) {
+        SpareGraph = Graph->CuHostSpareGraph;
+    } else
+#endif
+    {
+        SpareGraph = Graph->Context->SpareGraph;
+        Graph->Context->SpareGraph = NULL;
+    }
+
+    ASSERT(SpareGraph != NULL);
+    ASSERT(IsSpareGraph(SpareGraph));
+    SpareGraph->Flags.IsSpare = FALSE;
+    return SpareGraph;
+}
+
 GRAPH_REGISTER_SOLVED GraphRegisterSolved;
 
 _Use_decl_annotations_
@@ -3230,20 +3254,7 @@ Return Value:
     } else {
         ASSERT(Context->NewBestGraphCount == 0);
         ASSERT(Context->FirstAttemptSolved == 0);
-#ifdef PH_USE_CUDA
-        if (IsCuGraph(Graph)) {
-            SpareGraph = Graph->CuHostSpareGraph;
-        } else {
-            SpareGraph = Context->SpareGraph;
-            Context->SpareGraph = NULL;
-        }
-#else
-        SpareGraph = Context->SpareGraph;
-        Context->SpareGraph = NULL;
-#endif
-        ASSERT(SpareGraph != NULL);
-        ASSERT(IsSpareGraph(SpareGraph));
-        SpareGraph->Flags.IsSpare = FALSE;
+        SpareGraph = GraphTakeSpareGraph(Graph);
         BestGraph = Context->BestGraph = Graph;
         *NewGraphPointer = SpareGraph;
         BestGraphIndex = Context->NewBestGraphCount++;
@@ -4055,8 +4066,7 @@ Return Value:
         return E_POINTER;
     }
 
-    DebugCudaSolve = (IsCuGraph(Graph) ? IsPerfectHashCudaDebugEnabled() : FALSE);
-    Graph->Flags.DebugCudaChm02 = DebugCudaSolve;
+    DebugCudaSolve = (IsCuGraph(Graph) ? IsCudaDebugGraph(Graph) : FALSE);
 
     //
     // Acquire the exclusive graph lock for the duration of the routine.  The
@@ -6439,11 +6449,7 @@ Return Value:
     } else {
         ASSERT(Context->NewBestGraphCount == 0);
         ASSERT(Context->FirstAttemptSolved == 0);
-        SpareGraph = Context->SpareGraph;
-        ASSERT(SpareGraph != NULL);
-        ASSERT(IsSpareGraph(SpareGraph));
-        SpareGraph->Flags.IsSpare = FALSE;
-        Context->SpareGraph = NULL;
+        SpareGraph = GraphTakeSpareGraph(Graph);
         BestGraph = Context->BestGraph = Graph;
         *NewGraphPointer = SpareGraph;
         BestGraphIndex = Context->NewBestGraphCount++;

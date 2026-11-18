@@ -426,6 +426,14 @@ if(TARGET PerfectHashCreateExe AND TARGET PerfectHashBulkCreateExe)
                 -P ${CMAKE_CURRENT_SOURCE_DIR}/run_cli_chm02_cuda_generated_33000_test.cmake
         )
 
+        foreach(width IN ITEMS 16 32)
+            add_test(
+                NAME perfecthash.cuda.chm02.retained-graph.assigned${width}
+                COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/check_cuda_retained_graph.py
+                    $<TARGET_FILE:PerfectHashCreateExe> ${TEST_KEYS_FILE} ${width}
+            )
+        endforeach()
+
         add_test(
             NAME perfecthash.cuda.chm02.perf-surface
             COMMAND ${CMAKE_COMMAND}
@@ -441,6 +449,8 @@ if(TARGET PerfectHashCreateExe AND TARGET PerfectHashBulkCreateExe)
             perfecthash.cuda.chm02.hologram.fileio
             perfecthash.cuda.chm02.hologram.nondebug
             perfecthash.cuda.chm02.generated33000.nofileio
+            perfecthash.cuda.chm02.retained-graph.assigned16
+            perfecthash.cuda.chm02.retained-graph.assigned32
             perfecthash.cuda.chm02.perf-surface
             PROPERTIES
                 LABELS "cuda"

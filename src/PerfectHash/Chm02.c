@@ -705,8 +705,6 @@ Return Value:
         Graph->CuIsAcyclicElapsedMicroseconds.QuadPart;
     Table->CuAssignElapsedMicroseconds.QuadPart =
         Graph->CuAssignElapsedMicroseconds.QuadPart;
-    Table->CuVerifyElapsedMicroseconds.QuadPart =
-        Graph->CuVerifyElapsedMicroseconds.QuadPart;
 #endif
 
     //
@@ -923,6 +921,10 @@ Return Value:
     }
 
     CONTEXT_END_TIMERS(Verify);
+#ifdef PH_USE_CUDA
+    Table->CuVerifyElapsedMicroseconds.QuadPart =
+        Graph->CuVerifyElapsedMicroseconds.QuadPart;
+#endif
 
     if (DebugCuda) {
         fprintf(stderr, "[Chm02] Verify result=0x%08x\n", (unsigned)Result);

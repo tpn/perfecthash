@@ -59,7 +59,8 @@ row = next(csv.DictReader(open(path, newline=''))); \
 missing = [name for name in required if name not in row]; \
 assert not missing, f'Missing timing field(s): {missing}'; \
 negative = [name for name in required if int(row[name]) < 0]; \
-assert not negative, f'Negative timing field(s): {negative}'" "${csv_path}"
+assert not negative, f'Negative timing field(s): {negative}'; \
+assert int(row['CuVerifyMicroseconds']) > 0, 'GPU verification took zero microseconds'" "${csv_path}"
   RESULT_VARIABLE parse_result
   OUTPUT_VARIABLE parse_stdout
   ERROR_VARIABLE parse_stderr
