@@ -60,7 +60,9 @@ Older Windows builds may have copied `PerfectHashLLVM.dll` beside the executable
 
 When reusing a build directory with a cached `ON` or `OFF`, pass `-DPH_ONLINE_JIT_USE_FETCHCONTENT=AUTO` to select from the current `PERFECTHASH_ROOT`.
 
-To rediscover SDK paths cached by an older Windows finder, add `-U "PERFECTHASH_ONLINE_JIT_*" -U PERFECTHASH_ASM_LIBRARY` to the configure command and repeat any intentional path overrides after those options.
+To rediscover SDK paths cached by an older finder, add `-U "PERFECTHASH_ONLINE_JIT_*" -U PERFECTHASH_ASM_LIBRARY` to the configure command and repeat any intentional path overrides after those options.
+
+For a Windows SDK with a static archive outside a `static` directory, pass `-DPERFECTHASH_ONLINE_JIT_STATIC_LIBRARY=C:/sdk/lib/Debug/PerfectHashOnlineCore.lib` with the path to the archive.
 
 ```bash
 cmake -S examples/sqlite-online-jit \
@@ -93,8 +95,9 @@ This runs:
   `mulshrolate2rx`, `mulshrolate3rx`, `mulshrolate4rx`
 - vector widths: `1`, `2`, `4`, `8`, `16`
 
-For matrix mode, strict vector-width behavior is enabled so AVX-512 (`16`) and
-other widths are measured as requested per permutation.
+Matrix mode requests each batch width strictly. A width of `16` means 16 keys
+per call. On ARM64, RawDog batches scalar lookups and LLVM can emit NEON
+instructions. The instruction set depends on the backend and host.
 
 ### Single Configuration
 

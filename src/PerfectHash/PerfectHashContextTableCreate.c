@@ -508,13 +508,11 @@ Return Value:
                 goto Error;
             }
         }
-    }
-
-    // A completed solve status such as a timeout is already the outcome.
-    // A signal during optional testing or compilation of a solved table
-    // cancels that remaining work before its result is committed.
-    if (Result == S_OK && CtrlCPressed) {
-        Result = PH_E_CTRL_C_PRESSED;
+        // A cancelled post-solve test or compile must not commit a success row.
+        if (Result == S_OK && CtrlCPressed) {
+            Result = PH_E_CTRL_C_PRESSED;
+            goto Error;
+        }
     }
 
     //

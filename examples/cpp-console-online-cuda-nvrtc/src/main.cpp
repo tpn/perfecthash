@@ -1276,24 +1276,46 @@ extern "C" __global__ void blocksort_probe_kernel(
   return source.str();
 }
 
-std::string compile_to_ptx(std::string const& source, int major, int minor)
+nvrtcProgram create_nvrtc_program(std::string const& source, char const* name)
 {
   nvrtcProgram program{};
+#ifdef PH_NVRTC_CCCL_INCLUDE_DIR
+  // The fragment includes C standard headers. NVRTC can obtain their device
+  // types from the CUDA standard library shipped with the toolkit.
+  char const* names[] = {"stddef.h", "stdint.h"};
+  char const* headers[] = {
+    "#include <cuda/std/cstddef>\nusing cuda::std::size_t;\n",
+    "#include <cuda/std/cstdint>\nusing cuda::std::uint16_t;\n"
+    "using cuda::std::uint32_t;\nusing cuda::std::uint64_t;\n",
+  };
   auto create_result =
-    nvrtcCreateProgram(&program, source.c_str(), "perfecthash_online_nvrtc.cu", 0, nullptr, nullptr);
+    nvrtcCreateProgram(&program, source.c_str(), name, 2, headers, names);
+#else
+  auto create_result =
+    nvrtcCreateProgram(&program, source.c_str(), name, 0, nullptr, nullptr);
+#endif
   if (create_result != NVRTC_SUCCESS) {
     throw std::runtime_error("nvrtcCreateProgram failed: " +
                              nvrtc_result_to_string(create_result));
   }
+  return program;
+}
 
+constexpr char toolkit_include[] = "--include-path=" PH_CUDA_INCLUDE_DIR;
+
+std::string compile_to_ptx(std::string const& source, int major, int minor)
+{
+  auto program = create_nvrtc_program(source, "perfecthash_online_nvrtc.cu");
   std::string arch = "--gpu-architecture=compute_" + std::to_string(major) + std::to_string(minor);
-  std::string include_dir = std::string("--include-path=") + PH_CUDA_INCLUDE_DIR;
 
   std::vector<char const*> options{
     "--std=c++17",
     "--device-as-default-execution-space",
     arch.c_str(),
-    include_dir.c_str(),
+    toolkit_include,
+#ifdef PH_NVRTC_CCCL_INCLUDE_DIR
+    "--include-path=" PH_NVRTC_CCCL_INCLUDE_DIR,
+#endif
   };
 
   auto compile_result =
@@ -1324,16 +1346,8 @@ std::string compile_to_ptx(std::string const& source, int major, int minor)
 
 std::vector<char> compile_to_ltoir(std::string const& source, int major, int minor)
 {
-  nvrtcProgram program{};
-  auto create_result =
-    nvrtcCreateProgram(&program, source.c_str(), "perfecthash_online_nvrtc_lto.cu", 0, nullptr, nullptr);
-  if (create_result != NVRTC_SUCCESS) {
-    throw std::runtime_error("nvrtcCreateProgram failed: " +
-                             nvrtc_result_to_string(create_result));
-  }
-
+  auto program = create_nvrtc_program(source, "perfecthash_online_nvrtc_lto.cu");
   std::string arch = "--gpu-architecture=compute_" + std::to_string(major) + std::to_string(minor);
-  std::string include_dir = std::string("--include-path=") + PH_CUDA_INCLUDE_DIR;
 
   std::vector<char const*> options{
     "--std=c++17",
@@ -1341,7 +1355,10 @@ std::vector<char> compile_to_ltoir(std::string const& source, int major, int min
     "--dlink-time-opt",
     "--gen-opt-lto",
     arch.c_str(),
-    include_dir.c_str(),
+    toolkit_include,
+#ifdef PH_NVRTC_CCCL_INCLUDE_DIR
+    "--include-path=" PH_NVRTC_CCCL_INCLUDE_DIR,
+#endif
   };
 
   auto compile_result =

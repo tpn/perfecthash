@@ -125,6 +125,7 @@ add_executable(cpp-console-online-cuda-nvrtc
 target_link_libraries(cpp-console-online-cuda-nvrtc
     PRIVATE
         ${PH_ONLINE_CUDA_NVRTC_TARGET}
+        ${CMAKE_DL_LIBS}
         CUDA::cudart
         CUDA::nvrtc
         CUDA::nvJitLink
@@ -154,6 +155,15 @@ target_compile_definitions(
     PRIVATE
         PH_CUDA_INCLUDE_DIR="${PH_ONLINE_CUDA_NVRTC_CUDA_INCLUDE_DIR}"
 )
+
+set(_ph_nvrtc_cccl "${PH_ONLINE_CUDA_NVRTC_CUDA_INCLUDE_DIR}/cccl")
+if(EXISTS "${_ph_nvrtc_cccl}/cuda/std/cstddef" AND
+   EXISTS "${_ph_nvrtc_cccl}/cuda/std/cstdint" AND
+   NOT (EXISTS "${PH_ONLINE_CUDA_NVRTC_CUDA_INCLUDE_DIR}/stddef.h" AND
+        EXISTS "${PH_ONLINE_CUDA_NVRTC_CUDA_INCLUDE_DIR}/stdint.h"))
+    target_compile_definitions(cpp-console-online-cuda-nvrtc PRIVATE
+        PH_NVRTC_CCCL_INCLUDE_DIR="${_ph_nvrtc_cccl}")
+endif()
 
 if(PH_ONLINE_CUDA_NVRTC_LLVM_TARGET)
     target_compile_definitions(
