@@ -14,6 +14,19 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[3]
 KEYS = ROOT / "keys/HologramWorld-31016.keys"
+MULTIPLY_SHIFT = ("MultiplyShiftR", "MultiplyShiftRX")
+MULSHROLATE = tuple(f"Mulshrolate{i}RX" for i in range(1, 5))
+SEEDS = {
+    "MultiplyShiftR": (0x41AD0EDF, 0x5F8D672D, 0xD09),
+    "MultiplyShiftRX": (0xC2E3C0B7, 0xE8D9CDF9, 0x1B10),
+    # The CLI treats the shipped seed's zero rotation byte as unspecified.
+    # Halving its even multiplier and rotating left once (ROR 31) preserves
+    # the upper 16 product bits and exercises a nonzero rotation.
+    "Mulshrolate1RX": (0x39D252C1, 0x6A37DC9E, 0x0C041F10),
+    "Mulshrolate2RX": (0x36B166E3, 0x059700B5, 0x1C080110),
+    "Mulshrolate3RX": (0xF0192B55, 0xD9C83970, 0x0C1E0D10, 0xD11A5847),
+    "Mulshrolate4RX": (0xED1BAA28, 0x5570F5A6, 0x0E050810, 0x76EA4FF2, 0xBA628C02),
+}
 
 
 def measure_lookup(exe, bits, backend, lanes):
@@ -52,8 +65,7 @@ def measure_lookup(exe, bits, backend, lanes):
 
 
 def measure_solve(exe, bits, name, neon, frequency):
-    seeds = (0x41AD0EDF, 0x5F8D672D, 0xD09) if name == "MultiplyShiftR" else (
-             0xC2E3C0B7, 0xE8D9CDF9, 0x1B10)
+    seeds = SEEDS[name]
     with tempfile.TemporaryDirectory() as directory:
         args = [exe, KEYS, directory, "Chm01", name, "And", "1", "--GraphImpl=3",
                 "--HashAllKeysFirst", "--NoFileIo", "--FixedAttempts=1",
@@ -71,8 +83,11 @@ def measure_solve(exe, bits, name, neon, frequency):
     if (row["TableCreateResult"] != "S_OK" or row["FirstAttemptSolved"] != "1" or
             row["UsedNeonHashFunction"] != ("Y" if neon else "N") or
             row["UsedAssigned16"] != ("Y" if bits == 16 else "N") or
-            tuple(int(row[f"Seed{i}"]) for i in (1, 2, 3)) != seeds or
+            row["HashFunction"] != name or int(row["NumberOfKeys"]) != 31016 or
+            int(row["NumberOfSeeds"]) != len(seeds) or
+            tuple(int(row[f"Seed{i + 1}"]) for i in range(len(seeds))) != seeds or
             int(row["NumberOfVertices"]) != 65536 or
+            ticks <= 0 or int(row["SolveMicroseconds"]) <= 0 or
             usec != ticks * 1_000_000 // frequency):
         raise RuntimeError(f"Unexpected solve or counters in {csv_path}: {row}")
     return dict(hash=name, bits=bits, neon=neon, hash_qpc_ticks=ticks,
@@ -83,6 +98,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--build", type=Path, default=ROOT / "build")
     parser.add_argument("--affinity", type=lambda x: int(x, 0), default=4)
+    parser.add_argument("--mulshrolate-only", action="store_true",
+                        help="run only the four Mulshrolate solver comparisons")
     args = parser.parse_args()
     build = args.build.resolve()
     kernel = ctypes.WinDLL("kernel32", use_last_error=True)
@@ -100,20 +117,23 @@ def main():
     lookup_cases = [(bits, backend, lanes) for bits in (16, 32)
                     for backend in ("native", "rawdog", "llvm")
                     for lanes in ((1,) if backend == "native" else (1, 4, 8, 16))]
-    for repeat in range(1, 4):
-        rng.shuffle(lookup_cases)
-        for case in lookup_cases:
-            row = measure_lookup(build / "bin/Release/perfecthash_benchmarks.exe", *case)
-            output["lookup"].append(dict(repeat=repeat, **row))
-            print(repeat, row, flush=True)
+    if not args.mulshrolate_only:
+        for repeat in range(1, 4):
+            rng.shuffle(lookup_cases)
+            for case in lookup_cases:
+                row = measure_lookup(build / "bin/Release/perfecthash_benchmarks.exe", *case)
+                output["lookup"].append(dict(repeat=repeat, **row))
+                print(repeat, row, flush=True)
+    hashes = MULSHROLATE if args.mulshrolate_only else MULTIPLY_SHIFT
     for repeat in range(1, 46):
-        for name in ("MultiplyShiftR", "MultiplyShiftRX"):
+        for name in hashes:
             for bits in (16, 32):
                 for neon in (bool(repeat % 2), not bool(repeat % 2)):
                     row = measure_solve(build / "bin/Release/PerfectHashCreate.exe",
                                         bits, name, neon, freq.value)
                     output["solve"].append(dict(repeat=repeat, **row))
-    dest = build / "grace-jit-results.json"
+    filename = "mulshrolate-solver-results" if args.mulshrolate_only else "grace-jit-results"
+    dest = build / f"{filename}.json"
     with dest.open("w", encoding="utf-8", newline="\n") as stream:
         json.dump(output, stream, indent=2)
         stream.write("\n")

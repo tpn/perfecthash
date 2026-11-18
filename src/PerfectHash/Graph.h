@@ -2157,7 +2157,7 @@ extern GRAPH_POST_HASH_KEYS GraphPostHashKeys;
 #if (defined(_MSC_VER) && defined(_M_ARM64)) || \
     (defined(__aarch64__) && defined(__ARM_NEON))
 #define PH_HAS_ARM64_NEON 1
-extern GRAPH_HASH_KEYS GraphHashKeysMultiplyShift_NEON;
+extern GRAPH_HASH_KEYS GraphHashKeys_NEON;
 BOOL GraphHasNeon(VOID);
 #endif
 
@@ -2191,6 +2191,7 @@ extern GRAPH_SHOULD_WE_CONTINUE_TRYING_TO_SOLVE
     GraphShouldWeContinueTryingToSolve;
 extern GRAPH_ADD_KEYS GraphAddKeys;
 extern GRAPH_HASH_KEYS GraphHashKeys;
+extern GRAPH_HASH_KEYS GraphHashKeys16;
 extern GRAPH_ADD_HASHED_KEYS GraphAddHashedKeys;
 #endif
 

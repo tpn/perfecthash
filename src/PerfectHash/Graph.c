@@ -269,12 +269,11 @@ GraphInitializeRoutines(
 #ifdef PH_HAS_ARM64_NEON
     if (TableCreateFlags.HashAllKeysFirst &&
         !TableCreateFlags.DoNotTryUseNeonHashFunction &&
-        (HashFunctionId == PerfectHashHashMultiplyShiftRFunctionId ||
-         HashFunctionId == PerfectHashHashMultiplyShiftRXFunctionId) &&
+        IsGoodPerfectHashHashFunctionId(HashFunctionId) &&
         (Graph->Vtbl->HashKeys == GraphHashKeys ||
          Graph->Vtbl->HashKeys == GraphHashKeys16) &&
         GraphHasNeon()) {
-        Graph->Vtbl->HashKeys = GraphHashKeysMultiplyShift_NEON;
+        Graph->Vtbl->HashKeys = GraphHashKeys_NEON;
     }
 #endif
 

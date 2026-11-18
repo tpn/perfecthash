@@ -1,0 +1,6490 @@
+{
+  "affinity": 4,
+  "qpc_hz": 10000000,
+  "key_count": 31016,
+  "loops": 50,
+  "iterations": 5,
+  "lookup": [],
+  "solve": [
+    {
+      "repeat": 1,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 159,
+      "hash_us": 15,
+      "solve_us": 1308
+    },
+    {
+      "repeat": 1,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 2917,
+      "hash_us": 291,
+      "solve_us": 8837
+    },
+    {
+      "repeat": 1,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 159,
+      "hash_us": 15,
+      "solve_us": 1492
+    },
+    {
+      "repeat": 1,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 359,
+      "hash_us": 35,
+      "solve_us": 6258
+    },
+    {
+      "repeat": 1,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 176,
+      "hash_us": 17,
+      "solve_us": 1261
+    },
+    {
+      "repeat": 1,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 434,
+      "hash_us": 43,
+      "solve_us": 1249
+    },
+    {
+      "repeat": 1,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 163,
+      "hash_us": 16,
+      "solve_us": 1670
+    },
+    {
+      "repeat": 1,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 393,
+      "hash_us": 39,
+      "solve_us": 1327
+    },
+    {
+      "repeat": 1,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 2090,
+      "hash_us": 209,
+      "solve_us": 7464
+    },
+    {
+      "repeat": 1,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 432,
+      "hash_us": 43,
+      "solve_us": 2435
+    },
+    {
+      "repeat": 1,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 2312,
+      "hash_us": 231,
+      "solve_us": 8051
+    },
+    {
+      "repeat": 1,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 417,
+      "hash_us": 41,
+      "solve_us": 1351
+    },
+    {
+      "repeat": 1,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 186,
+      "hash_us": 18,
+      "solve_us": 1235
+    },
+    {
+      "repeat": 1,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 477,
+      "hash_us": 47,
+      "solve_us": 1278
+    },
+    {
+      "repeat": 1,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 189,
+      "hash_us": 18,
+      "solve_us": 2828
+    },
+    {
+      "repeat": 1,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 450,
+      "hash_us": 45,
+      "solve_us": 9980
+    },
+    {
+      "repeat": 2,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 8498,
+      "hash_us": 849,
+      "solve_us": 8158
+    },
+    {
+      "repeat": 2,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 722,
+      "hash_us": 72,
+      "solve_us": 7949
+    },
+    {
+      "repeat": 2,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 358,
+      "hash_us": 35,
+      "solve_us": 1200
+    },
+    {
+      "repeat": 2,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 149,
+      "hash_us": 14,
+      "solve_us": 1353
+    },
+    {
+      "repeat": 2,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 436,
+      "hash_us": 43,
+      "solve_us": 2596
+    },
+    {
+      "repeat": 2,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 2170,
+      "hash_us": 217,
+      "solve_us": 8296
+    },
+    {
+      "repeat": 2,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 390,
+      "hash_us": 39,
+      "solve_us": 1356
+    },
+    {
+      "repeat": 2,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 160,
+      "hash_us": 16,
+      "solve_us": 1440
+    },
+    {
+      "repeat": 2,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 5468,
+      "hash_us": 546,
+      "solve_us": 7681
+    },
+    {
+      "repeat": 2,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 1604,
+      "hash_us": 160,
+      "solve_us": 7520
+    },
+    {
+      "repeat": 2,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 420,
+      "hash_us": 42,
+      "solve_us": 1430
+    },
+    {
+      "repeat": 2,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 170,
+      "hash_us": 17,
+      "solve_us": 2729
+    },
+    {
+      "repeat": 2,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 478,
+      "hash_us": 47,
+      "solve_us": 1278
+    },
+    {
+      "repeat": 2,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 184,
+      "hash_us": 18,
+      "solve_us": 1348
+    },
+    {
+      "repeat": 2,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 4610,
+      "hash_us": 461,
+      "solve_us": 8355
+    },
+    {
+      "repeat": 2,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 179,
+      "hash_us": 17,
+      "solve_us": 1321
+    },
+    {
+      "repeat": 3,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 1709,
+      "hash_us": 170,
+      "solve_us": 7678
+    },
+    {
+      "repeat": 3,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 373,
+      "hash_us": 37,
+      "solve_us": 1277
+    },
+    {
+      "repeat": 3,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 156,
+      "hash_us": 15,
+      "solve_us": 1322
+    },
+    {
+      "repeat": 3,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 6477,
+      "hash_us": 647,
+      "solve_us": 8647
+    },
+    {
+      "repeat": 3,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 152,
+      "hash_us": 15,
+      "solve_us": 1231
+    },
+    {
+      "repeat": 3,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 4960,
+      "hash_us": 496,
+      "solve_us": 7558
+    },
+    {
+      "repeat": 3,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 190,
+      "hash_us": 19,
+      "solve_us": 1513
+    },
+    {
+      "repeat": 3,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 6290,
+      "hash_us": 629,
+      "solve_us": 7704
+    },
+    {
+      "repeat": 3,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 161,
+      "hash_us": 16,
+      "solve_us": 1212
+    },
+    {
+      "repeat": 3,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 435,
+      "hash_us": 43,
+      "solve_us": 1298
+    },
+    {
+      "repeat": 3,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 176,
+      "hash_us": 17,
+      "solve_us": 1415
+    },
+    {
+      "repeat": 3,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 415,
+      "hash_us": 41,
+      "solve_us": 1290
+    },
+    {
+      "repeat": 3,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 177,
+      "hash_us": 17,
+      "solve_us": 1209
+    },
+    {
+      "repeat": 3,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 474,
+      "hash_us": 47,
+      "solve_us": 1257
+    },
+    {
+      "repeat": 3,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 183,
+      "hash_us": 18,
+      "solve_us": 1338
+    },
+    {
+      "repeat": 3,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 6921,
+      "hash_us": 692,
+      "solve_us": 7912
+    },
+    {
+      "repeat": 4,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 382,
+      "hash_us": 38,
+      "solve_us": 1239
+    },
+    {
+      "repeat": 4,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 1234,
+      "hash_us": 123,
+      "solve_us": 7882
+    },
+    {
+      "repeat": 4,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 5206,
+      "hash_us": 520,
+      "solve_us": 8320
+    },
+    {
+      "repeat": 4,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 1302,
+      "hash_us": 130,
+      "solve_us": 7975
+    },
+    {
+      "repeat": 4,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 5324,
+      "hash_us": 532,
+      "solve_us": 7691
+    },
+    {
+      "repeat": 4,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 159,
+      "hash_us": 15,
+      "solve_us": 1213
+    },
+    {
+      "repeat": 4,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 383,
+      "hash_us": 38,
+      "solve_us": 1355
+    },
+    {
+      "repeat": 4,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 173,
+      "hash_us": 17,
+      "solve_us": 1342
+    },
+    {
+      "repeat": 4,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 6706,
+      "hash_us": 670,
+      "solve_us": 7458
+    },
+    {
+      "repeat": 4,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 157,
+      "hash_us": 15,
+      "solve_us": 1496
+    },
+    {
+      "repeat": 4,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 5358,
+      "hash_us": 535,
+      "solve_us": 7771
+    },
+    {
+      "repeat": 4,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 167,
+      "hash_us": 16,
+      "solve_us": 1275
+    },
+    {
+      "repeat": 4,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 575,
+      "hash_us": 57,
+      "solve_us": 1217
+    },
+    {
+      "repeat": 4,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 201,
+      "hash_us": 20,
+      "solve_us": 1210
+    },
+    {
+      "repeat": 4,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 5541,
+      "hash_us": 554,
+      "solve_us": 7889
+    },
+    {
+      "repeat": 4,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 179,
+      "hash_us": 17,
+      "solve_us": 1265
+    },
+    {
+      "repeat": 5,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 136,
+      "hash_us": 13,
+      "solve_us": 1172
+    },
+    {
+      "repeat": 5,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 367,
+      "hash_us": 36,
+      "solve_us": 1543
+    },
+    {
+      "repeat": 5,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 1656,
+      "hash_us": 165,
+      "solve_us": 7592
+    },
+    {
+      "repeat": 5,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 349,
+      "hash_us": 34,
+      "solve_us": 1311
+    },
+    {
+      "repeat": 5,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 1856,
+      "hash_us": 185,
+      "solve_us": 7940
+    },
+    {
+      "repeat": 5,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 425,
+      "hash_us": 42,
+      "solve_us": 1263
+    },
+    {
+      "repeat": 5,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 2287,
+      "hash_us": 228,
+      "solve_us": 8251
+    },
+    {
+      "repeat": 5,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 386,
+      "hash_us": 38,
+      "solve_us": 1517
+    },
+    {
+      "repeat": 5,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 1179,
+      "hash_us": 117,
+      "solve_us": 7631
+    },
+    {
+      "repeat": 5,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 5549,
+      "hash_us": 554,
+      "solve_us": 7575
+    },
+    {
+      "repeat": 5,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 2277,
+      "hash_us": 227,
+      "solve_us": 8534
+    },
+    {
+      "repeat": 5,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 416,
+      "hash_us": 41,
+      "solve_us": 1449
+    },
+    {
+      "repeat": 5,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 2224,
+      "hash_us": 222,
+      "solve_us": 8220
+    },
+    {
+      "repeat": 5,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 486,
+      "hash_us": 48,
+      "solve_us": 1314
+    },
+    {
+      "repeat": 5,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 184,
+      "hash_us": 18,
+      "solve_us": 2503
+    },
+    {
+      "repeat": 5,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 447,
+      "hash_us": 44,
+      "solve_us": 1686
+    },
+    {
+      "repeat": 6,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 374,
+      "hash_us": 37,
+      "solve_us": 1252
+    },
+    {
+      "repeat": 6,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 253,
+      "hash_us": 25,
+      "solve_us": 1218
+    },
+    {
+      "repeat": 6,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 351,
+      "hash_us": 35,
+      "solve_us": 1478
+    },
+    {
+      "repeat": 6,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 1737,
+      "hash_us": 173,
+      "solve_us": 7825
+    },
+    {
+      "repeat": 6,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 4306,
+      "hash_us": 430,
+      "solve_us": 8113
+    },
+    {
+      "repeat": 6,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 2690,
+      "hash_us": 269,
+      "solve_us": 7707
+    },
+    {
+      "repeat": 6,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 5321,
+      "hash_us": 532,
+      "solve_us": 7845
+    },
+    {
+      "repeat": 6,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 1808,
+      "hash_us": 180,
+      "solve_us": 8411
+    },
+    {
+      "repeat": 6,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 441,
+      "hash_us": 44,
+      "solve_us": 1227
+    },
+    {
+      "repeat": 6,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 174,
+      "hash_us": 17,
+      "solve_us": 1234
+    },
+    {
+      "repeat": 6,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 425,
+      "hash_us": 42,
+      "solve_us": 1810
+    },
+    {
+      "repeat": 6,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 168,
+      "hash_us": 16,
+      "solve_us": 1340
+    },
+    {
+      "repeat": 6,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 483,
+      "hash_us": 48,
+      "solve_us": 1271
+    },
+    {
+      "repeat": 6,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 2200,
+      "hash_us": 220,
+      "solve_us": 7621
+    },
+    {
+      "repeat": 6,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 455,
+      "hash_us": 45,
+      "solve_us": 2658
+    },
+    {
+      "repeat": 6,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 2297,
+      "hash_us": 229,
+      "solve_us": 9804
+    },
+    {
+      "repeat": 7,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 134,
+      "hash_us": 13,
+      "solve_us": 1219
+    },
+    {
+      "repeat": 7,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 380,
+      "hash_us": 38,
+      "solve_us": 4974
+    },
+    {
+      "repeat": 7,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 148,
+      "hash_us": 14,
+      "solve_us": 1475
+    },
+    {
+      "repeat": 7,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 351,
+      "hash_us": 35,
+      "solve_us": 1313
+    },
+    {
+      "repeat": 7,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 1243,
+      "hash_us": 124,
+      "solve_us": 7724
+    },
+    {
+      "repeat": 7,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 427,
+      "hash_us": 42,
+      "solve_us": 4685
+    },
+    {
+      "repeat": 7,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 1299,
+      "hash_us": 129,
+      "solve_us": 8624
+    },
+    {
+      "repeat": 7,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 385,
+      "hash_us": 38,
+      "solve_us": 1398
+    },
+    {
+      "repeat": 7,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 1698,
+      "hash_us": 169,
+      "solve_us": 7580
+    },
+    {
+      "repeat": 7,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 4980,
+      "hash_us": 498,
+      "solve_us": 7453
+    },
+    {
+      "repeat": 7,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 174,
+      "hash_us": 17,
+      "solve_us": 1326
+    },
+    {
+      "repeat": 7,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 424,
+      "hash_us": 42,
+      "solve_us": 1394
+    },
+    {
+      "repeat": 7,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 1602,
+      "hash_us": 160,
+      "solve_us": 7610
+    },
+    {
+      "repeat": 7,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 475,
+      "hash_us": 47,
+      "solve_us": 1290
+    },
+    {
+      "repeat": 7,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 2195,
+      "hash_us": 219,
+      "solve_us": 7853
+    },
+    {
+      "repeat": 7,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 445,
+      "hash_us": 44,
+      "solve_us": 1436
+    },
+    {
+      "repeat": 8,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 376,
+      "hash_us": 37,
+      "solve_us": 1258
+    },
+    {
+      "repeat": 8,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 134,
+      "hash_us": 13,
+      "solve_us": 7788
+    },
+    {
+      "repeat": 8,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 2967,
+      "hash_us": 296,
+      "solve_us": 9960
+    },
+    {
+      "repeat": 8,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 147,
+      "hash_us": 14,
+      "solve_us": 1485
+    },
+    {
+      "repeat": 8,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 420,
+      "hash_us": 42,
+      "solve_us": 1154
+    },
+    {
+      "repeat": 8,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 715,
+      "hash_us": 71,
+      "solve_us": 7823
+    },
+    {
+      "repeat": 8,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 386,
+      "hash_us": 38,
+      "solve_us": 1199
+    },
+    {
+      "repeat": 8,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 811,
+      "hash_us": 81,
+      "solve_us": 8223
+    },
+    {
+      "repeat": 8,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 451,
+      "hash_us": 45,
+      "solve_us": 1321
+    },
+    {
+      "repeat": 8,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 1369,
+      "hash_us": 136,
+      "solve_us": 7795
+    },
+    {
+      "repeat": 8,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 423,
+      "hash_us": 42,
+      "solve_us": 1378
+    },
+    {
+      "repeat": 8,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 169,
+      "hash_us": 16,
+      "solve_us": 1588
+    },
+    {
+      "repeat": 8,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 488,
+      "hash_us": 48,
+      "solve_us": 1283
+    },
+    {
+      "repeat": 8,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 195,
+      "hash_us": 19,
+      "solve_us": 1235
+    },
+    {
+      "repeat": 8,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 446,
+      "hash_us": 44,
+      "solve_us": 1320
+    },
+    {
+      "repeat": 8,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 188,
+      "hash_us": 18,
+      "solve_us": 1332
+    },
+    {
+      "repeat": 9,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 704,
+      "hash_us": 70,
+      "solve_us": 7787
+    },
+    {
+      "repeat": 9,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 2954,
+      "hash_us": 295,
+      "solve_us": 7717
+    },
+    {
+      "repeat": 9,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 145,
+      "hash_us": 14,
+      "solve_us": 1769
+    },
+    {
+      "repeat": 9,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 352,
+      "hash_us": 35,
+      "solve_us": 1482
+    },
+    {
+      "repeat": 9,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 157,
+      "hash_us": 15,
+      "solve_us": 1235
+    },
+    {
+      "repeat": 9,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 435,
+      "hash_us": 43,
+      "solve_us": 1276
+    },
+    {
+      "repeat": 9,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 159,
+      "hash_us": 15,
+      "solve_us": 1344
+    },
+    {
+      "repeat": 9,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 387,
+      "hash_us": 38,
+      "solve_us": 1461
+    },
+    {
+      "repeat": 9,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 173,
+      "hash_us": 17,
+      "solve_us": 1203
+    },
+    {
+      "repeat": 9,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 507,
+      "hash_us": 50,
+      "solve_us": 1248
+    },
+    {
+      "repeat": 9,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 1676,
+      "hash_us": 167,
+      "solve_us": 8046
+    },
+    {
+      "repeat": 9,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 419,
+      "hash_us": 41,
+      "solve_us": 1475
+    },
+    {
+      "repeat": 9,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 175,
+      "hash_us": 17,
+      "solve_us": 1191
+    },
+    {
+      "repeat": 9,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 477,
+      "hash_us": 47,
+      "solve_us": 1253
+    },
+    {
+      "repeat": 9,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 1782,
+      "hash_us": 178,
+      "solve_us": 7803
+    },
+    {
+      "repeat": 9,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 458,
+      "hash_us": 45,
+      "solve_us": 1350
+    },
+    {
+      "repeat": 10,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 368,
+      "hash_us": 36,
+      "solve_us": 4959
+    },
+    {
+      "repeat": 10,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 621,
+      "hash_us": 62,
+      "solve_us": 8147
+    },
+    {
+      "repeat": 10,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 360,
+      "hash_us": 36,
+      "solve_us": 1437
+    },
+    {
+      "repeat": 10,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 2940,
+      "hash_us": 294,
+      "solve_us": 8238
+    },
+    {
+      "repeat": 10,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 6008,
+      "hash_us": 600,
+      "solve_us": 7605
+    },
+    {
+      "repeat": 10,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 1266,
+      "hash_us": 126,
+      "solve_us": 7530
+    },
+    {
+      "repeat": 10,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 4019,
+      "hash_us": 401,
+      "solve_us": 7690
+    },
+    {
+      "repeat": 10,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 167,
+      "hash_us": 16,
+      "solve_us": 1539
+    },
+    {
+      "repeat": 10,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 2481,
+      "hash_us": 248,
+      "solve_us": 7973
+    },
+    {
+      "repeat": 10,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 170,
+      "hash_us": 17,
+      "solve_us": 1233
+    },
+    {
+      "repeat": 10,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 413,
+      "hash_us": 41,
+      "solve_us": 1329
+    },
+    {
+      "repeat": 10,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 171,
+      "hash_us": 17,
+      "solve_us": 1406
+    },
+    {
+      "repeat": 10,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 490,
+      "hash_us": 49,
+      "solve_us": 1260
+    },
+    {
+      "repeat": 10,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 1379,
+      "hash_us": 137,
+      "solve_us": 7995
+    },
+    {
+      "repeat": 10,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 445,
+      "hash_us": 44,
+      "solve_us": 1331
+    },
+    {
+      "repeat": 10,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 187,
+      "hash_us": 18,
+      "solve_us": 1319
+    },
+    {
+      "repeat": 11,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 181,
+      "hash_us": 18,
+      "solve_us": 1434
+    },
+    {
+      "repeat": 11,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 6506,
+      "hash_us": 650,
+      "solve_us": 9599
+    },
+    {
+      "repeat": 11,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 2754,
+      "hash_us": 275,
+      "solve_us": 7983
+    },
+    {
+      "repeat": 11,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 355,
+      "hash_us": 35,
+      "solve_us": 1348
+    },
+    {
+      "repeat": 11,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 3737,
+      "hash_us": 373,
+      "solve_us": 7805
+    },
+    {
+      "repeat": 11,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 6451,
+      "hash_us": 645,
+      "solve_us": 7729
+    },
+    {
+      "repeat": 11,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 186,
+      "hash_us": 18,
+      "solve_us": 1486
+    },
+    {
+      "repeat": 11,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 388,
+      "hash_us": 38,
+      "solve_us": 1411
+    },
+    {
+      "repeat": 11,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 2301,
+      "hash_us": 230,
+      "solve_us": 7941
+    },
+    {
+      "repeat": 11,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 438,
+      "hash_us": 43,
+      "solve_us": 1246
+    },
+    {
+      "repeat": 11,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 169,
+      "hash_us": 16,
+      "solve_us": 1724
+    },
+    {
+      "repeat": 11,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 425,
+      "hash_us": 42,
+      "solve_us": 1302
+    },
+    {
+      "repeat": 11,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 199,
+      "hash_us": 19,
+      "solve_us": 1261
+    },
+    {
+      "repeat": 11,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 490,
+      "hash_us": 49,
+      "solve_us": 1234
+    },
+    {
+      "repeat": 11,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 182,
+      "hash_us": 18,
+      "solve_us": 1284
+    },
+    {
+      "repeat": 11,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 449,
+      "hash_us": 44,
+      "solve_us": 1245
+    },
+    {
+      "repeat": 12,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 5324,
+      "hash_us": 532,
+      "solve_us": 7459
+    },
+    {
+      "repeat": 12,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 131,
+      "hash_us": 13,
+      "solve_us": 1210
+    },
+    {
+      "repeat": 12,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 361,
+      "hash_us": 36,
+      "solve_us": 1310
+    },
+    {
+      "repeat": 12,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 148,
+      "hash_us": 14,
+      "solve_us": 1344
+    },
+    {
+      "repeat": 12,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 435,
+      "hash_us": 43,
+      "solve_us": 1197
+    },
+    {
+      "repeat": 12,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 170,
+      "hash_us": 17,
+      "solve_us": 1248
+    },
+    {
+      "repeat": 12,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 387,
+      "hash_us": 38,
+      "solve_us": 1365
+    },
+    {
+      "repeat": 12,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 157,
+      "hash_us": 15,
+      "solve_us": 1365
+    },
+    {
+      "repeat": 12,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 442,
+      "hash_us": 44,
+      "solve_us": 1317
+    },
+    {
+      "repeat": 12,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 166,
+      "hash_us": 16,
+      "solve_us": 1262
+    },
+    {
+      "repeat": 12,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 422,
+      "hash_us": 42,
+      "solve_us": 1479
+    },
+    {
+      "repeat": 12,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 168,
+      "hash_us": 16,
+      "solve_us": 1349
+    },
+    {
+      "repeat": 12,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 514,
+      "hash_us": 51,
+      "solve_us": 1323
+    },
+    {
+      "repeat": 12,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 176,
+      "hash_us": 17,
+      "solve_us": 1206
+    },
+    {
+      "repeat": 12,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 453,
+      "hash_us": 45,
+      "solve_us": 1352
+    },
+    {
+      "repeat": 12,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 179,
+      "hash_us": 17,
+      "solve_us": 1314
+    },
+    {
+      "repeat": 13,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 124,
+      "hash_us": 12,
+      "solve_us": 1174
+    },
+    {
+      "repeat": 13,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 4611,
+      "hash_us": 461,
+      "solve_us": 7275
+    },
+    {
+      "repeat": 13,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 2824,
+      "hash_us": 282,
+      "solve_us": 7968
+    },
+    {
+      "repeat": 13,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 6488,
+      "hash_us": 648,
+      "solve_us": 7794
+    },
+    {
+      "repeat": 13,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 2781,
+      "hash_us": 278,
+      "solve_us": 7374
+    },
+    {
+      "repeat": 13,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 6330,
+      "hash_us": 633,
+      "solve_us": 7373
+    },
+    {
+      "repeat": 13,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 178,
+      "hash_us": 17,
+      "solve_us": 1322
+    },
+    {
+      "repeat": 13,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 382,
+      "hash_us": 38,
+      "solve_us": 1305
+    },
+    {
+      "repeat": 13,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 157,
+      "hash_us": 15,
+      "solve_us": 2423
+    },
+    {
+      "repeat": 13,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 5431,
+      "hash_us": 543,
+      "solve_us": 7721
+    },
+    {
+      "repeat": 13,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 171,
+      "hash_us": 17,
+      "solve_us": 1495
+    },
+    {
+      "repeat": 13,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 6440,
+      "hash_us": 644,
+      "solve_us": 7784
+    },
+    {
+      "repeat": 13,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 2166,
+      "hash_us": 216,
+      "solve_us": 7763
+    },
+    {
+      "repeat": 13,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 7950,
+      "hash_us": 795,
+      "solve_us": 7332
+    },
+    {
+      "repeat": 13,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 2686,
+      "hash_us": 268,
+      "solve_us": 7989
+    },
+    {
+      "repeat": 13,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 449,
+      "hash_us": 44,
+      "solve_us": 1393
+    },
+    {
+      "repeat": 14,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 2694,
+      "hash_us": 269,
+      "solve_us": 9588
+    },
+    {
+      "repeat": 14,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 126,
+      "hash_us": 12,
+      "solve_us": 1232
+    },
+    {
+      "repeat": 14,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 357,
+      "hash_us": 35,
+      "solve_us": 1269
+    },
+    {
+      "repeat": 14,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 1715,
+      "hash_us": 171,
+      "solve_us": 7655
+    },
+    {
+      "repeat": 14,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 435,
+      "hash_us": 43,
+      "solve_us": 1211
+    },
+    {
+      "repeat": 14,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 153,
+      "hash_us": 15,
+      "solve_us": 1186
+    },
+    {
+      "repeat": 14,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 5348,
+      "hash_us": 534,
+      "solve_us": 7846
+    },
+    {
+      "repeat": 14,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 174,
+      "hash_us": 17,
+      "solve_us": 1258
+    },
+    {
+      "repeat": 14,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 4374,
+      "hash_us": 437,
+      "solve_us": 7609
+    },
+    {
+      "repeat": 14,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 164,
+      "hash_us": 16,
+      "solve_us": 1226
+    },
+    {
+      "repeat": 14,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 419,
+      "hash_us": 41,
+      "solve_us": 2819
+    },
+    {
+      "repeat": 14,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 170,
+      "hash_us": 17,
+      "solve_us": 1334
+    },
+    {
+      "repeat": 14,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 485,
+      "hash_us": 48,
+      "solve_us": 1277
+    },
+    {
+      "repeat": 14,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 2706,
+      "hash_us": 270,
+      "solve_us": 7647
+    },
+    {
+      "repeat": 14,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 447,
+      "hash_us": 44,
+      "solve_us": 1424
+    },
+    {
+      "repeat": 14,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 181,
+      "hash_us": 18,
+      "solve_us": 2662
+    },
+    {
+      "repeat": 15,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 1104,
+      "hash_us": 110,
+      "solve_us": 7561
+    },
+    {
+      "repeat": 15,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 4839,
+      "hash_us": 483,
+      "solve_us": 8052
+    },
+    {
+      "repeat": 15,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 174,
+      "hash_us": 17,
+      "solve_us": 1361
+    },
+    {
+      "repeat": 15,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 357,
+      "hash_us": 35,
+      "solve_us": 1314
+    },
+    {
+      "repeat": 15,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 1499,
+      "hash_us": 149,
+      "solve_us": 8107
+    },
+    {
+      "repeat": 15,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 428,
+      "hash_us": 42,
+      "solve_us": 1261
+    },
+    {
+      "repeat": 15,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 161,
+      "hash_us": 16,
+      "solve_us": 1237
+    },
+    {
+      "repeat": 15,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 384,
+      "hash_us": 38,
+      "solve_us": 1310
+    },
+    {
+      "repeat": 15,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 174,
+      "hash_us": 17,
+      "solve_us": 1233
+    },
+    {
+      "repeat": 15,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 434,
+      "hash_us": 43,
+      "solve_us": 1247
+    },
+    {
+      "repeat": 15,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 3081,
+      "hash_us": 308,
+      "solve_us": 8909
+    },
+    {
+      "repeat": 15,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 413,
+      "hash_us": 41,
+      "solve_us": 1447
+    },
+    {
+      "repeat": 15,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 182,
+      "hash_us": 18,
+      "solve_us": 1239
+    },
+    {
+      "repeat": 15,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 6563,
+      "hash_us": 656,
+      "solve_us": 7473
+    },
+    {
+      "repeat": 15,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 181,
+      "hash_us": 18,
+      "solve_us": 1312
+    },
+    {
+      "repeat": 15,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 449,
+      "hash_us": 44,
+      "solve_us": 1478
+    },
+    {
+      "repeat": 16,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 371,
+      "hash_us": 37,
+      "solve_us": 1243
+    },
+    {
+      "repeat": 16,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 1684,
+      "hash_us": 168,
+      "solve_us": 7714
+    },
+    {
+      "repeat": 16,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 353,
+      "hash_us": 35,
+      "solve_us": 2710
+    },
+    {
+      "repeat": 16,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 1770,
+      "hash_us": 177,
+      "solve_us": 8280
+    },
+    {
+      "repeat": 16,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 4952,
+      "hash_us": 495,
+      "solve_us": 8252
+    },
+    {
+      "repeat": 16,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 151,
+      "hash_us": 15,
+      "solve_us": 1233
+    },
+    {
+      "repeat": 16,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 389,
+      "hash_us": 38,
+      "solve_us": 1414
+    },
+    {
+      "repeat": 16,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 162,
+      "hash_us": 16,
+      "solve_us": 1305
+    },
+    {
+      "repeat": 16,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 481,
+      "hash_us": 48,
+      "solve_us": 1234
+    },
+    {
+      "repeat": 16,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 1326,
+      "hash_us": 132,
+      "solve_us": 8122
+    },
+    {
+      "repeat": 16,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 4505,
+      "hash_us": 450,
+      "solve_us": 8693
+    },
+    {
+      "repeat": 16,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 168,
+      "hash_us": 16,
+      "solve_us": 1180
+    },
+    {
+      "repeat": 16,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 487,
+      "hash_us": 48,
+      "solve_us": 1220
+    },
+    {
+      "repeat": 16,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 2802,
+      "hash_us": 280,
+      "solve_us": 7652
+    },
+    {
+      "repeat": 16,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 6053,
+      "hash_us": 605,
+      "solve_us": 8331
+    },
+    {
+      "repeat": 16,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 2368,
+      "hash_us": 236,
+      "solve_us": 8469
+    },
+    {
+      "repeat": 17,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 123,
+      "hash_us": 12,
+      "solve_us": 1234
+    },
+    {
+      "repeat": 17,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 381,
+      "hash_us": 38,
+      "solve_us": 1250
+    },
+    {
+      "repeat": 17,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 149,
+      "hash_us": 14,
+      "solve_us": 1329
+    },
+    {
+      "repeat": 17,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 6119,
+      "hash_us": 611,
+      "solve_us": 7975
+    },
+    {
+      "repeat": 17,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 177,
+      "hash_us": 17,
+      "solve_us": 1238
+    },
+    {
+      "repeat": 17,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 429,
+      "hash_us": 42,
+      "solve_us": 1250
+    },
+    {
+      "repeat": 17,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 159,
+      "hash_us": 15,
+      "solve_us": 1344
+    },
+    {
+      "repeat": 17,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 394,
+      "hash_us": 39,
+      "solve_us": 1445
+    },
+    {
+      "repeat": 17,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 1603,
+      "hash_us": 160,
+      "solve_us": 7543
+    },
+    {
+      "repeat": 17,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 430,
+      "hash_us": 43,
+      "solve_us": 1286
+    },
+    {
+      "repeat": 17,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 171,
+      "hash_us": 17,
+      "solve_us": 1265
+    },
+    {
+      "repeat": 17,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 419,
+      "hash_us": 41,
+      "solve_us": 5410
+    },
+    {
+      "repeat": 17,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 2233,
+      "hash_us": 223,
+      "solve_us": 8286
+    },
+    {
+      "repeat": 17,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 4542,
+      "hash_us": 454,
+      "solve_us": 8070
+    },
+    {
+      "repeat": 17,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 2308,
+      "hash_us": 230,
+      "solve_us": 7926
+    },
+    {
+      "repeat": 17,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 444,
+      "hash_us": 44,
+      "solve_us": 1397
+    },
+    {
+      "repeat": 18,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 373,
+      "hash_us": 37,
+      "solve_us": 1235
+    },
+    {
+      "repeat": 18,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 134,
+      "hash_us": 13,
+      "solve_us": 1202
+    },
+    {
+      "repeat": 18,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 357,
+      "hash_us": 35,
+      "solve_us": 1309
+    },
+    {
+      "repeat": 18,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 150,
+      "hash_us": 15,
+      "solve_us": 2561
+    },
+    {
+      "repeat": 18,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 432,
+      "hash_us": 43,
+      "solve_us": 1236
+    },
+    {
+      "repeat": 18,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 155,
+      "hash_us": 15,
+      "solve_us": 1206
+    },
+    {
+      "repeat": 18,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 398,
+      "hash_us": 39,
+      "solve_us": 1581
+    },
+    {
+      "repeat": 18,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 178,
+      "hash_us": 17,
+      "solve_us": 1341
+    },
+    {
+      "repeat": 18,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 446,
+      "hash_us": 44,
+      "solve_us": 1494
+    },
+    {
+      "repeat": 18,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 1688,
+      "hash_us": 168,
+      "solve_us": 7831
+    },
+    {
+      "repeat": 18,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 417,
+      "hash_us": 41,
+      "solve_us": 1328
+    },
+    {
+      "repeat": 18,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 166,
+      "hash_us": 16,
+      "solve_us": 1332
+    },
+    {
+      "repeat": 18,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 4159,
+      "hash_us": 415,
+      "solve_us": 8273
+    },
+    {
+      "repeat": 18,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 184,
+      "hash_us": 18,
+      "solve_us": 2557
+    },
+    {
+      "repeat": 18,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 449,
+      "hash_us": 44,
+      "solve_us": 1330
+    },
+    {
+      "repeat": 18,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 187,
+      "hash_us": 18,
+      "solve_us": 1433
+    },
+    {
+      "repeat": 19,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 132,
+      "hash_us": 13,
+      "solve_us": 1239
+    },
+    {
+      "repeat": 19,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 373,
+      "hash_us": 37,
+      "solve_us": 1245
+    },
+    {
+      "repeat": 19,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 145,
+      "hash_us": 14,
+      "solve_us": 1420
+    },
+    {
+      "repeat": 19,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 352,
+      "hash_us": 35,
+      "solve_us": 1328
+    },
+    {
+      "repeat": 19,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 156,
+      "hash_us": 15,
+      "solve_us": 1193
+    },
+    {
+      "repeat": 19,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 4378,
+      "hash_us": 437,
+      "solve_us": 7451
+    },
+    {
+      "repeat": 19,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 167,
+      "hash_us": 16,
+      "solve_us": 1352
+    },
+    {
+      "repeat": 19,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 4546,
+      "hash_us": 454,
+      "solve_us": 8009
+    },
+    {
+      "repeat": 19,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 172,
+      "hash_us": 17,
+      "solve_us": 1256
+    },
+    {
+      "repeat": 19,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 443,
+      "hash_us": 44,
+      "solve_us": 1283
+    },
+    {
+      "repeat": 19,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 175,
+      "hash_us": 17,
+      "solve_us": 1557
+    },
+    {
+      "repeat": 19,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 420,
+      "hash_us": 42,
+      "solve_us": 1469
+    },
+    {
+      "repeat": 19,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 195,
+      "hash_us": 19,
+      "solve_us": 1297
+    },
+    {
+      "repeat": 19,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 477,
+      "hash_us": 47,
+      "solve_us": 1365
+    },
+    {
+      "repeat": 19,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 2568,
+      "hash_us": 256,
+      "solve_us": 8881
+    },
+    {
+      "repeat": 19,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 4088,
+      "hash_us": 408,
+      "solve_us": 8853
+    },
+    {
+      "repeat": 20,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 379,
+      "hash_us": 37,
+      "solve_us": 1358
+    },
+    {
+      "repeat": 20,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 151,
+      "hash_us": 15,
+      "solve_us": 1178
+    },
+    {
+      "repeat": 20,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 357,
+      "hash_us": 35,
+      "solve_us": 3014
+    },
+    {
+      "repeat": 20,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 178,
+      "hash_us": 17,
+      "solve_us": 1251
+    },
+    {
+      "repeat": 20,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 1630,
+      "hash_us": 163,
+      "solve_us": 8465
+    },
+    {
+      "repeat": 20,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 156,
+      "hash_us": 15,
+      "solve_us": 1295
+    },
+    {
+      "repeat": 20,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 394,
+      "hash_us": 39,
+      "solve_us": 1452
+    },
+    {
+      "repeat": 20,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 177,
+      "hash_us": 17,
+      "solve_us": 1362
+    },
+    {
+      "repeat": 20,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 453,
+      "hash_us": 45,
+      "solve_us": 2565
+    },
+    {
+      "repeat": 20,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 173,
+      "hash_us": 17,
+      "solve_us": 5638
+    },
+    {
+      "repeat": 20,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 421,
+      "hash_us": 42,
+      "solve_us": 1344
+    },
+    {
+      "repeat": 20,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 172,
+      "hash_us": 17,
+      "solve_us": 1870
+    },
+    {
+      "repeat": 20,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 5831,
+      "hash_us": 583,
+      "solve_us": 7737
+    },
+    {
+      "repeat": 20,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 179,
+      "hash_us": 17,
+      "solve_us": 1228
+    },
+    {
+      "repeat": 20,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 5761,
+      "hash_us": 576,
+      "solve_us": 9295
+    },
+    {
+      "repeat": 20,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 207,
+      "hash_us": 20,
+      "solve_us": 1339
+    },
+    {
+      "repeat": 21,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 1378,
+      "hash_us": 137,
+      "solve_us": 9434
+    },
+    {
+      "repeat": 21,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 367,
+      "hash_us": 36,
+      "solve_us": 1235
+    },
+    {
+      "repeat": 21,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 1253,
+      "hash_us": 125,
+      "solve_us": 8717
+    },
+    {
+      "repeat": 21,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 357,
+      "hash_us": 35,
+      "solve_us": 1454
+    },
+    {
+      "repeat": 21,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 2352,
+      "hash_us": 235,
+      "solve_us": 7791
+    },
+    {
+      "repeat": 21,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 424,
+      "hash_us": 42,
+      "solve_us": 1223
+    },
+    {
+      "repeat": 21,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 1404,
+      "hash_us": 140,
+      "solve_us": 8296
+    },
+    {
+      "repeat": 21,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 379,
+      "hash_us": 37,
+      "solve_us": 1211
+    },
+    {
+      "repeat": 21,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 169,
+      "hash_us": 16,
+      "solve_us": 1188
+    },
+    {
+      "repeat": 21,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 5950,
+      "hash_us": 595,
+      "solve_us": 7629
+    },
+    {
+      "repeat": 21,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 1838,
+      "hash_us": 183,
+      "solve_us": 8244
+    },
+    {
+      "repeat": 21,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 424,
+      "hash_us": 42,
+      "solve_us": 2720
+    },
+    {
+      "repeat": 21,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 173,
+      "hash_us": 17,
+      "solve_us": 1131
+    },
+    {
+      "repeat": 21,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 488,
+      "hash_us": 48,
+      "solve_us": 1224
+    },
+    {
+      "repeat": 21,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 2304,
+      "hash_us": 230,
+      "solve_us": 7849
+    },
+    {
+      "repeat": 21,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 450,
+      "hash_us": 45,
+      "solve_us": 1446
+    },
+    {
+      "repeat": 22,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 1936,
+      "hash_us": 193,
+      "solve_us": 7625
+    },
+    {
+      "repeat": 22,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 148,
+      "hash_us": 14,
+      "solve_us": 2657
+    },
+    {
+      "repeat": 22,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 489,
+      "hash_us": 48,
+      "solve_us": 1373
+    },
+    {
+      "repeat": 22,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 157,
+      "hash_us": 15,
+      "solve_us": 1395
+    },
+    {
+      "repeat": 22,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 430,
+      "hash_us": 43,
+      "solve_us": 1251
+    },
+    {
+      "repeat": 22,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 2731,
+      "hash_us": 273,
+      "solve_us": 7742
+    },
+    {
+      "repeat": 22,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 385,
+      "hash_us": 38,
+      "solve_us": 1841
+    },
+    {
+      "repeat": 22,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 159,
+      "hash_us": 15,
+      "solve_us": 1204
+    },
+    {
+      "repeat": 22,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 449,
+      "hash_us": 44,
+      "solve_us": 1274
+    },
+    {
+      "repeat": 22,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 183,
+      "hash_us": 18,
+      "solve_us": 1201
+    },
+    {
+      "repeat": 22,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 425,
+      "hash_us": 42,
+      "solve_us": 1548
+    },
+    {
+      "repeat": 22,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 174,
+      "hash_us": 17,
+      "solve_us": 1388
+    },
+    {
+      "repeat": 22,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 490,
+      "hash_us": 49,
+      "solve_us": 1211
+    },
+    {
+      "repeat": 22,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 187,
+      "hash_us": 18,
+      "solve_us": 1182
+    },
+    {
+      "repeat": 22,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 444,
+      "hash_us": 44,
+      "solve_us": 1574
+    },
+    {
+      "repeat": 22,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 192,
+      "hash_us": 19,
+      "solve_us": 1420
+    },
+    {
+      "repeat": 23,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 2951,
+      "hash_us": 295,
+      "solve_us": 7447
+    },
+    {
+      "repeat": 23,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 366,
+      "hash_us": 36,
+      "solve_us": 1243
+    },
+    {
+      "repeat": 23,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 1858,
+      "hash_us": 185,
+      "solve_us": 7893
+    },
+    {
+      "repeat": 23,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 358,
+      "hash_us": 35,
+      "solve_us": 1325
+    },
+    {
+      "repeat": 23,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 2693,
+      "hash_us": 269,
+      "solve_us": 7653
+    },
+    {
+      "repeat": 23,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 432,
+      "hash_us": 43,
+      "solve_us": 1231
+    },
+    {
+      "repeat": 23,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 160,
+      "hash_us": 16,
+      "solve_us": 1329
+    },
+    {
+      "repeat": 23,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 383,
+      "hash_us": 38,
+      "solve_us": 1467
+    },
+    {
+      "repeat": 23,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 171,
+      "hash_us": 17,
+      "solve_us": 1474
+    },
+    {
+      "repeat": 23,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 430,
+      "hash_us": 43,
+      "solve_us": 1260
+    },
+    {
+      "repeat": 23,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 175,
+      "hash_us": 17,
+      "solve_us": 5436
+    },
+    {
+      "repeat": 23,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 6442,
+      "hash_us": 644,
+      "solve_us": 8234
+    },
+    {
+      "repeat": 23,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 176,
+      "hash_us": 17,
+      "solve_us": 1224
+    },
+    {
+      "repeat": 23,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 5511,
+      "hash_us": 551,
+      "solve_us": 7507
+    },
+    {
+      "repeat": 23,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 182,
+      "hash_us": 18,
+      "solve_us": 1403
+    },
+    {
+      "repeat": 23,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 449,
+      "hash_us": 44,
+      "solve_us": 1434
+    },
+    {
+      "repeat": 24,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 372,
+      "hash_us": 37,
+      "solve_us": 1218
+    },
+    {
+      "repeat": 24,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 148,
+      "hash_us": 14,
+      "solve_us": 1241
+    },
+    {
+      "repeat": 24,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 355,
+      "hash_us": 35,
+      "solve_us": 2591
+    },
+    {
+      "repeat": 24,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 1789,
+      "hash_us": 178,
+      "solve_us": 9439
+    },
+    {
+      "repeat": 24,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 448,
+      "hash_us": 44,
+      "solve_us": 1252
+    },
+    {
+      "repeat": 24,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 3247,
+      "hash_us": 324,
+      "solve_us": 7292
+    },
+    {
+      "repeat": 24,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 385,
+      "hash_us": 38,
+      "solve_us": 1320
+    },
+    {
+      "repeat": 24,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 169,
+      "hash_us": 16,
+      "solve_us": 1327
+    },
+    {
+      "repeat": 24,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 461,
+      "hash_us": 46,
+      "solve_us": 1255
+    },
+    {
+      "repeat": 24,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 158,
+      "hash_us": 15,
+      "solve_us": 1474
+    },
+    {
+      "repeat": 24,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 4965,
+      "hash_us": 496,
+      "solve_us": 7728
+    },
+    {
+      "repeat": 24,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 171,
+      "hash_us": 17,
+      "solve_us": 2673
+    },
+    {
+      "repeat": 24,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 475,
+      "hash_us": 47,
+      "solve_us": 1222
+    },
+    {
+      "repeat": 24,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 184,
+      "hash_us": 18,
+      "solve_us": 1209
+    },
+    {
+      "repeat": 24,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 463,
+      "hash_us": 46,
+      "solve_us": 1437
+    },
+    {
+      "repeat": 24,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 190,
+      "hash_us": 19,
+      "solve_us": 1308
+    },
+    {
+      "repeat": 25,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 1673,
+      "hash_us": 167,
+      "solve_us": 8057
+    },
+    {
+      "repeat": 25,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 370,
+      "hash_us": 37,
+      "solve_us": 4092
+    },
+    {
+      "repeat": 25,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 1799,
+      "hash_us": 179,
+      "solve_us": 7857
+    },
+    {
+      "repeat": 25,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 351,
+      "hash_us": 35,
+      "solve_us": 1350
+    },
+    {
+      "repeat": 25,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 3277,
+      "hash_us": 327,
+      "solve_us": 8034
+    },
+    {
+      "repeat": 25,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 412,
+      "hash_us": 41,
+      "solve_us": 1237
+    },
+    {
+      "repeat": 25,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 162,
+      "hash_us": 16,
+      "solve_us": 1283
+    },
+    {
+      "repeat": 25,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 379,
+      "hash_us": 37,
+      "solve_us": 1302
+    },
+    {
+      "repeat": 25,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 2284,
+      "hash_us": 228,
+      "solve_us": 8173
+    },
+    {
+      "repeat": 25,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 443,
+      "hash_us": 44,
+      "solve_us": 1274
+    },
+    {
+      "repeat": 25,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 2351,
+      "hash_us": 235,
+      "solve_us": 8820
+    },
+    {
+      "repeat": 25,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 416,
+      "hash_us": 41,
+      "solve_us": 2586
+    },
+    {
+      "repeat": 25,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 183,
+      "hash_us": 18,
+      "solve_us": 1234
+    },
+    {
+      "repeat": 25,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 3651,
+      "hash_us": 365,
+      "solve_us": 8175
+    },
+    {
+      "repeat": 25,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 182,
+      "hash_us": 18,
+      "solve_us": 1308
+    },
+    {
+      "repeat": 25,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 448,
+      "hash_us": 44,
+      "solve_us": 1390
+    },
+    {
+      "repeat": 26,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 390,
+      "hash_us": 39,
+      "solve_us": 1228
+    },
+    {
+      "repeat": 26,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 651,
+      "hash_us": 65,
+      "solve_us": 7645
+    },
+    {
+      "repeat": 26,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 6389,
+      "hash_us": 638,
+      "solve_us": 8449
+    },
+    {
+      "repeat": 26,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 147,
+      "hash_us": 14,
+      "solve_us": 1535
+    },
+    {
+      "repeat": 26,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 5994,
+      "hash_us": 599,
+      "solve_us": 7899
+    },
+    {
+      "repeat": 26,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 2198,
+      "hash_us": 219,
+      "solve_us": 7383
+    },
+    {
+      "repeat": 26,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 5020,
+      "hash_us": 502,
+      "solve_us": 9927
+    },
+    {
+      "repeat": 26,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 3274,
+      "hash_us": 327,
+      "solve_us": 8363
+    },
+    {
+      "repeat": 26,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 4196,
+      "hash_us": 419,
+      "solve_us": 8172
+    },
+    {
+      "repeat": 26,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 1655,
+      "hash_us": 165,
+      "solve_us": 8212
+    },
+    {
+      "repeat": 26,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 4424,
+      "hash_us": 442,
+      "solve_us": 8245
+    },
+    {
+      "repeat": 26,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 2278,
+      "hash_us": 227,
+      "solve_us": 8030
+    },
+    {
+      "repeat": 26,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 485,
+      "hash_us": 48,
+      "solve_us": 1171
+    },
+    {
+      "repeat": 26,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 182,
+      "hash_us": 18,
+      "solve_us": 1235
+    },
+    {
+      "repeat": 26,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 452,
+      "hash_us": 45,
+      "solve_us": 2553
+    },
+    {
+      "repeat": 26,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 191,
+      "hash_us": 19,
+      "solve_us": 1306
+    },
+    {
+      "repeat": 27,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 1080,
+      "hash_us": 108,
+      "solve_us": 8432
+    },
+    {
+      "repeat": 27,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 372,
+      "hash_us": 37,
+      "solve_us": 1255
+    },
+    {
+      "repeat": 27,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 152,
+      "hash_us": 15,
+      "solve_us": 1302
+    },
+    {
+      "repeat": 27,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 351,
+      "hash_us": 35,
+      "solve_us": 1344
+    },
+    {
+      "repeat": 27,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 2377,
+      "hash_us": 237,
+      "solve_us": 7708
+    },
+    {
+      "repeat": 27,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 432,
+      "hash_us": 43,
+      "solve_us": 1247
+    },
+    {
+      "repeat": 27,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 175,
+      "hash_us": 17,
+      "solve_us": 1305
+    },
+    {
+      "repeat": 27,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 2235,
+      "hash_us": 223,
+      "solve_us": 7964
+    },
+    {
+      "repeat": 27,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 1644,
+      "hash_us": 164,
+      "solve_us": 7666
+    },
+    {
+      "repeat": 27,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 6482,
+      "hash_us": 648,
+      "solve_us": 7464
+    },
+    {
+      "repeat": 27,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 2325,
+      "hash_us": 232,
+      "solve_us": 8087
+    },
+    {
+      "repeat": 27,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 415,
+      "hash_us": 41,
+      "solve_us": 1298
+    },
+    {
+      "repeat": 27,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 182,
+      "hash_us": 18,
+      "solve_us": 1275
+    },
+    {
+      "repeat": 27,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 472,
+      "hash_us": 47,
+      "solve_us": 1271
+    },
+    {
+      "repeat": 27,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 2220,
+      "hash_us": 222,
+      "solve_us": 8159
+    },
+    {
+      "repeat": 27,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 449,
+      "hash_us": 44,
+      "solve_us": 1476
+    },
+    {
+      "repeat": 28,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 373,
+      "hash_us": 37,
+      "solve_us": 1253
+    },
+    {
+      "repeat": 28,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 127,
+      "hash_us": 12,
+      "solve_us": 1217
+    },
+    {
+      "repeat": 28,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 356,
+      "hash_us": 35,
+      "solve_us": 1344
+    },
+    {
+      "repeat": 28,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 148,
+      "hash_us": 14,
+      "solve_us": 1366
+    },
+    {
+      "repeat": 28,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 425,
+      "hash_us": 42,
+      "solve_us": 1244
+    },
+    {
+      "repeat": 28,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 2139,
+      "hash_us": 213,
+      "solve_us": 7823
+    },
+    {
+      "repeat": 28,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 387,
+      "hash_us": 38,
+      "solve_us": 1243
+    },
+    {
+      "repeat": 28,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 2224,
+      "hash_us": 222,
+      "solve_us": 7885
+    },
+    {
+      "repeat": 28,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 461,
+      "hash_us": 46,
+      "solve_us": 1230
+    },
+    {
+      "repeat": 28,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 156,
+      "hash_us": 15,
+      "solve_us": 1220
+    },
+    {
+      "repeat": 28,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 415,
+      "hash_us": 41,
+      "solve_us": 1402
+    },
+    {
+      "repeat": 28,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 168,
+      "hash_us": 16,
+      "solve_us": 2691
+    },
+    {
+      "repeat": 28,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 487,
+      "hash_us": 48,
+      "solve_us": 1299
+    },
+    {
+      "repeat": 28,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 2320,
+      "hash_us": 232,
+      "solve_us": 7646
+    },
+    {
+      "repeat": 28,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 444,
+      "hash_us": 44,
+      "solve_us": 1380
+    },
+    {
+      "repeat": 28,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 2175,
+      "hash_us": 217,
+      "solve_us": 7625
+    },
+    {
+      "repeat": 29,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 2075,
+      "hash_us": 207,
+      "solve_us": 7248
+    },
+    {
+      "repeat": 29,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 6282,
+      "hash_us": 628,
+      "solve_us": 7347
+    },
+    {
+      "repeat": 29,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 3424,
+      "hash_us": 342,
+      "solve_us": 7971
+    },
+    {
+      "repeat": 29,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 352,
+      "hash_us": 35,
+      "solve_us": 1382
+    },
+    {
+      "repeat": 29,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 150,
+      "hash_us": 15,
+      "solve_us": 1203
+    },
+    {
+      "repeat": 29,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 4408,
+      "hash_us": 440,
+      "solve_us": 7939
+    },
+    {
+      "repeat": 29,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 166,
+      "hash_us": 16,
+      "solve_us": 1466
+    },
+    {
+      "repeat": 29,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 384,
+      "hash_us": 38,
+      "solve_us": 1326
+    },
+    {
+      "repeat": 29,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 159,
+      "hash_us": 15,
+      "solve_us": 1212
+    },
+    {
+      "repeat": 29,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 437,
+      "hash_us": 43,
+      "solve_us": 1247
+    },
+    {
+      "repeat": 29,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 173,
+      "hash_us": 17,
+      "solve_us": 1532
+    },
+    {
+      "repeat": 29,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 427,
+      "hash_us": 42,
+      "solve_us": 1242
+    },
+    {
+      "repeat": 29,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 2238,
+      "hash_us": 223,
+      "solve_us": 7351
+    },
+    {
+      "repeat": 29,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 477,
+      "hash_us": 47,
+      "solve_us": 1202
+    },
+    {
+      "repeat": 29,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 1826,
+      "hash_us": 182,
+      "solve_us": 8481
+    },
+    {
+      "repeat": 29,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 452,
+      "hash_us": 45,
+      "solve_us": 2661
+    },
+    {
+      "repeat": 30,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 393,
+      "hash_us": 39,
+      "solve_us": 1257
+    },
+    {
+      "repeat": 30,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 142,
+      "hash_us": 14,
+      "solve_us": 1128
+    },
+    {
+      "repeat": 30,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 368,
+      "hash_us": 36,
+      "solve_us": 1313
+    },
+    {
+      "repeat": 30,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 145,
+      "hash_us": 14,
+      "solve_us": 1413
+    },
+    {
+      "repeat": 30,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 465,
+      "hash_us": 46,
+      "solve_us": 1249
+    },
+    {
+      "repeat": 30,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 174,
+      "hash_us": 17,
+      "solve_us": 2443
+    },
+    {
+      "repeat": 30,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 3391,
+      "hash_us": 339,
+      "solve_us": 8454
+    },
+    {
+      "repeat": 30,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 162,
+      "hash_us": 16,
+      "solve_us": 1501
+    },
+    {
+      "repeat": 30,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 439,
+      "hash_us": 43,
+      "solve_us": 1293
+    },
+    {
+      "repeat": 30,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 180,
+      "hash_us": 18,
+      "solve_us": 1242
+    },
+    {
+      "repeat": 30,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 419,
+      "hash_us": 41,
+      "solve_us": 1481
+    },
+    {
+      "repeat": 30,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 2279,
+      "hash_us": 227,
+      "solve_us": 9479
+    },
+    {
+      "repeat": 30,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 479,
+      "hash_us": 47,
+      "solve_us": 1234
+    },
+    {
+      "repeat": 30,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 2314,
+      "hash_us": 231,
+      "solve_us": 8691
+    },
+    {
+      "repeat": 30,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 6125,
+      "hash_us": 612,
+      "solve_us": 8562
+    },
+    {
+      "repeat": 30,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 200,
+      "hash_us": 20,
+      "solve_us": 1399
+    },
+    {
+      "repeat": 31,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 1734,
+      "hash_us": 173,
+      "solve_us": 8198
+    },
+    {
+      "repeat": 31,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 372,
+      "hash_us": 37,
+      "solve_us": 1319
+    },
+    {
+      "repeat": 31,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 1195,
+      "hash_us": 119,
+      "solve_us": 9174
+    },
+    {
+      "repeat": 31,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 355,
+      "hash_us": 35,
+      "solve_us": 1394
+    },
+    {
+      "repeat": 31,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 170,
+      "hash_us": 17,
+      "solve_us": 1255
+    },
+    {
+      "repeat": 31,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 419,
+      "hash_us": 41,
+      "solve_us": 1143
+    },
+    {
+      "repeat": 31,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 1322,
+      "hash_us": 132,
+      "solve_us": 9185
+    },
+    {
+      "repeat": 31,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 391,
+      "hash_us": 39,
+      "solve_us": 1448
+    },
+    {
+      "repeat": 31,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 172,
+      "hash_us": 17,
+      "solve_us": 1335
+    },
+    {
+      "repeat": 31,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 6783,
+      "hash_us": 678,
+      "solve_us": 8456
+    },
+    {
+      "repeat": 31,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 2363,
+      "hash_us": 236,
+      "solve_us": 8268
+    },
+    {
+      "repeat": 31,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 413,
+      "hash_us": 41,
+      "solve_us": 1381
+    },
+    {
+      "repeat": 31,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 1397,
+      "hash_us": 139,
+      "solve_us": 8206
+    },
+    {
+      "repeat": 31,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 477,
+      "hash_us": 47,
+      "solve_us": 1267
+    },
+    {
+      "repeat": 31,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 3526,
+      "hash_us": 352,
+      "solve_us": 8545
+    },
+    {
+      "repeat": 31,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 446,
+      "hash_us": 44,
+      "solve_us": 1391
+    },
+    {
+      "repeat": 32,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 5462,
+      "hash_us": 546,
+      "solve_us": 7717
+    },
+    {
+      "repeat": 32,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 146,
+      "hash_us": 14,
+      "solve_us": 1203
+    },
+    {
+      "repeat": 32,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 365,
+      "hash_us": 36,
+      "solve_us": 2628
+    },
+    {
+      "repeat": 32,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 149,
+      "hash_us": 14,
+      "solve_us": 2700
+    },
+    {
+      "repeat": 32,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 3968,
+      "hash_us": 396,
+      "solve_us": 8496
+    },
+    {
+      "repeat": 32,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 1743,
+      "hash_us": 174,
+      "solve_us": 7867
+    },
+    {
+      "repeat": 32,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 2730,
+      "hash_us": 273,
+      "solve_us": 8762
+    },
+    {
+      "repeat": 32,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 5634,
+      "hash_us": 563,
+      "solve_us": 8653
+    },
+    {
+      "repeat": 32,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 5950,
+      "hash_us": 595,
+      "solve_us": 7562
+    },
+    {
+      "repeat": 32,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 2911,
+      "hash_us": 291,
+      "solve_us": 7782
+    },
+    {
+      "repeat": 32,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 5852,
+      "hash_us": 585,
+      "solve_us": 8420
+    },
+    {
+      "repeat": 32,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 167,
+      "hash_us": 16,
+      "solve_us": 1380
+    },
+    {
+      "repeat": 32,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 474,
+      "hash_us": 47,
+      "solve_us": 2490
+    },
+    {
+      "repeat": 32,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 177,
+      "hash_us": 17,
+      "solve_us": 1234
+    },
+    {
+      "repeat": 32,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 443,
+      "hash_us": 44,
+      "solve_us": 2626
+    },
+    {
+      "repeat": 32,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 197,
+      "hash_us": 19,
+      "solve_us": 1538
+    },
+    {
+      "repeat": 33,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 133,
+      "hash_us": 13,
+      "solve_us": 1209
+    },
+    {
+      "repeat": 33,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 370,
+      "hash_us": 37,
+      "solve_us": 1239
+    },
+    {
+      "repeat": 33,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 145,
+      "hash_us": 14,
+      "solve_us": 3806
+    },
+    {
+      "repeat": 33,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 356,
+      "hash_us": 35,
+      "solve_us": 1422
+    },
+    {
+      "repeat": 33,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 152,
+      "hash_us": 15,
+      "solve_us": 1210
+    },
+    {
+      "repeat": 33,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 2498,
+      "hash_us": 249,
+      "solve_us": 7416
+    },
+    {
+      "repeat": 33,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 2856,
+      "hash_us": 285,
+      "solve_us": 7810
+    },
+    {
+      "repeat": 33,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 379,
+      "hash_us": 37,
+      "solve_us": 1353
+    },
+    {
+      "repeat": 33,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 2217,
+      "hash_us": 221,
+      "solve_us": 7881
+    },
+    {
+      "repeat": 33,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 441,
+      "hash_us": 44,
+      "solve_us": 1234
+    },
+    {
+      "repeat": 33,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 169,
+      "hash_us": 16,
+      "solve_us": 1343
+    },
+    {
+      "repeat": 33,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 414,
+      "hash_us": 41,
+      "solve_us": 1401
+    },
+    {
+      "repeat": 33,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 186,
+      "hash_us": 18,
+      "solve_us": 1207
+    },
+    {
+      "repeat": 33,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 486,
+      "hash_us": 48,
+      "solve_us": 2562
+    },
+    {
+      "repeat": 33,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 180,
+      "hash_us": 18,
+      "solve_us": 1529
+    },
+    {
+      "repeat": 33,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 445,
+      "hash_us": 44,
+      "solve_us": 1399
+    },
+    {
+      "repeat": 34,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 4144,
+      "hash_us": 414,
+      "solve_us": 7946
+    },
+    {
+      "repeat": 34,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 123,
+      "hash_us": 12,
+      "solve_us": 1257
+    },
+    {
+      "repeat": 34,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 3266,
+      "hash_us": 326,
+      "solve_us": 9769
+    },
+    {
+      "repeat": 34,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 150,
+      "hash_us": 15,
+      "solve_us": 1585
+    },
+    {
+      "repeat": 34,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 3133,
+      "hash_us": 313,
+      "solve_us": 7858
+    },
+    {
+      "repeat": 34,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 159,
+      "hash_us": 15,
+      "solve_us": 3143
+    },
+    {
+      "repeat": 34,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 3134,
+      "hash_us": 313,
+      "solve_us": 8136
+    },
+    {
+      "repeat": 34,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 2752,
+      "hash_us": 275,
+      "solve_us": 8209
+    },
+    {
+      "repeat": 34,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 443,
+      "hash_us": 44,
+      "solve_us": 1267
+    },
+    {
+      "repeat": 34,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 162,
+      "hash_us": 16,
+      "solve_us": 8368
+    },
+    {
+      "repeat": 34,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 413,
+      "hash_us": 41,
+      "solve_us": 1552
+    },
+    {
+      "repeat": 34,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 1422,
+      "hash_us": 142,
+      "solve_us": 9112
+    },
+    {
+      "repeat": 34,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 477,
+      "hash_us": 47,
+      "solve_us": 1276
+    },
+    {
+      "repeat": 34,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 174,
+      "hash_us": 17,
+      "solve_us": 1222
+    },
+    {
+      "repeat": 34,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 458,
+      "hash_us": 45,
+      "solve_us": 1348
+    },
+    {
+      "repeat": 34,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 178,
+      "hash_us": 17,
+      "solve_us": 1363
+    },
+    {
+      "repeat": 35,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 144,
+      "hash_us": 14,
+      "solve_us": 1206
+    },
+    {
+      "repeat": 35,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 372,
+      "hash_us": 37,
+      "solve_us": 1235
+    },
+    {
+      "repeat": 35,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 149,
+      "hash_us": 14,
+      "solve_us": 1320
+    },
+    {
+      "repeat": 35,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 3745,
+      "hash_us": 374,
+      "solve_us": 9012
+    },
+    {
+      "repeat": 35,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 193,
+      "hash_us": 19,
+      "solve_us": 1540
+    },
+    {
+      "repeat": 35,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 442,
+      "hash_us": 44,
+      "solve_us": 1266
+    },
+    {
+      "repeat": 35,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 174,
+      "hash_us": 17,
+      "solve_us": 1357
+    },
+    {
+      "repeat": 35,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 402,
+      "hash_us": 40,
+      "solve_us": 1510
+    },
+    {
+      "repeat": 35,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 160,
+      "hash_us": 16,
+      "solve_us": 1246
+    },
+    {
+      "repeat": 35,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 433,
+      "hash_us": 43,
+      "solve_us": 2478
+    },
+    {
+      "repeat": 35,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 1696,
+      "hash_us": 169,
+      "solve_us": 7861
+    },
+    {
+      "repeat": 35,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 428,
+      "hash_us": 42,
+      "solve_us": 1374
+    },
+    {
+      "repeat": 35,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 173,
+      "hash_us": 17,
+      "solve_us": 1276
+    },
+    {
+      "repeat": 35,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 475,
+      "hash_us": 47,
+      "solve_us": 1270
+    },
+    {
+      "repeat": 35,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 188,
+      "hash_us": 18,
+      "solve_us": 2537
+    },
+    {
+      "repeat": 35,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 449,
+      "hash_us": 44,
+      "solve_us": 1506
+    },
+    {
+      "repeat": 36,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 390,
+      "hash_us": 39,
+      "solve_us": 2464
+    },
+    {
+      "repeat": 36,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 130,
+      "hash_us": 13,
+      "solve_us": 1230
+    },
+    {
+      "repeat": 36,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 350,
+      "hash_us": 35,
+      "solve_us": 1453
+    },
+    {
+      "repeat": 36,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 146,
+      "hash_us": 14,
+      "solve_us": 1224
+    },
+    {
+      "repeat": 36,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 5291,
+      "hash_us": 529,
+      "solve_us": 9790
+    },
+    {
+      "repeat": 36,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 162,
+      "hash_us": 16,
+      "solve_us": 1204
+    },
+    {
+      "repeat": 36,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 396,
+      "hash_us": 39,
+      "solve_us": 1336
+    },
+    {
+      "repeat": 36,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 165,
+      "hash_us": 16,
+      "solve_us": 1321
+    },
+    {
+      "repeat": 36,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 443,
+      "hash_us": 44,
+      "solve_us": 1263
+    },
+    {
+      "repeat": 36,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 723,
+      "hash_us": 72,
+      "solve_us": 7623
+    },
+    {
+      "repeat": 36,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 426,
+      "hash_us": 42,
+      "solve_us": 2760
+    },
+    {
+      "repeat": 36,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 169,
+      "hash_us": 16,
+      "solve_us": 1311
+    },
+    {
+      "repeat": 36,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 492,
+      "hash_us": 49,
+      "solve_us": 1247
+    },
+    {
+      "repeat": 36,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 2319,
+      "hash_us": 231,
+      "solve_us": 6209
+    },
+    {
+      "repeat": 36,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 442,
+      "hash_us": 44,
+      "solve_us": 1397
+    },
+    {
+      "repeat": 36,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 180,
+      "hash_us": 18,
+      "solve_us": 1314
+    },
+    {
+      "repeat": 37,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 125,
+      "hash_us": 12,
+      "solve_us": 1252
+    },
+    {
+      "repeat": 37,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 367,
+      "hash_us": 36,
+      "solve_us": 1240
+    },
+    {
+      "repeat": 37,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 658,
+      "hash_us": 65,
+      "solve_us": 8291
+    },
+    {
+      "repeat": 37,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 2335,
+      "hash_us": 233,
+      "solve_us": 8027
+    },
+    {
+      "repeat": 37,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 1715,
+      "hash_us": 171,
+      "solve_us": 7739
+    },
+    {
+      "repeat": 37,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 440,
+      "hash_us": 44,
+      "solve_us": 1241
+    },
+    {
+      "repeat": 37,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 159,
+      "hash_us": 15,
+      "solve_us": 1305
+    },
+    {
+      "repeat": 37,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 383,
+      "hash_us": 38,
+      "solve_us": 1262
+    },
+    {
+      "repeat": 37,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 177,
+      "hash_us": 17,
+      "solve_us": 1125
+    },
+    {
+      "repeat": 37,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 7662,
+      "hash_us": 766,
+      "solve_us": 9206
+    },
+    {
+      "repeat": 37,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 168,
+      "hash_us": 16,
+      "solve_us": 1359
+    },
+    {
+      "repeat": 37,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 426,
+      "hash_us": 42,
+      "solve_us": 1511
+    },
+    {
+      "repeat": 37,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 188,
+      "hash_us": 18,
+      "solve_us": 1251
+    },
+    {
+      "repeat": 37,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 478,
+      "hash_us": 47,
+      "solve_us": 1762
+    },
+    {
+      "repeat": 37,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 675,
+      "hash_us": 67,
+      "solve_us": 8135
+    },
+    {
+      "repeat": 37,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 448,
+      "hash_us": 44,
+      "solve_us": 1409
+    },
+    {
+      "repeat": 38,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 395,
+      "hash_us": 39,
+      "solve_us": 1259
+    },
+    {
+      "repeat": 38,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 835,
+      "hash_us": 83,
+      "solve_us": 8042
+    },
+    {
+      "repeat": 38,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 358,
+      "hash_us": 35,
+      "solve_us": 1284
+    },
+    {
+      "repeat": 38,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 2346,
+      "hash_us": 234,
+      "solve_us": 8150
+    },
+    {
+      "repeat": 38,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 460,
+      "hash_us": 46,
+      "solve_us": 1303
+    },
+    {
+      "repeat": 38,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 2230,
+      "hash_us": 223,
+      "solve_us": 7755
+    },
+    {
+      "repeat": 38,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 379,
+      "hash_us": 37,
+      "solve_us": 1378
+    },
+    {
+      "repeat": 38,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 2938,
+      "hash_us": 293,
+      "solve_us": 9431
+    },
+    {
+      "repeat": 38,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 434,
+      "hash_us": 43,
+      "solve_us": 1288
+    },
+    {
+      "repeat": 38,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 157,
+      "hash_us": 15,
+      "solve_us": 1227
+    },
+    {
+      "repeat": 38,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 421,
+      "hash_us": 42,
+      "solve_us": 1341
+    },
+    {
+      "repeat": 38,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 166,
+      "hash_us": 16,
+      "solve_us": 1383
+    },
+    {
+      "repeat": 38,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 472,
+      "hash_us": 47,
+      "solve_us": 1241
+    },
+    {
+      "repeat": 38,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 195,
+      "hash_us": 19,
+      "solve_us": 1200
+    },
+    {
+      "repeat": 38,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 449,
+      "hash_us": 44,
+      "solve_us": 1519
+    },
+    {
+      "repeat": 38,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 742,
+      "hash_us": 74,
+      "solve_us": 9537
+    },
+    {
+      "repeat": 39,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 147,
+      "hash_us": 14,
+      "solve_us": 1240
+    },
+    {
+      "repeat": 39,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 381,
+      "hash_us": 38,
+      "solve_us": 1294
+    },
+    {
+      "repeat": 39,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 176,
+      "hash_us": 17,
+      "solve_us": 1485
+    },
+    {
+      "repeat": 39,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 352,
+      "hash_us": 35,
+      "solve_us": 2596
+    },
+    {
+      "repeat": 39,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 202,
+      "hash_us": 20,
+      "solve_us": 1260
+    },
+    {
+      "repeat": 39,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 6317,
+      "hash_us": 631,
+      "solve_us": 7410
+    },
+    {
+      "repeat": 39,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 167,
+      "hash_us": 16,
+      "solve_us": 1445
+    },
+    {
+      "repeat": 39,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 397,
+      "hash_us": 39,
+      "solve_us": 1388
+    },
+    {
+      "repeat": 39,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 162,
+      "hash_us": 16,
+      "solve_us": 5790
+    },
+    {
+      "repeat": 39,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 434,
+      "hash_us": 43,
+      "solve_us": 1265
+    },
+    {
+      "repeat": 39,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 167,
+      "hash_us": 16,
+      "solve_us": 1486
+    },
+    {
+      "repeat": 39,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 424,
+      "hash_us": 42,
+      "solve_us": 1358
+    },
+    {
+      "repeat": 39,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 176,
+      "hash_us": 17,
+      "solve_us": 1201
+    },
+    {
+      "repeat": 39,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 3169,
+      "hash_us": 316,
+      "solve_us": 9857
+    },
+    {
+      "repeat": 39,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 2287,
+      "hash_us": 228,
+      "solve_us": 8036
+    },
+    {
+      "repeat": 39,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 441,
+      "hash_us": 44,
+      "solve_us": 1391
+    },
+    {
+      "repeat": 40,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 373,
+      "hash_us": 37,
+      "solve_us": 1226
+    },
+    {
+      "repeat": 40,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 1223,
+      "hash_us": 122,
+      "solve_us": 7834
+    },
+    {
+      "repeat": 40,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 355,
+      "hash_us": 35,
+      "solve_us": 1337
+    },
+    {
+      "repeat": 40,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 173,
+      "hash_us": 17,
+      "solve_us": 1322
+    },
+    {
+      "repeat": 40,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 447,
+      "hash_us": 44,
+      "solve_us": 1249
+    },
+    {
+      "repeat": 40,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 2379,
+      "hash_us": 237,
+      "solve_us": 7517
+    },
+    {
+      "repeat": 40,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 5725,
+      "hash_us": 572,
+      "solve_us": 7571
+    },
+    {
+      "repeat": 40,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 158,
+      "hash_us": 15,
+      "solve_us": 1403
+    },
+    {
+      "repeat": 40,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 441,
+      "hash_us": 44,
+      "solve_us": 1311
+    },
+    {
+      "repeat": 40,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 162,
+      "hash_us": 16,
+      "solve_us": 2459
+    },
+    {
+      "repeat": 40,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 411,
+      "hash_us": 41,
+      "solve_us": 1330
+    },
+    {
+      "repeat": 40,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 171,
+      "hash_us": 17,
+      "solve_us": 1390
+    },
+    {
+      "repeat": 40,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 486,
+      "hash_us": 48,
+      "solve_us": 1261
+    },
+    {
+      "repeat": 40,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 2182,
+      "hash_us": 218,
+      "solve_us": 7912
+    },
+    {
+      "repeat": 40,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 448,
+      "hash_us": 44,
+      "solve_us": 2629
+    },
+    {
+      "repeat": 40,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 194,
+      "hash_us": 19,
+      "solve_us": 1310
+    },
+    {
+      "repeat": 41,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 135,
+      "hash_us": 13,
+      "solve_us": 1226
+    },
+    {
+      "repeat": 41,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 6303,
+      "hash_us": 630,
+      "solve_us": 8099
+    },
+    {
+      "repeat": 41,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 173,
+      "hash_us": 17,
+      "solve_us": 1347
+    },
+    {
+      "repeat": 41,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 353,
+      "hash_us": 35,
+      "solve_us": 2864
+    },
+    {
+      "repeat": 41,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 186,
+      "hash_us": 18,
+      "solve_us": 1210
+    },
+    {
+      "repeat": 41,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 436,
+      "hash_us": 43,
+      "solve_us": 1226
+    },
+    {
+      "repeat": 41,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 2353,
+      "hash_us": 235,
+      "solve_us": 8046
+    },
+    {
+      "repeat": 41,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 384,
+      "hash_us": 38,
+      "solve_us": 1948
+    },
+    {
+      "repeat": 41,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 171,
+      "hash_us": 17,
+      "solve_us": 1336
+    },
+    {
+      "repeat": 41,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 443,
+      "hash_us": 44,
+      "solve_us": 1355
+    },
+    {
+      "repeat": 41,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 171,
+      "hash_us": 17,
+      "solve_us": 1548
+    },
+    {
+      "repeat": 41,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 425,
+      "hash_us": 42,
+      "solve_us": 1628
+    },
+    {
+      "repeat": 41,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 2999,
+      "hash_us": 299,
+      "solve_us": 8915
+    },
+    {
+      "repeat": 41,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 484,
+      "hash_us": 48,
+      "solve_us": 1353
+    },
+    {
+      "repeat": 41,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 196,
+      "hash_us": 19,
+      "solve_us": 1360
+    },
+    {
+      "repeat": 41,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 4975,
+      "hash_us": 497,
+      "solve_us": 8901
+    },
+    {
+      "repeat": 42,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 6673,
+      "hash_us": 667,
+      "solve_us": 8233
+    },
+    {
+      "repeat": 42,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 159,
+      "hash_us": 15,
+      "solve_us": 1212
+    },
+    {
+      "repeat": 42,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 3131,
+      "hash_us": 313,
+      "solve_us": 8222
+    },
+    {
+      "repeat": 42,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 174,
+      "hash_us": 17,
+      "solve_us": 1374
+    },
+    {
+      "repeat": 42,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 2022,
+      "hash_us": 202,
+      "solve_us": 9482
+    },
+    {
+      "repeat": 42,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 731,
+      "hash_us": 73,
+      "solve_us": 7703
+    },
+    {
+      "repeat": 42,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 388,
+      "hash_us": 38,
+      "solve_us": 1395
+    },
+    {
+      "repeat": 42,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 2184,
+      "hash_us": 218,
+      "solve_us": 8233
+    },
+    {
+      "repeat": 42,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 433,
+      "hash_us": 43,
+      "solve_us": 1287
+    },
+    {
+      "repeat": 42,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 161,
+      "hash_us": 16,
+      "solve_us": 1085
+    },
+    {
+      "repeat": 42,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 416,
+      "hash_us": 41,
+      "solve_us": 1381
+    },
+    {
+      "repeat": 42,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 167,
+      "hash_us": 16,
+      "solve_us": 1374
+    },
+    {
+      "repeat": 42,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 486,
+      "hash_us": 48,
+      "solve_us": 1267
+    },
+    {
+      "repeat": 42,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 1303,
+      "hash_us": 130,
+      "solve_us": 6065
+    },
+    {
+      "repeat": 42,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 447,
+      "hash_us": 44,
+      "solve_us": 1394
+    },
+    {
+      "repeat": 42,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 1387,
+      "hash_us": 138,
+      "solve_us": 8763
+    },
+    {
+      "repeat": 43,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 132,
+      "hash_us": 13,
+      "solve_us": 1276
+    },
+    {
+      "repeat": 43,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 1926,
+      "hash_us": 192,
+      "solve_us": 7102
+    },
+    {
+      "repeat": 43,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 148,
+      "hash_us": 14,
+      "solve_us": 1423
+    },
+    {
+      "repeat": 43,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 352,
+      "hash_us": 35,
+      "solve_us": 1348
+    },
+    {
+      "repeat": 43,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 163,
+      "hash_us": 16,
+      "solve_us": 1086
+    },
+    {
+      "repeat": 43,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 3595,
+      "hash_us": 359,
+      "solve_us": 7637
+    },
+    {
+      "repeat": 43,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 1320,
+      "hash_us": 132,
+      "solve_us": 8012
+    },
+    {
+      "repeat": 43,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 381,
+      "hash_us": 38,
+      "solve_us": 1328
+    },
+    {
+      "repeat": 43,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 166,
+      "hash_us": 16,
+      "solve_us": 1194
+    },
+    {
+      "repeat": 43,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 433,
+      "hash_us": 43,
+      "solve_us": 2450
+    },
+    {
+      "repeat": 43,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 167,
+      "hash_us": 16,
+      "solve_us": 1297
+    },
+    {
+      "repeat": 43,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 4861,
+      "hash_us": 486,
+      "solve_us": 8035
+    },
+    {
+      "repeat": 43,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 176,
+      "hash_us": 17,
+      "solve_us": 1254
+    },
+    {
+      "repeat": 43,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 5072,
+      "hash_us": 507,
+      "solve_us": 7780
+    },
+    {
+      "repeat": 43,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 2413,
+      "hash_us": 241,
+      "solve_us": 8703
+    },
+    {
+      "repeat": 43,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 5680,
+      "hash_us": 568,
+      "solve_us": 8310
+    },
+    {
+      "repeat": 44,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 389,
+      "hash_us": 38,
+      "solve_us": 1251
+    },
+    {
+      "repeat": 44,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 1636,
+      "hash_us": 163,
+      "solve_us": 7942
+    },
+    {
+      "repeat": 44,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 3349,
+      "hash_us": 334,
+      "solve_us": 9370
+    },
+    {
+      "repeat": 44,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 1893,
+      "hash_us": 189,
+      "solve_us": 7143
+    },
+    {
+      "repeat": 44,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 4870,
+      "hash_us": 487,
+      "solve_us": 7565
+    },
+    {
+      "repeat": 44,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 1639,
+      "hash_us": 163,
+      "solve_us": 7209
+    },
+    {
+      "repeat": 44,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 2520,
+      "hash_us": 252,
+      "solve_us": 7799
+    },
+    {
+      "repeat": 44,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 166,
+      "hash_us": 16,
+      "solve_us": 1287
+    },
+    {
+      "repeat": 44,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 4891,
+      "hash_us": 489,
+      "solve_us": 7498
+    },
+    {
+      "repeat": 44,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 2102,
+      "hash_us": 210,
+      "solve_us": 7191
+    },
+    {
+      "repeat": 44,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 429,
+      "hash_us": 42,
+      "solve_us": 1432
+    },
+    {
+      "repeat": 44,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 169,
+      "hash_us": 16,
+      "solve_us": 1526
+    },
+    {
+      "repeat": 44,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 492,
+      "hash_us": 49,
+      "solve_us": 1244
+    },
+    {
+      "repeat": 44,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 1846,
+      "hash_us": 184,
+      "solve_us": 7932
+    },
+    {
+      "repeat": 44,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 448,
+      "hash_us": 44,
+      "solve_us": 1653
+    },
+    {
+      "repeat": 44,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 2550,
+      "hash_us": 255,
+      "solve_us": 8673
+    },
+    {
+      "repeat": 45,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 146,
+      "hash_us": 14,
+      "solve_us": 1224
+    },
+    {
+      "repeat": 45,
+      "hash": "Mulshrolate1RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 3840,
+      "hash_us": 384,
+      "solve_us": 7548
+    },
+    {
+      "repeat": 45,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 1966,
+      "hash_us": 196,
+      "solve_us": 8614
+    },
+    {
+      "repeat": 45,
+      "hash": "Mulshrolate1RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 4621,
+      "hash_us": 462,
+      "solve_us": 8204
+    },
+    {
+      "repeat": 45,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 179,
+      "hash_us": 17,
+      "solve_us": 1223
+    },
+    {
+      "repeat": 45,
+      "hash": "Mulshrolate2RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 427,
+      "hash_us": 42,
+      "solve_us": 1235
+    },
+    {
+      "repeat": 45,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 172,
+      "hash_us": 17,
+      "solve_us": 1433
+    },
+    {
+      "repeat": 45,
+      "hash": "Mulshrolate2RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 394,
+      "hash_us": 39,
+      "solve_us": 1483
+    },
+    {
+      "repeat": 45,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 1386,
+      "hash_us": 138,
+      "solve_us": 9102
+    },
+    {
+      "repeat": 45,
+      "hash": "Mulshrolate3RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 7202,
+      "hash_us": 720,
+      "solve_us": 8558
+    },
+    {
+      "repeat": 45,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 2512,
+      "hash_us": 251,
+      "solve_us": 10170
+    },
+    {
+      "repeat": 45,
+      "hash": "Mulshrolate3RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 418,
+      "hash_us": 41,
+      "solve_us": 1321
+    },
+    {
+      "repeat": 45,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": true,
+      "hash_qpc_ticks": 174,
+      "hash_us": 17,
+      "solve_us": 1228
+    },
+    {
+      "repeat": 45,
+      "hash": "Mulshrolate4RX",
+      "bits": 16,
+      "neon": false,
+      "hash_qpc_ticks": 9145,
+      "hash_us": 914,
+      "solve_us": 9804
+    },
+    {
+      "repeat": 45,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": true,
+      "hash_qpc_ticks": 3092,
+      "hash_us": 309,
+      "solve_us": 9244
+    },
+    {
+      "repeat": 45,
+      "hash": "Mulshrolate4RX",
+      "bits": 32,
+      "neon": false,
+      "hash_qpc_ticks": 457,
+      "hash_us": 45,
+      "solve_us": 1339
+    }
+  ]
+}

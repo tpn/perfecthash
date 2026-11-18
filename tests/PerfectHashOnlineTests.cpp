@@ -504,9 +504,13 @@ TEST_F(PerfectHashOnlineTests, NeonHashAllKeysHandlesWidthsTailsAndFallback) {
   hasNeon = true;
 #endif
 
-  for (auto hash : {PerfectHashHashMultiplyShiftRFunctionId,
-                    PerfectHashHashMultiplyShiftRXFunctionId,
-                    PerfectHashHashMulshrolate1RXFunctionId}) {
+  const PERFECT_HASH_HASH_FUNCTION_ID hashes[] = {
+#define NEON_TEST_HASH(Name) PerfectHashHash##Name##FunctionId,
+      PERFECT_HASH_GOOD_HASH_FUNCTION_TABLE_ENTRY(NEON_TEST_HASH)
+#undef NEON_TEST_HASH
+      PerfectHashHashRotateMultiplyXorRotateFunctionId,
+  };
+  for (auto hash : hashes) {
     for (bool assigned16 : {false, true}) {
       for (ULONG tail = 0; tail < 4; ++tail) {
         auto keys = MakePseudoRandomKeys(100 + tail, 0x31415926u);
@@ -529,8 +533,8 @@ TEST_F(PerfectHashOnlineTests, NeonHashAllKeysHandlesWidthsTailsAndFallback) {
           PERFECT_HASH_TABLE_FLAGS flags = {};
           EXPECT_GE(shim->Vtbl->GetFlags(table, sizeof(flags), &flags), 0);
           EXPECT_EQ(flags.AssignedElementSizeInBits << 3, assigned16 ? 16u : 32u);
-          EXPECT_EQ(!!flags.UsedNeonHashFunction, hasNeon && !disableNeon &&
-                    hash != PerfectHashHashMulshrolate1RXFunctionId);
+          EXPECT_EQ(!!flags.UsedNeonHashFunction,
+                    hasNeon && !disableNeon && IsGoodPerfectHashHashFunctionId(hash));
           std::unordered_set<ULONG> seen;
           for (ULONG key : keys) {
             ULONG index = 0;

@@ -221,8 +221,9 @@ Windows ARM64 RawDog provides scalar and 4-, 8-, and 16-key batch lookup for
 MultiplyShiftR, MultiplyShiftRX, and Mulshrolate1RX through Mulshrolate3RX.
 LLVM also supports Mulshrolate4RX and can generate SIMD lookup kernels.
 
-The ARM64 solver can hash four keys at a time using NEON for MultiplyShiftR
-and MultiplyShiftRX with `HashAllKeysFirst`. Use
+With `HashAllKeysFirst`, the ARM64 solver hashes four keys at a time using
+NEON for MultiplyShiftR, MultiplyShiftRX, and Mulshrolate1RX through
+Mulshrolate4RX. This applies to both 16-bit and 32-bit vertex pairs. Use
 `--DoNotTryUseNeonHashFunction` for a scalar comparison and check
 `UsedNeonHashFunction` in the resulting CSV. Lookups in an already solved
 table use the backend and batch width chosen by the caller.

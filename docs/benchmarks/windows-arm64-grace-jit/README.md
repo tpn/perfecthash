@@ -77,6 +77,33 @@ yet have a higher standalone median. All runs are included. Larger inputs
 and solves that need several attempts may spend a different share of their
 time hashing.
 
+### Mulshrolate solver hashing
+
+The native four-key NEON kernels for Mulshrolate1RX through Mulshrolate4RX
+were measured on the same Grace host and 31,016-key input. Each row uses
+45 alternating scalar/NEON pairs at one worker, with the same seeds and
+65,536 vertices in both runs. Every run solved on its first attempt. The
+runner checked the selected hash, assigned width, seeds and NEON flag in
+the CSV. For Mulshrolate1RX it used an equivalent nonzero rotation seed
+because the CLI randomizes an unspecified zero rotation byte.
+
+| Hash | Assigned bits | Scalar hash (µs) | NEON hash (µs) | Paired hash speedup | Pairs favoring NEON | Paired whole-solve speedup |
+|---|---:|---:|---:|---:|---:|---:|
+| Mulshrolate1RX | 16 | 38.1 | 14.8 | 2.81× | 32/45 | 1.026× |
+| Mulshrolate1RX | 32 | 35.7 | 17.3 | 2.35× | 32/45 | 0.965× |
+| Mulshrolate2RX | 16 | 44.7 | 71.5 | 2.42× | 30/45 | 1.010× |
+| Mulshrolate2RX | 32 | 38.9 | 17.4 | 2.31× | 33/45 | 1.010× |
+| Mulshrolate3RX | 16 | 44.6 | 17.3 | 2.68× | 36/45 | 1.008× |
+| Mulshrolate3RX | 32 | 42.1 | 17.1 | 2.47× | 33/45 | 0.945× |
+| Mulshrolate4RX | 16 | 48.6 | 18.8 | 2.58× | 30/45 | 1.006× |
+| Mulshrolate4RX | 32 | 44.9 | 19.6 | 2.37× | 29/45 | 0.970× |
+
+NEON shortened the hash phase in 255 of 360 pairs. Complete solves ranged
+from 0.945× to 1.026× across the eight cases. For 16-bit Mulshrolate2RX,
+NEON won 30 pairs despite a higher standalone median hash time. The paired
+speedup uses the scalar/NEON ratio within each pair, keeping the fast and
+slow runs in the data. [All 720 measurements](mulshrolate-solver-results.json)
+
 ## Reproduce
 
 Build with both JITs using the native Windows ARM64 instructions in the root
@@ -84,10 +111,12 @@ README, keep the LLVM runtime on `PATH`, then run:
 
 ```powershell
 python docs/benchmarks/windows-arm64-grace-jit/run.py
+python docs/benchmarks/windows-arm64-grace-jit/run.py --mulshrolate-only
 ```
 
 The runner pins itself and its children using affinity mask 4 and sets online
 solver concurrency to one. Lookup cases run in a reproducibly shuffled order.
 Use `--build PATH` to select another Ninja Multi-Config build and
 `--affinity MASK` to change the processor. The script writes
-`grace-jit-results.json` in the build directory. [Per-process measurements](results.json)
+`grace-jit-results.json` in the build directory. The second command writes
+`mulshrolate-solver-results.json` there. [Original per-process measurements](results.json)
