@@ -241,6 +241,26 @@ TEST(PerfectHashOnlineJitTests, SwitchBackendsAndReportCompiledWidth) {
   EXPECT_TRUE(first.get());
   EXPECT_TRUE(second.get());
   check_x8();
+
+  // Lock contention is not a RawDog failure. An automatic request RawDog can
+  // satisfy reports RawDog or PH_E_TABLE_LOCKED, never a fallback to LLVM.
+  auto recompile_auto = [&]() {
+    for (int pass = 0; pass < 2000; ++pass) {
+      PH_ONLINE_JIT_BACKEND backend = PhOnlineJitBackendAuto;
+      auto result = PhOnlineJitCompileTableEx(
+          context.get(), table.get(), PhOnlineJitBackendAuto, 1,
+          PhOnlineJitMaxIsaAuto, strict, &backend, nullptr);
+      if (result < 0 ? result != PH_E_TABLE_LOCKED
+                     : backend != PhOnlineJitBackendRawDogJit) {
+        return false;
+      }
+    }
+    return true;
+  };
+  first = std::async(std::launch::async, recompile_auto);
+  second = std::async(std::launch::async, recompile_auto);
+  EXPECT_TRUE(first.get());
+  EXPECT_TRUE(second.get());
 }
 #endif
 

@@ -1026,7 +1026,10 @@ PhOnlineJitCompileTableEx(
                 Result == PH_E_INVARIANT_CHECK_FAILED) {
                 continue;
             }
-            if (Backend == PhOnlineJitBackendAuto &&
+            // A concurrent compile holds the table. Report the contention
+            // rather than treating it as a RawDog failure and trying LLVM.
+            if (Result != PH_E_TABLE_LOCKED &&
+                Backend == PhOnlineJitBackendAuto &&
                 CandidateBackend == PhOnlineJitBackendRawDogJit) {
                 break;
             }
