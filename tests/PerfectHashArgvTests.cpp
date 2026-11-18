@@ -126,6 +126,16 @@ TEST(PerfectHashCompatTests, ExitStatusKeepsEveryFailureNonZero) {
   EXPECT_NE(PerfectHashExitStatus(
                 (unsigned)PH_E_CONTEXT_MAIN_WORK_LIST_EMPTY) & 0xff, 0);
 }
+
+// The CLIs end with ExitProcess(Result). Check the status a parent process
+// sees, since no CLI run reaches either code that ends in 0x00.
+TEST(PerfectHashCompatDeathTest, ExitProcessGivesEveryFailureANonZeroStatus) {
+  EXPECT_EXIT(ExitProcess((unsigned)PH_E_INVALID_PATH),
+              ::testing::ExitedWithCode(1), "");
+  EXPECT_EXIT(ExitProcess((unsigned)PH_E_SYSTEM_CALL_FAILED),
+              ::testing::ExitedWithCode(0x24), "");
+  EXPECT_EXIT(ExitProcess(S_OK), ::testing::ExitedWithCode(0), "");
+}
 #endif
 
 TEST_F(PerfectHashArgvTests, InvalidNumArgs) {
