@@ -86,8 +86,9 @@ Return Value:
     PPH_CU_SOLVE_CONTEXT SolveContext;
     PPH_CU_SOLVE_CONTEXTS SolveContexts;
     PPH_CU_RUNTIME_CONTEXT CuRuntimeContext;
-    PPERFECT_HASH_TLS_CONTEXT TlsContext;
+    PPERFECT_HASH_TLS_CONTEXT TlsContext = NULL;
     PERFECT_HASH_TLS_CONTEXT LocalTlsContext;
+    PERFECT_HASH_TLS_CONTEXT SavedTlsContext = { 0 };
     //PERFECT_HASH_CU_RNG_ID CuRngId = PerfectHashCuNullRngId;
     PPERFECT_HASH_PATH PtxPath;
     PPERFECT_HASH_FILE PtxFile;
@@ -127,11 +128,12 @@ Return Value:
         Context->Table->TableCreateFlags.AsULongLong;
 
     //
-    // If we've already got a CU instance, assume we're already initialized.
+    // Late driver setup failures release the runtime configuration. A context
+    // in that state has no solver arrays that can safely be reused.
     //
 
     if (Context->Cu != NULL) {
-        return S_FALSE;
+        return Context->CuRuntimeContext ? S_FALSE : PH_E_INVARIANT_CHECK_FAILED;
     }
 
     PtxPath = NULL;
@@ -167,10 +169,6 @@ Return Value:
                  Result);
         goto Error;
     }
-
-    // Publish the CU component only after the solver parameters are valid.
-    // A rejected configuration can then be corrected on this same context.
-    Context->Cu = Cu;
 
     //
     // TODO: continue hoisting out logic below into separate routines.
@@ -332,6 +330,9 @@ Return Value:
     NumberOfContexts = CuRuntimeContext->NumberOfContexts;
     DeviceContexts = CuRuntimeContext->CuDeviceContexts;
 
+    // Parameter and input file failures can be retried before the first driver
+    // context is created. From here, the parent owns the CUDA component.
+    Context->Cu = Cu;
     for (Index = 0; Index < NumberOfContexts; Index++) {
         DeviceContext = &DeviceContexts->DeviceContexts[Index];
 
@@ -683,15 +684,12 @@ Return Value:
     Context->CpuGraphs = CpuGraphs;
 
     TlsContext = PerfectHashTlsGetOrSetContext(&LocalTlsContext);
-
-    ASSERT(!TlsContext->Flags.DisableGlobalAllocatorComponent);
-    ASSERT(!TlsContext->Flags.CustomAllocatorDetailsPresent);
-    ASSERT(!TlsContext->HeapCreateFlags);
-    ASSERT(!TlsContext->HeapMinimumSize);
+    SavedTlsContext = *TlsContext;
 
     TlsContextDisableGlobalAllocator(TlsContext);
     TlsContext->Flags.CustomAllocatorDetailsPresent = TRUE;
     TlsContext->HeapCreateFlags = HEAP_NO_SERIALIZE;
+    TlsContext->HeapMinimumSize = 0;
 
     //
     // Copy the table create flags into the TLS context as well; they are now
@@ -938,6 +936,20 @@ Error:
     //
 
 End:
+
+    // Direct COM calls can install LocalTlsContext on this thread.  Restore
+    // the caller's graph-construction settings and leave no stack pointer in TLS.
+    if (TlsContext) {
+        TlsContext->Flags.DisableGlobalAllocatorComponent =
+            SavedTlsContext.Flags.DisableGlobalAllocatorComponent;
+        TlsContext->Flags.CustomAllocatorDetailsPresent =
+            SavedTlsContext.Flags.CustomAllocatorDetailsPresent;
+        TlsContext->HeapCreateFlags = SavedTlsContext.HeapCreateFlags;
+        TlsContext->HeapMinimumSize = SavedTlsContext.HeapMinimumSize;
+        TlsContext->TableCreateFlags = SavedTlsContext.TableCreateFlags;
+        TlsContext->Table = SavedTlsContext.Table;
+        PerfectHashTlsClearContextIfActive(&LocalTlsContext);
+    }
 
     //
     // Release any temporary component references.

@@ -278,7 +278,7 @@ TEST_F(PerfectHashArgvTests, RejectedCudaOrdinalsCanBeCorrectedOnSameContext) {
   ASSERT_NO_FATAL_FAILURE(OpenRetryTable(keysPath));
   ULONG ordinal = 0;
   ULONG seeds[] = {0xF0192B55, 0xD9C83970, 0x0C1E0D10, 0xD11A5847};
-  PERFECT_HASH_TABLE_CREATE_PARAMETER params[3] = {};
+  PERFECT_HASH_TABLE_CREATE_PARAMETER params[4] = {};
   params[0].Id = TableCreateParameterCuConcurrencyId;
   params[0].AsULong = 1;
   params[1].Id = TableCreateParameterCuDevicesId;
@@ -289,17 +289,27 @@ TEST_F(PerfectHashArgvTests, RejectedCudaOrdinalsCanBeCorrectedOnSameContext) {
   params[2].AsValueArray.Values = seeds;
   params[2].AsValueArray.NumberOfValues = 4;
   params[2].AsValueArray.ValueSizeInBytes = sizeof(ULONG);
+  auto missingPtx = (candidate / "missing.ptx").wstring();
+  params[3].Id = TableCreateParameterCuPtxPathId;
+  params[3].AsUnicodeString.Buffer = missingPtx.data();
+  params[3].AsUnicodeString.Length = static_cast<USHORT>(missingPtx.size() * sizeof(WCHAR));
+  params[3].AsUnicodeString.MaximumLength = params[3].AsUnicodeString.Length + sizeof(WCHAR);
   PERFECT_HASH_TABLE_CREATE_PARAMETERS parameters = {};
   parameters.SizeOfStruct = sizeof(parameters);
-  parameters.NumberOfElements = 3;
+  parameters.NumberOfElements = 4;
   parameters.Params = params;
   PERFECT_HASH_TABLE_CREATE_FLAGS flags = {};
   flags.NoFileIo = TRUE;
   flags.Quiet = TRUE;
   auto vtbl = reinterpret_cast<TableShim *>(retryTable_)->Vtbl;
-  ASSERT_EQ(S_OK, vtbl->Create(retryTable_, context_, PerfectHashChm02AlgorithmId,
-      PerfectHashHashMulshrolate3RXFunctionId, PerfectHashAndMaskFunctionId,
-      retryKeys_, &flags, &parameters));
+  auto create = [&]() {
+    return vtbl->Create(retryTable_, context_, PerfectHashChm02AlgorithmId,
+        PerfectHashHashMulshrolate3RXFunctionId, PerfectHashAndMaskFunctionId,
+        retryKeys_, &flags, &parameters);
+  };
+  ASSERT_EQ(PH_E_SYSTEM_CALL_FAILED, create());
+  parameters.NumberOfElements = 3;
+  ASSERT_EQ(S_OK, create());
   EXPECT_EQ(S_OK, vtbl->Test(retryTable_, retryKeys_, FALSE));
 }
 #endif
