@@ -61,6 +61,9 @@
   <ItemGroup>
     <None Include="PerfectHash.def" />
     <None Include="PerfectHashEvents.man" />
+    <None Include="PerfectHashJitIndexMulshrolate4RX_arm64.s" />
+    <None Include="PerfectHashJitIndexMulshrolate4RX_x64.asm" />
+    <None Include="PerfectHashJitIndexMulshrolate4RXIndex32x4_x64.nasm" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\PerfectHash\CompiledPerfectHash.h" />

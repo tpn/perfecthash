@@ -786,6 +786,8 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_ARCH_X86_64 AND
                 PerfectHashJitIndexMulshrolate3RX16Index32x8_x64
                 PerfectHashJitIndexMulshrolate3RXIndex32x16_x64
                 PerfectHashJitIndexMulshrolate3RX16Index32x16_x64
+                PerfectHashJitIndexMulshrolate4RXIndex32x4_x64
+                PerfectHashJitIndexMulshrolate4RX16Index32x4_x64
                 PerfectHashJitIndexMulshrolate4RXIndex32x8_x64
                 PerfectHashJitIndexMulshrolate4RX16Index32x8_x64
                 PerfectHashJitIndexMulshrolate4RXIndex32x16_x64
@@ -800,6 +802,13 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_ARCH_X86_64 AND
                 set(RAWDOG_EXTRA_ASM
                     "${CMAKE_CURRENT_SOURCE_DIR}/${RAWDOG_EXTRA_BLOB}.nasm"
                 )
+                set(RAWDOG_EXTRA_DEFINES)
+                if(RAWDOG_EXTRA_BLOB STREQUAL "PerfectHashJitIndexMulshrolate4RX16Index32x4_x64")
+                    set(RAWDOG_EXTRA_ASM
+                        "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndexMulshrolate4RXIndex32x4_x64.nasm"
+                    )
+                    set(RAWDOG_EXTRA_DEFINES -DASSIGNED16)
+                endif()
                 set(RAWDOG_EXTRA_OBJ
                     "${CMAKE_CURRENT_BINARY_DIR}/${RAWDOG_EXTRA_BLOB}.o"
                 )
@@ -817,6 +826,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_ARCH_X86_64 AND
                     OUTPUT "${RAWDOG_EXTRA_HDR}"
                     COMMAND ${PERFECTHASH_NASM_EXECUTABLE}
                             -f elf64
+                            ${RAWDOG_EXTRA_DEFINES}
                             -o "${RAWDOG_EXTRA_OBJ}"
                             "${RAWDOG_EXTRA_ASM}"
                     COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
@@ -2216,6 +2226,49 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                 /I "${PERFECTHASH_ROOT_DIR}/include"
                 /I "${PERFECTHASH_ROOT_DIR}/include/PerfectHash"
             )
+
+            set(RAWDOG_M4RX_ASM
+                "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndexMulshrolate4RX_x64.asm"
+            )
+            foreach(ASSIGNED_BITS IN ITEMS 32 16)
+                if(ASSIGNED_BITS EQUAL 16)
+                    set(ASSIGNED_SUFFIX "16")
+                else()
+                    set(ASSIGNED_SUFFIX "")
+                endif()
+                foreach(KEY_COUNT IN ITEMS 1 4 8 16)
+                    if(KEY_COUNT EQUAL 1)
+                        set(BATCH_SUFFIX "")
+                    else()
+                        set(BATCH_SUFFIX "Index32x${KEY_COUNT}")
+                    endif()
+                    set(BLOB "Mulshrolate4RX${ASSIGNED_SUFFIX}${BATCH_SUFFIX}_x64")
+                    set(SYMBOL "PerfectHashJitRawDog${BLOB}")
+                    set(OBJ "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndex${BLOB}.obj")
+                    set(BIN "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndex${BLOB}.bin")
+                    set(HDR "${CMAKE_CURRENT_BINARY_DIR}/${SYMBOL}.h")
+                    add_custom_command(
+                        OUTPUT "${HDR}"
+                        COMMAND ${PERFECTHASH_ML64_EXECUTABLE}
+                                /nologo /c /Fo "${OBJ}"
+                                /DENTRY_NAME=PerfectHashJitIndex${BLOB}
+                                /DASSIGNED_BITS=${ASSIGNED_BITS} /DKEY_COUNT=${KEY_COUNT}
+                                ${PERFECTHASH_ML64_INCLUDE_ARGS}
+                                "${RAWDOG_M4RX_ASM}"
+                        COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
+                                --dump-section=.text$mn$00=${BIN} "${OBJ}"
+                        COMMAND "${Python3_EXECUTABLE}"
+                                "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                                --input "${BIN}" --output "${HDR}" --symbol "${SYMBOL}"
+                        DEPENDS
+                            "${RAWDOG_M4RX_ASM}"
+                            "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                        COMMENT "Generating RawDog JIT blob for ${BLOB} (MASM)..."
+                        VERBATIM
+                    )
+                    list(APPEND Private_Header_Files "${HDR}")
+                endforeach()
+            endforeach()
 
             add_custom_command(
                 OUTPUT ${RAWDOG_HDR}
@@ -4968,6 +5021,48 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND
                 COMMENT "Generating RawDog JIT blob for Mulshrolate3RX16 Index32x16 (arm64)..."
                 VERBATIM
             )
+
+            set(m4_arm64_asm "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndexMulshrolate4RX_arm64.s")
+            foreach(assigned_bits IN ITEMS 16 32)
+                if(assigned_bits EQUAL 16)
+                    set(hash_name Mulshrolate4RX16)
+                else()
+                    set(hash_name Mulshrolate4RX)
+                endif()
+                foreach(key_count IN ITEMS 1 4 8 16)
+                    if(key_count EQUAL 1)
+                        set(variant "${hash_name}_arm64")
+                    else()
+                        set(variant "${hash_name}Index32x${key_count}_arm64")
+                    endif()
+                    set(obj "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndex${variant}.o")
+                    set(bin "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndex${variant}.bin")
+                    set(symbol "PerfectHashJitRawDog${variant}")
+                    set(header "${CMAKE_CURRENT_BINARY_DIR}/${symbol}.h")
+                    add_custom_command(
+                        OUTPUT "${header}"
+                        COMMAND ${RAWDOG_ARM64_ASSEMBLER}
+                                -x assembler-with-cpp -c
+                                -DRAWDOG_FUNCTION=PerfectHashJitIndex${variant}
+                                -DRAWDOG_KEY_COUNT=${key_count}
+                                -DRAWDOG_ASSIGNED_BITS=${assigned_bits}
+                                -o "${obj}" "${m4_arm64_asm}"
+                        COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
+                                --dump-section=${RAWDOG_OBJCOPY_TEXT_SECTION}=${bin}
+                                "${obj}"
+                        COMMAND "${Python3_EXECUTABLE}"
+                                "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                                --input "${bin}" --output "${header}" --symbol "${symbol}"
+                        DEPENDS
+                            "${m4_arm64_asm}"
+                            "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndex32x16Arm64.inc"
+                            "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                        COMMENT "Generating RawDog JIT blob for ${variant}..."
+                        VERBATIM
+                    )
+                    list(APPEND Private_Header_Files "${header}")
+                endforeach()
+            endforeach()
 
             list(APPEND Private_Header_Files
                  "${RAWDOG_ARM64_HDR}"

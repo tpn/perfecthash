@@ -1,11 +1,14 @@
 #include <gtest/gtest.h>
 
 #include <PerfectHash/PerfectHash.h>
+#include <PerfectHash/PerfectHashOnlineJit.h>
+#include <PerfectHash/PerfectHashOnlineJitPrivate.h>
 
 #include <algorithm>
 #include <cctype>
 #include <cstdlib>
 #include <fstream>
+#include <memory>
 #include <string>
 #include <unordered_set>
 #include <vector>
@@ -3934,44 +3937,71 @@ TEST_F(PerfectHashOnlineTests,
   shim->Vtbl->Release(table);
 }
 
-TEST_F(PerfectHashOnlineTests, RawDogJitMulshrolate4RXMatchesSlowIndex) {
-  const std::vector<ULONG> keys = {
-      1, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53,
-      59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113,
+TEST_F(PerfectHashOnlineTests, RawDogJitMulshrolate4RXStrictWidthsMatchIndex) {
+  const auto keys = MakePseudoRandomKeys(64);
+  const std::vector<uint32_t> queries(keys.begin(), keys.end());
+  PH_ONLINE_JIT_CONTEXT context = {classFactory_, online_};
+  const auto compile = [&](PH_ONLINE_JIT_TABLE *table, uint32_t width) {
+    return PhOnlineJitCompileTableEx(
+        &context, table, PhOnlineJitBackendRawDogJit, width, PhOnlineJitMaxIsaAuto,
+        PH_ONLINE_JIT_COMPILE_FLAG_STRICT_VECTOR_WIDTH, nullptr, nullptr);
   };
 
-  PPERFECT_HASH_TABLE table =
-      CreateTableFromKeys(keys, PerfectHashHashMulshrolate4RXFunctionId);
-  ASSERT_NE(table, nullptr);
-
-  auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
-  ASSERT_NE(shim->Vtbl->SlowIndex, nullptr);
-
-  PERFECT_HASH_TABLE_COMPILE_FLAGS compileFlags = {0};
-  compileFlags.Jit = TRUE;
-  compileFlags.JitBackendRawDog = TRUE;
-
-  HRESULT result = online_->Vtbl->CompileTable(online_, table, &compileFlags);
-  if (result == PH_E_NOT_IMPLEMENTED) {
-    shim->Vtbl->Release(table);
-    GTEST_SKIP() << "RawDog Mulshrolate4RX unavailable on this host.";
-  }
-  ASSERT_GE(result, 0);
-
-  for (ULONG key : keys) {
-    ULONG slowIndex = 0;
-    ULONG jitIndex = 0;
-
-    result = shim->Vtbl->SlowIndex(table, key, &slowIndex);
+#if defined(_M_X64) || defined(__x86_64__)
+  // MultiplyShiftRX has the same ISA requirements for x4, x8 and x16.
+  std::vector<uint32_t> widths = {1};
+  PH_ONLINE_JIT_TABLE *probe = nullptr;
+  ASSERT_GE(PhOnlineJitCreateTable32(&context, PhOnlineJitHashMultiplyShiftRX,
+                                     queries.data(), queries.size(), &probe), 0);
+  std::unique_ptr<PH_ONLINE_JIT_TABLE, decltype(&PhOnlineJitReleaseTable)>
+      probe_owner(probe, &PhOnlineJitReleaseTable);
+  for (uint32_t width : {4u, 8u, 16u}) {
+    const auto result = compile(probe, width);
+    if (result == PH_E_NOT_IMPLEMENTED) {
+      continue;
+    }
     ASSERT_GE(result, 0);
-
-    result = shim->Vtbl->Index(table, key, &jitIndex);
-    ASSERT_GE(result, 0);
-
-    EXPECT_EQ(slowIndex, jitIndex);
+    widths.push_back(width);
   }
+#else
+  const uint32_t widths[] = {1, 4, 8, 16};
+#endif
 
-  shim->Vtbl->Release(table);
+  for (bool assigned16 : {false, true}) {
+    SCOPED_TRACE(assigned16);
+    PPERFECT_HASH_TABLE table = CreateTableFromKeys(
+        keys, PerfectHashHashMulshrolate4RXFunctionId, assigned16, 3);
+    ASSERT_NE(table, nullptr);
+    const auto release = [](PPERFECT_HASH_TABLE t) {
+      reinterpret_cast<PerfectHashTableShim *>(t)->Vtbl->Release(t);
+    };
+    std::unique_ptr<PERFECT_HASH_TABLE, decltype(release)> owner(table, release);
+    PH_ONLINE_JIT_TABLE wrapper = {table};
+    PH_ONLINE_JIT_TABLE_INFO info = {};
+    ASSERT_GE(PhOnlineJitGetTableInfo(&wrapper, &info), 0);
+    ASSERT_EQ(info.AssignedElementSizeInBytes, assigned16 ? 2u : 4u);
+
+    std::vector<uint32_t> expected(keys.size());
+    for (size_t i = 0; i < keys.size(); ++i) {
+      ASSERT_GE(PhOnlineJitIndex32(&wrapper, queries[i], &expected[i]), 0);
+    }
+
+    for (uint32_t width : widths) {
+      SCOPED_TRACE(width);
+      ASSERT_GE(compile(&wrapper, width), 0);
+      std::vector<uint32_t> actual(keys.size());
+      for (size_t i = 0; i < keys.size(); i += width) {
+        if (width == 1) {
+          ASSERT_GE(PhOnlineJitIndex32(&wrapper, queries[i], &actual[i]), 0);
+        } else {
+          const auto index = width == 4 ? PhOnlineJitIndex32x4 :
+                             width == 8 ? PhOnlineJitIndex32x8 : PhOnlineJitIndex32x16;
+          ASSERT_GE(index(&wrapper, &queries[i], &actual[i]), 0);
+        }
+      }
+      EXPECT_EQ(actual, expected);
+    }
+  }
 }
 
 TEST_F(PerfectHashOnlineTests,

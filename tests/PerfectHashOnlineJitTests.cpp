@@ -122,7 +122,7 @@ static void VerifyArm64BatchWidths(PH_ONLINE_JIT_BACKEND requested) {
 
   for (auto hash : {PhOnlineJitHashMultiplyShiftR, PhOnlineJitHashMultiplyShiftRX,
                     PhOnlineJitHashMulshrolate1RX, PhOnlineJitHashMulshrolate2RX,
-                    PhOnlineJitHashMulshrolate3RX}) {
+                    PhOnlineJitHashMulshrolate3RX, PhOnlineJitHashMulshrolate4RX}) {
     SCOPED_TRACE(hash);
     PH_ONLINE_JIT_TABLE *raw_table = nullptr;
     ASSERT_GE(PhOnlineJitCreateTable32(context.get(), hash, keys.data(),

@@ -894,19 +894,9 @@ int RunBenchmark(const BenchmarkOptions &base,
       return 1;
     }
     if (wants_vector &&
-        options.hash_function_id !=
-            PerfectHashHashMultiplyShiftRFunctionId &&
-        options.hash_function_id !=
-            PerfectHashHashMultiplyShiftRXFunctionId &&
-        options.hash_function_id !=
-            PerfectHashHashMulshrolate1RXFunctionId &&
-        options.hash_function_id !=
-            PerfectHashHashMulshrolate2RXFunctionId &&
-        options.hash_function_id !=
-            PerfectHashHashMulshrolate3RXFunctionId) {
+        !IsGoodPerfectHashHashFunctionId(options.hash_function_id)) {
       std::cerr << "RawDog vector JIT only supports MultiplyShiftR, "
-                   "MultiplyShiftRX, Mulshrolate1RX, Mulshrolate2RX, or "
-                   "Mulshrolate3RX.\n";
+                   "MultiplyShiftRX, and Mulshrolate1RX through Mulshrolate4RX.\n";
       return 1;
     }
   }
@@ -1796,11 +1786,7 @@ int RunCompare(const BenchmarkOptions &base) {
 
 #if defined(PH_HAS_RAWDOG_JIT)
   const bool rawdog_vector_supported =
-      options.hash_function_id == PerfectHashHashMultiplyShiftRFunctionId ||
-      options.hash_function_id == PerfectHashHashMultiplyShiftRXFunctionId ||
-      options.hash_function_id == PerfectHashHashMulshrolate1RXFunctionId ||
-      options.hash_function_id == PerfectHashHashMulshrolate2RXFunctionId ||
-      options.hash_function_id == PerfectHashHashMulshrolate3RXFunctionId;
+      IsGoodPerfectHashHashFunctionId(options.hash_function_id);
 
   if (!arm64Compare || rawdog_vector_supported) {
     addEntry("scalar", "rawdog", "x1", BenchmarkOptions::JitBackend::RawDog,
