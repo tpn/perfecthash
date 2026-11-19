@@ -619,6 +619,15 @@ Return Value:
     if (!IsSpareGraph(Graph)) {
         CuResult = Cu->CtxSetCurrent(DeviceContext->Context);
         CU_CHECK(CuResult, CtxSetCurrent);
+        if (IsCudaDebugGraph(Graph)) {
+            CU_DEVICE ActiveDevice;
+            ULONG Solver = (ULONG)(SolveContext -
+                                    Context->CuSolveContexts->SolveContexts);
+            CuResult = Cu->CtxGetDevice(&ActiveDevice);
+            CU_CHECK(CuResult, CtxGetDevice);
+            fprintf(stderr, "[Chm02] Worker %u CUDA device %d\n",
+                    (unsigned)Solver, (int)ActiveDevice);
+        }
     }
 
     if (!FindBestGraph(Context)) {

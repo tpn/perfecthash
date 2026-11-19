@@ -4310,7 +4310,7 @@ Abstract:
 //
 // MessageText:
 //
-// Number of values supplied to --CuDevices must match the value supplied by --CuConcurrency.
+// An explicit --CuDevices list must contain between one and --CuConcurrency device ordinals.
 //
 #define PH_E_CU_DEVICES_COUNT_MUST_MATCH_CU_CONCONCURRENCY ((HRESULT)0xE00403B0L)
 

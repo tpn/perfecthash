@@ -519,6 +519,7 @@ CreateCuRuntimeContext(
                                         &CuRuntimeContext->CuDevices);
     if (FAILED(Result)) {
         PH_ERROR(CreatePerfectHashCuDevices, Result);
+        DestroyCuRuntimeContext(&CuRuntimeContext);
         return Result;
     }
 
@@ -532,6 +533,7 @@ DestroyCuRuntimeContext(
     _Inout_ PPH_CU_RUNTIME_CONTEXT *CuRuntimeContextPointer
     )
 {
+    PCU Cu;
     PALLOCATOR Allocator;
     PPH_CU_RUNTIME_CONTEXT CuRuntimeContext;
 
@@ -544,7 +546,8 @@ DestroyCuRuntimeContext(
         return;
     }
 
-    Allocator = CuRuntimeContext->Cu->Allocator;
+    Cu = CuRuntimeContext->Cu;
+    Allocator = Cu->Allocator;
 
     //
     // TODO: loop through the device contexts and free any device-specific allocs.
@@ -565,16 +568,11 @@ DestroyCuRuntimeContext(
                                  &CuRuntimeContext->CuDeviceContexts);
 
     //
-    // Release the CU instance.
+    // Release the runtime record while its component still owns the allocator.
     //
 
-    RELEASE(CuRuntimeContext->Cu);
-
-    //
-    // Clear the caller's pointer and return.
-    //
-
-    *CuRuntimeContextPointer = NULL;
+    Allocator->Vtbl->FreePointer(Allocator, (PVOID *)CuRuntimeContextPointer);
+    RELEASE(Cu);
 }
 
 _Must_inspect_result_

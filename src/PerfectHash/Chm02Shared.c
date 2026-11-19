@@ -49,7 +49,7 @@ Return Value:
 
 --*/
 {
-    PCU Cu;
+    PCU Cu = NULL;
     ULONG Index;
     ULONG Inner;
     BOOLEAN Found;
@@ -142,7 +142,7 @@ Return Value:
     DeviceContexts = NULL;
     CuCudaDevRuntimeLibPath = NULL;
 
-    Result = CreateCuInstance(Context, &Context->Cu);
+    Result = CreateCuInstance(Context, &Cu);
     if (FAILED(Result)) {
         PH_ERROR(InitializeCudaAndGraphsChm02_CreateCuInstance, Result);
         goto Error;
@@ -152,7 +152,6 @@ Return Value:
     // Create and initialize the CU runtime context.
     //
 
-    Cu = Context->Cu;
     Result = CreateCuRuntimeContext(Cu, &Context->CuRuntimeContext);
     if (FAILED(Result)) {
         PH_ERROR(InitializeCudaAndGraphsChm02_CreateCuRuntimeContext, Result);
@@ -168,6 +167,10 @@ Return Value:
                  Result);
         goto Error;
     }
+
+    // Publish the CU component only after the solver parameters are valid.
+    // A rejected configuration can then be corrected on this same context.
+    Context->Cu = Cu;
 
     //
     // TODO: continue hoisting out logic below into separate routines.
@@ -547,11 +550,8 @@ Return Value:
         CU_CHECK(CuResult, CtxPushCurrent);
 
         if (DebugCuda) {
-            CU_DEVICE ActiveDevice;
-            CuResult = Cu->CtxGetDevice(&ActiveDevice);
-            CU_CHECK(CuResult, CtxGetDevice);
             fprintf(stderr, "[Chm02] Solver %u CUDA device %d\n",
-                    (unsigned)Index, (int)ActiveDevice);
+                    (unsigned)Index, (int)DeviceContext->Handle);
         }
 
         //
@@ -925,6 +925,9 @@ Error:
     }
 
     DestroyCuRuntimeContext(&Context->CuRuntimeContext);
+    if (Context->Cu == NULL) {
+        RELEASE(Cu);
+    }
 
     //
     // TODO: loop through any device contexts here and free?

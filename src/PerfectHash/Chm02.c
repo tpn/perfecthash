@@ -604,7 +604,8 @@ Return Value:
         //
 
         if (!NoFileIo(Table)) {
-            WaitForThreadpoolWorkCallbacks(Context->FileWork, CancelPending);
+            WaitForThreadpoolWorkCallbacks(Context->FileWork, FALSE);
+            CHECK_ALL_PREPARE_ERRORS();
         }
 
         //
@@ -736,6 +737,8 @@ Return Value:
     //
 
     if (!NoFileIo(Table)) {
+        WaitForThreadpoolWorkCallbacks(Context->FileWork, FALSE);
+        CHECK_ALL_PREPARE_ERRORS();
         if (!IsCuGraph(Graph)) {
             SUBMIT_SAVE_FILE_WORK();
         }
@@ -1014,16 +1017,6 @@ Error:
 
 End:
 
-    //
-    // Convert the out-of-memory error codes into our equivalent info codes.
-    //
-
-    if (Result == E_OUTOFMEMORY) {
-        Result = PH_I_OUT_OF_MEMORY;
-    } else if (Result == PH_E_CUDA_OUT_OF_MEMORY) {
-        Result = PH_I_CUDA_OUT_OF_MEMORY;
-    }
-
     if (NoFileIo(Table)) {
         goto ReleaseGraphs;
     }
@@ -1049,8 +1042,12 @@ End:
     ZeroStructInline(Verb##Name);                       \
     Verb##Name.FileWorkId = FileWork##Verb##Name##Id;   \
     Verb##Name.EndOfFile = EndOfFile;                   \
-    InsertTailFileWork(Context, &Verb##Name.ListEntry); \
-    SubmitThreadpoolWork(Context->FileWork);
+    if (Result == S_OK ||                               \
+        (Prepare##Name.FilePointer &&                   \
+         *Prepare##Name.FilePointer)) {                 \
+        InsertTailFileWork(Context, &Verb##Name.ListEntry); \
+        SubmitThreadpoolWork(Context->FileWork);        \
+    }
 
 #define SUBMIT_CLOSE_FILE_WORK() \
     CLOSE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_SUBMIT_CLOSE_FILE_WORK)
@@ -1071,7 +1068,7 @@ End:
         }                                                            \
         PH_ERROR(                                                    \
             CreatePerfectHashTableImplChm02_ErrorDuring##Verb##Name, \
-            Result                                                   \
+            CloseResult                                              \
         );                                                           \
         CloseFileErrorCount++;                                       \
     }
@@ -1082,15 +1079,24 @@ End:
     CHECK_ALL_CLOSE_ERRORS();
 
     //
-    // Just use whatever the last close file error was for our return value if
-    // we encountered any errors.
+    // A close failure takes precedence over an informational solve result.
     //
 
-    if (CloseFileErrorCount > 0) {
+    if (CloseFileErrorCount > 0 && SUCCEEDED(Result)) {
         Result = CloseResult;
     }
 
 ReleaseGraphs:
+
+    //
+    // Convert the out-of-memory error codes into our equivalent info codes.
+    //
+
+    if (Result == E_OUTOFMEMORY) {
+        Result = PH_I_OUT_OF_MEMORY;
+    } else if (Result == PH_E_CUDA_OUT_OF_MEMORY) {
+        Result = PH_I_CUDA_OUT_OF_MEMORY;
+    }
 
     Graphs = Context->Graphs;
 

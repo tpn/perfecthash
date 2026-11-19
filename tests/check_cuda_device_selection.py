@@ -2,6 +2,7 @@
 
 import ctypes
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -10,10 +11,15 @@ from pathlib import Path
 
 
 def visible_devices():
-    if os.name == "nt":
-        driver = ctypes.WinDLL("nvcuda.dll")
-    else:
-        driver = ctypes.CDLL("libcuda.so.1")
+    try:
+        if os.name == "nt":
+            driver = ctypes.WinDLL("nvcuda.dll")
+        else:
+            driver = ctypes.CDLL("libcuda.so.1")
+    except OSError as error:
+        if getattr(error, "winerror", None) == 126 or "No such file or directory" in str(error):
+            return []
+        raise
     # CUDA_ERROR_NO_DEVICE is a valid result on GPU-less build hosts.
     status = driver.cuInit(0)
     if status == 100:
@@ -34,13 +40,14 @@ def visible_devices():
     return devices
 
 
-def run(exe, source, output, ordinals, expected_devices=(), file_io=False, expected_status=0):
-    output.mkdir()
-    keys = output / source.name
+def run(exe, source, output, ordinals, expected_devices=(), file_io=False,
+        expected_status=0, seeds="0xF0192B55,0xD9C83970,0x0C1E0D10,0xD11A5847",
+        extra_args=()):
+    output.mkdir(exist_ok=True)
+    keys = output / "Test.keys"
     shutil.copyfile(source, keys)
     args = [exe, keys, output, "Chm02", "Mulshrolate3RX", "And", "2",
-            "--CuConcurrency=2", "--DisableCsvOutputFile",
-            "--Seeds=0xF0192B55,0xD9C83970,0x0C1E0D10,0xD11A5847"]
+            "--CuConcurrency=2", "--DisableCsvOutputFile", f"--Seeds={seeds}", *extra_args]
     if ordinals is not None:
         args.append(f"--CuDevices={ordinals}")
     if not file_io:
@@ -60,7 +67,12 @@ def run(exe, source, output, ordinals, expected_devices=(), file_io=False, expec
         marker = f"[Chm02] Solver {index} CUDA device {device}".encode()
         if marker not in proc.stderr.splitlines():
             raise AssertionError(f"Missing device assignment {marker!r}: {proc.stderr!r}")
-    if file_io:
+    if expected_devices:
+        # First-solution mode can cancel workers that have not started yet.
+        workers = re.findall(rb"\[Chm02\] Worker (\d+) CUDA device (\d+)", proc.stderr)
+        if not workers or any(expected_devices[int(i)] != int(device) for i, device in workers):
+            raise AssertionError(f"Unexpected worker device assignments: {workers!r}")
+    if file_io and expected_status == 0:
         table, = output.rglob("*.pht1")
         if table.stat().st_size == 0:
             raise AssertionError(f"Empty saved table: {table}")
@@ -75,9 +87,16 @@ def main():
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         run(exe, keys, root / "default", None, [devices[0]] * 2)
-        run(exe, keys, root / "short", "0", [devices[0]] * 2)
+        run(exe, keys, root / "short", str(len(devices) - 1), [devices[-1]] * 2)
         # PH_E_INVALID_CU_DEVICES on an unavailable ordinal.
         run(exe, keys, root / "invalid", str(len(devices)), expected_status=0xe00403a4)
+        # A UUID-bearing project file cannot be created over a directory.
+        # Preserve PH_E_SYSTEM_CALL_FAILED through prepare and rollback.
+        blocked = root / "blocked"
+        table = "Test_Chm02_Mulshrolate3RX_And"
+        (blocked / table / f"{table}_Dll.vcxproj").mkdir(parents=True)
+        run(exe, keys, blocked, "0", file_io=True, expected_status=0xe0040224,
+            seeds="1,1,0x101010,1", extra_args=["--FixedAttempts=1"])
         if len(devices) >= 2:
             run(exe, keys, root / "forward", "0,1", devices[:2])
             run(exe, keys, root / "reverse", "1,0", [devices[1], devices[0]], file_io=True)

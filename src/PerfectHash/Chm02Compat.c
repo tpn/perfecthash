@@ -604,6 +604,7 @@ Return Value:
 
         if (!NoFileIo(Table)) {
             ThreadpoolWait(FileWorkThreadpool);
+            CHECK_ALL_PREPARE_ERRORS();
         }
 
         //
@@ -998,16 +999,6 @@ Error:
 End:
 
     //
-    // Convert the out-of-memory error codes into our equivalent info codes.
-    //
-
-    if (Result == E_OUTOFMEMORY) {
-        Result = PH_I_OUT_OF_MEMORY;
-    } else if (Result == PH_E_CUDA_OUT_OF_MEMORY) {
-        Result = PH_I_CUDA_OUT_OF_MEMORY;
-    }
-
-    //
     // Close every file prepared by the file workers, including on error.
     //
 
@@ -1075,14 +1066,24 @@ End:
     CHECK_ALL_CLOSE_ERRORS();
 
     //
-    // Preserve an earlier failure; propagate a close error after a successful solve.
+    // A close failure takes precedence over an informational solve result.
     //
 
-    if (CloseFileErrorCount > 0 && Result == S_OK) {
+    if (CloseFileErrorCount > 0 && SUCCEEDED(Result)) {
         Result = CloseResult;
     }
 
 ReleaseGraphs:
+
+    //
+    // Convert the out-of-memory error codes into our equivalent info codes.
+    //
+
+    if (Result == E_OUTOFMEMORY) {
+        Result = PH_I_OUT_OF_MEMORY;
+    } else if (Result == PH_E_CUDA_OUT_OF_MEMORY) {
+        Result = PH_I_CUDA_OUT_OF_MEMORY;
+    }
 
     Graphs = Context->Graphs;
 

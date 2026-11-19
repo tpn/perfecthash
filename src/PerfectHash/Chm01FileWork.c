@@ -712,11 +712,15 @@ End:
     //
 
     if (Item->Uuid.Buffer) {
+        HRESULT CleanupResult;
         ASSERT(FileRequiresUuid(FileId));
         if (File && *File) {
             ASSERT((*File)->Uuid.Buffer == NULL);
         }
-        Result = RtlFreeUuidString(Rtl, &Item->Uuid);
+        CleanupResult = RtlFreeUuidString(Rtl, &Item->Uuid);
+        if (FAILED(CleanupResult) && SUCCEEDED(Result)) {
+            Result = CleanupResult;
+        }
     }
 
     Item->LastResult = Result;
