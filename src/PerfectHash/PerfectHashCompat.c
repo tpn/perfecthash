@@ -818,6 +818,14 @@ CreateDirectoryW(
     if (Result != 0) {
         if (errno == EEXIST) {
             SetLastError(ERROR_ALREADY_EXISTS);
+        } else if (errno == ENOENT) {
+
+            //
+            // A parent directory is missing.  Callers create the missing
+            // parents when they see the error Windows reports for this.
+            //
+
+            SetLastError(ERROR_PATH_NOT_FOUND);
         } else {
             SetLastError(errno);
         }

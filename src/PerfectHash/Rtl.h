@@ -2392,6 +2392,17 @@ IsValidStringWithMinimumLengthInChars(
     );
 }
 
+//
+// The shortest directory name on Windows is "C:\a".  Elsewhere there is no
+// drive, and a relative name can be a single character.
+//
+
+#ifdef PH_WINDOWS
+#define MINIMUM_DIRECTORY_LENGTH_IN_CHARS 4
+#else
+#define MINIMUM_DIRECTORY_LENGTH_IN_CHARS 1
+#endif
+
 FORCEINLINE
 BOOLEAN
 IsValidMinimumDirectoryUnicodeString(
@@ -2400,7 +2411,7 @@ IsValidMinimumDirectoryUnicodeString(
 {
     return IsValidUnicodeStringWithMinimumLengthInChars(
         String,
-        4
+        MINIMUM_DIRECTORY_LENGTH_IN_CHARS
     );
 }
 
@@ -2431,13 +2442,9 @@ IsValidMinimumDirectoryNullTerminatedUnicodeString(
     _In_ PCUNICODE_STRING String
     )
 {
-    //
-    // Minimum length: "C:\a" -> 4.
-    //
-
     return IsValidNullTerminatedUnicodeStringWithMinimumLengthInChars(
         String,
-        4
+        MINIMUM_DIRECTORY_LENGTH_IN_CHARS
     );
 }
 
