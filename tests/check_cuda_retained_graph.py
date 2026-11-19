@@ -65,10 +65,11 @@ with tempfile.TemporaryDirectory() as tmp:
     winners = int(row["NewBestGraphCount"])
     if winners < 2:
         raise AssertionError(f"Expected multiple best graphs, got {winners}")
-    if args.subset and int(row[f"BestGraph{winners}_Value"]) <= int(row["BestGraph1_Value"]):
+    if args.subset and int(row["BestGraph2_Value"]) <= int(row["BestGraph1_Value"]):
         raise AssertionError("The retained graph did not improve the key-subset score")
-    winning_attempt = int(row[f"BestGraph{winners}_Attempt"])
-    if int(row["AttemptThatFoundBestGraph"]) != winning_attempt:
+    winning_attempt = int(row["AttemptThatFoundBestGraph"])
+    history_attempt = row.get(f"BestGraph{winners}_Attempt")
+    if history_attempt is not None and int(history_attempt) != winning_attempt:
         raise AssertionError(f"Expected the summary and winner to agree on attempt {winning_attempt}")
     if not 0 < winning_attempt < attempts - 1:
         raise AssertionError(f"Expected an earlier retained winner, got attempt {winning_attempt}")

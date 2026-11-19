@@ -161,6 +161,12 @@ add_test(
 )
 set_tests_properties(perfecthash.fast.unit PROPERTIES LABELS fast)
 
+add_executable(perfecthash_subset_hits_test GraphKeysSubsetTest.c)
+target_link_libraries(perfecthash_subset_hits_test PRIVATE PerfectHashOnlineCoreStatic)
+target_compile_definitions(perfecthash_subset_hits_test PRIVATE _PERFECT_HASH_INTERNAL_BUILD)
+target_include_directories(perfecthash_subset_hits_test PRIVATE "${PERFECTHASH_SRC_DIR}/PerfectHash")
+add_test(NAME perfecthash_unit_tests.KeysSubsetCacheLineHits COMMAND perfecthash_subset_hits_test)
+
 if(PERFECTHASH_HAS_CUDA)
     add_executable(perfecthash_cuda_best_graph_test GraphCuBestGraphTest.c)
     target_link_libraries(perfecthash_cuda_best_graph_test PRIVATE PerfectHashOnlineCoreStatic)

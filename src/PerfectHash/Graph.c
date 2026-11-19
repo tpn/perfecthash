@@ -2866,9 +2866,9 @@ Return Value:
     PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_CONTEXT Context;
     PASSIGNED_MEMORY_COVERAGE Coverage;
-    PASSIGNED_PAGE_COUNT PageCount;
+    PULONG PageCount;
     PASSIGNED_LARGE_PAGE_COUNT LargePageCount;
-    PASSIGNED_CACHE_LINE_COUNT CacheLineCount;
+    PULONG CacheLineCount;
 
     ASSERT(!IsUsingAssigned16(Graph));
 
@@ -2921,9 +2921,9 @@ Return Value:
         LargePageIndex1 = (ULONG)(Offset1 >> LARGE_PAGE_SHIFT);
         CacheLineIndex1 = (ULONG)(Offset1 >> CACHE_LINE_SHIFT);
 
-        Coverage->NumberOfAssignedPerPage[PageIndex1]++;
+        Coverage->SubsetHitsPerPage[PageIndex1]++;
         Coverage->NumberOfAssignedPerLargePage[LargePageIndex1]++;
-        Coverage->NumberOfAssignedPerCacheLine[CacheLineIndex1]++;
+        Coverage->SubsetHitsPerCacheLine[CacheLineIndex1]++;
 
         //
         // Process the second vertex.
@@ -2935,9 +2935,9 @@ Return Value:
         LargePageIndex2 = (ULONG)(Offset2 >> LARGE_PAGE_SHIFT);
         CacheLineIndex2 = (ULONG)(Offset2 >> CACHE_LINE_SHIFT);
 
-        Coverage->NumberOfAssignedPerPage[PageIndex2]++;
+        Coverage->SubsetHitsPerPage[PageIndex2]++;
         Coverage->NumberOfAssignedPerLargePage[LargePageIndex2]++;
-        Coverage->NumberOfAssignedPerCacheLine[CacheLineIndex2]++;
+        Coverage->SubsetHitsPerCacheLine[CacheLineIndex2]++;
 
         //
         // Increment relevant counters if the same large page, page or cache
@@ -2959,7 +2959,7 @@ Return Value:
     // Sum the counts captured above.
     //
 
-    PageCount = Coverage->NumberOfAssignedPerPage;
+    PageCount = Coverage->SubsetHitsPerPage;
     for (Index = 0; Index < Coverage->TotalNumberOfPages; Index++) {
         Count = *PageCount++;
         if (Count > 0) {
@@ -2975,7 +2975,7 @@ Return Value:
         }
     }
 
-    CacheLineCount = Coverage->NumberOfAssignedPerCacheLine;
+    CacheLineCount = Coverage->SubsetHitsPerCacheLine;
     for (Index = 0; Index < Coverage->TotalNumberOfCacheLines; Index++) {
         Count = *CacheLineCount++;
         if (Count > 0) {
@@ -2984,7 +2984,11 @@ Return Value:
                 Coverage->MaxAssignedPerCacheLineCount = Count;
             }
         }
-        Coverage->NumberOfAssignedPerCacheLineCounts[Count]++;
+        // The occupancy histogram has one bin per possible number of
+        // distinct assigned values. Repeated subset visits can exceed it.
+        if (Count < ARRAYSIZE(Coverage->NumberOfAssignedPerCacheLineCounts)) {
+            Coverage->NumberOfAssignedPerCacheLineCounts[Count]++;
+        }
     }
 
     return;

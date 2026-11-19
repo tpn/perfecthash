@@ -73,6 +73,7 @@ Return Value:
     ULONG GraphImpl;
     ULONG NumberOfKeys;
     BOOLEAN UseAssigned16;
+    BOOLEAN UseSubsetCoverage;
     USHORT NumberOfBitmaps;
     PGRAPH_DIMENSIONS Dim;
     SYSTEM_INFO SystemInfo;
@@ -374,12 +375,14 @@ Return Value:
     //  4) Key-subset coverage uses the 32-bit assigned layout.
     //
 
+    UseSubsetCoverage = (!FirstSolvedGraphWins(Context) &&
+        DoesBestCoverageTypeRequireKeysSubset(Context->BestCoverageType));
+
     if ((GraphImpl == 3) &&
         ((NumberOfVertices.LowPart - 1) <= 0x0000ffff) &&
         (NumberOfEdges.LowPart <= 0x00008000) &&
         (NumberOfKeys <= 0x00007fff) &&
-        !(FindBestMemoryCoverage(Context) &&
-          DoesBestCoverageTypeRequireKeysSubset(Context->BestCoverageType)) &&
+        !UseSubsetCoverage &&
         (TableCreateFlags.DoNotTryUseHash16Impl == FALSE)) {
 
         UseAssigned16 = TRUE;
@@ -581,8 +584,7 @@ Return Value:
 
         Info->NumberOfAssignedPerPageSizeInBytes = (
             Info->AssignedArrayNumberOfPages *
-            RTL_ELEMENT_SIZE(ASSIGNED_MEMORY_COVERAGE,
-                             NumberOfAssignedPerPage)
+            (UseSubsetCoverage ? sizeof(ULONG) : sizeof(ASSIGNED_PAGE_COUNT))
         );
 
         Info->NumberOfAssignedPerLargePageSizeInBytes = (
@@ -593,8 +595,8 @@ Return Value:
 
         Info->NumberOfAssignedPerCacheLineSizeInBytes = (
             Info->AssignedArrayNumberOfCacheLines *
-            RTL_ELEMENT_SIZE(ASSIGNED_MEMORY_COVERAGE,
-                             NumberOfAssignedPerCacheLine)
+            (UseSubsetCoverage ? sizeof(ULONG) :
+                                 sizeof(ASSIGNED_CACHE_LINE_COUNT))
         );
 
     } else {
