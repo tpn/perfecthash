@@ -261,20 +261,22 @@ RawDogHostHasAvx2(
 
 static
 BOOLEAN
-RawDogHostHasAvx512(
-    _In_opt_ PRTL Rtl
+RawDogHostSupportsAvx512Kernel(
+    _In_opt_ PRTL Rtl,
+    _In_ PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId
     )
 {
     if (!ARGUMENT_PRESENT(Rtl) ||
         Rtl->CpuFeatures.AVX512F == FALSE ||
-        Rtl->CpuFeatures.AVX512DQ == FALSE ||
-        Rtl->CpuFeatures.AVX512BW == FALSE ||
-        Rtl->CpuFeatures.AVX512VL == FALSE ||
         !RawDogOsAvx512Enabled(Rtl)) {
         return FALSE;
     }
 
-    return TRUE;
+    // Both Mulshrolate4RX x16 kernels use only AVX-512F instructions.
+    return (HashFunctionId == PerfectHashHashMulshrolate4RXFunctionId ||
+            (Rtl->CpuFeatures.AVX512DQ &&
+             Rtl->CpuFeatures.AVX512BW &&
+             Rtl->CpuFeatures.AVX512VL));
 }
 #endif
 
@@ -1384,7 +1386,7 @@ CompileChm01IndexVectorJitRawDog(
     Rtl = Table->Rtl;
     HostHasAvx = RawDogHostHasAvx(Rtl);
     HostHasAvx2 = RawDogHostHasAvx2(Rtl);
-    HostHasAvx512 = RawDogHostHasAvx512(Rtl);
+    HostHasAvx512 = RawDogHostSupportsAvx512Kernel(Rtl, Table->HashFunctionId);
     RequestedIsa = (PERFECT_HASH_JIT_MAX_ISA_ID)CompileFlags->JitMaxIsa;
     AllowAvx512 = (RequestedIsa == PerfectHashJitMaxIsaAuto ||
                    RequestedIsa == PerfectHashJitMaxIsaAvx512);
@@ -2781,7 +2783,7 @@ CompileChm01IndexVectorJitRawDog(
     Rtl = Table->Rtl;
     HostHasAvx = RawDogHostHasAvx(Rtl);
     HostHasAvx2 = (HostHasAvx && Rtl->CpuFeatures.AVX2 != FALSE);
-    HostHasAvx512 = RawDogHostHasAvx512(Rtl);
+    HostHasAvx512 = RawDogHostSupportsAvx512Kernel(Rtl, Table->HashFunctionId);
 
     RequestedIsa = (PERFECT_HASH_JIT_MAX_ISA_ID)CompileFlags->JitMaxIsa;
     AllowAvx512 = (RequestedIsa == PerfectHashJitMaxIsaAuto ||
@@ -2806,7 +2808,8 @@ CompileChm01IndexVectorJitRawDog(
 #endif
 
     if (CompileIndex32x16) {
-        if (!AllowAvx2 || !HostHasAvx2) {
+        if (Table->HashFunctionId != PerfectHashHashMulshrolate4RXFunctionId &&
+            (!AllowAvx2 || !HostHasAvx2)) {
             return PH_E_NOT_IMPLEMENTED;
         }
 

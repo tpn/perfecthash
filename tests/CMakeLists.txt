@@ -44,8 +44,8 @@ set_target_properties(perfecthash_unit_tests PROPERTIES
 if(PERFECTHASH_HAS_RAWDOG_JIT)
     target_compile_definitions(perfecthash_unit_tests PRIVATE PH_HAS_RAWDOG_JIT)
     if(PERFECTHASH_ARCH_X86_64)
-        target_sources(perfecthash_unit_tests PRIVATE RawDogAvxOnlyTest.c)
-        set_source_files_properties(RawDogAvxOnlyTest.c PROPERTIES
+        target_sources(perfecthash_unit_tests PRIVATE RawDogCpuFeaturesTest.c)
+        set_source_files_properties(RawDogCpuFeaturesTest.c PROPERTIES
             COMPILE_DEFINITIONS _PERFECT_HASH_INTERNAL_BUILD
             INCLUDE_DIRECTORIES "${PERFECTHASH_SRC_DIR}/PerfectHash"
         )
