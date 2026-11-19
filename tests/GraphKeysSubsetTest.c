@@ -9,7 +9,7 @@ HashStar(PPERFECT_HASH_TABLE Table, ULONG Key, ULONG Count, PULONG Seeds,
     (void)Table;
     (void)Count;
     (void)Seeds;
-    *Hash = (ULONGLONG)(Key * 16) << 32;
+    *Hash = (ULONGLONG)(Key * (CACHE_LINE_SIZE / sizeof(ULONG))) << 32;
     return S_OK;
 }
 
@@ -28,7 +28,10 @@ int main(void)
     static PERFECT_HASH_TABLE_VTBL Vtbl;
     static GRAPH Graph;
     static KEYS_SUBSET Subset;
-    static ULONG Keys[65536], Pages[1025], LargePages[3], Lines[65537];
+    static ULONG Keys[65536];
+    static ULONG Lines[ARRAYSIZE(Keys) + 1];
+    static ULONG Pages[((ARRAYSIZE(Keys) * CACHE_LINE_SIZE) >> PAGE_SHIFT) + 1];
+    static ULONG LargePages[((ARRAYSIZE(Keys) * CACHE_LINE_SIZE) >> LARGE_PAGE_SHIFT) + 1];
     PASSIGNED_MEMORY_COVERAGE Coverage = &Graph.AssignedMemoryCoverage;
     ULONG Index;
 
@@ -56,7 +59,8 @@ int main(void)
         Coverage->NumberOfAssignedPerCacheLineCounts[1] != ARRAYSIZE(Keys) ||
         Coverage->NumberOfUsedPages != ARRAYSIZE(Pages) ||
         Coverage->NumberOfUsedLargePages != ARRAYSIZE(LargePages) ||
-        Lines[0] != ARRAYSIZE(Keys) || Pages[0] != ARRAYSIZE(Keys) + 63) {
+        Lines[0] != ARRAYSIZE(Keys) ||
+        Pages[0] != ARRAYSIZE(Keys) + (1u << (PAGE_SHIFT - CACHE_LINE_SHIFT)) - 1) {
         return 1;
     }
     for (Index = 0; Index < ARRAYSIZE(Coverage->NumberOfAssignedPerCacheLineCounts); Index++) {
