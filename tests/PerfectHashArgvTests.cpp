@@ -103,6 +103,18 @@ protected:
 #endif
   }
 
+  // A run writes its .csv report to the output directory, --NoFileIo or not.
+  static bool HasCsvReport(const std::filesystem::path &outputDirectory) {
+    std::error_code error;
+    for (const auto &entry :
+         std::filesystem::directory_iterator(outputDirectory, error)) {
+      if (entry.path().extension() == ".csv") {
+        return true;
+      }
+    }
+    return false;
+  }
+
   std::filesystem::path retryDirectory_;
 
   PPERFECT_HASH_TABLE retryTable_ = nullptr;
@@ -215,6 +227,28 @@ TEST_F(PerfectHashArgvTests, FailedFileCreateRegeneratesSharedFiles) {
   EXPECT_GT(std::filesystem::file_size(outputPath / "CompiledPerfectHash.props"), 0u);
   EXPECT_GT(std::filesystem::file_size(outputPath / "CompiledPerfectHash.h"), 0u);
 #undef PH_TEST_IID
+}
+
+TEST_F(PerfectHashArgvTests, CreatesMissingParentsOfTheOutputDirectory) {
+  std::random_device entropy;
+  const auto candidate = std::filesystem::temp_directory_path() /
+      ("perfecthash-parents-" + std::to_string(entropy()) + "-" +
+       std::to_string(entropy()));
+  ASSERT_TRUE(std::filesystem::create_directory(candidate));
+  retryDirectory_ = candidate;
+  const auto keysPath = retryDirectory_ / "Parents.keys";
+  {
+    const ULONG keys[] = {1, 3, 5, 7};
+    std::ofstream file(keysPath, std::ios::binary);
+    file.write(reinterpret_cast<const char *>(keys), sizeof(keys));
+    ASSERT_TRUE(file.good());
+  }
+
+  const auto outputPath = retryDirectory_ / "a" / "b" / "out";
+  ASSERT_EQ(S_OK, RunTableCreate({
+      "PerfectHashCreate", keysPath.string(), outputPath.string(), "Chm01",
+      "MultiplyShiftR", "And", "1", "--Quiet", "--NoFileIo"}));
+  EXPECT_TRUE(HasCsvReport(outputPath));
 }
 
 TEST_F(PerfectHashArgvTests, InvalidAlgorithmId) {
