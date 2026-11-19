@@ -514,7 +514,7 @@ Return Value:
         InterlockedIncrement(&Context->LowMemoryObserved);
         Result = PH_I_LOW_MEMORY;
         if (!NoFileIo(Table)) {
-            WaitForThreadpoolWorkCallbacks(Context->FileWork, FALSE);
+            WaitForThreadpoolWorkCallbacks(Context->FileWork, TRUE);
             CHECK_ALL_PREPARE_ERRORS();
         }
         goto Error;
@@ -1012,9 +1012,10 @@ Error:
     WaitForThreadpoolWorkCallbacks(Context->MainWork, TRUE);
     WaitForThreadpoolWorkCallbacks(Context->ConsoleWork, TRUE);
     if (!NoFileIo(Table)) {
-        // A canceled callback leaves its item in FileWorkList ahead of the
-        // rollback jobs. Drain the submitted work before queuing closes.
-        WaitForThreadpoolWorkCallbacks(Context->FileWork, FALSE);
+        // Drop canceled items after active callbacks finish, so rollback
+        // callbacks consume only the newly submitted closes.
+        WaitForThreadpoolWorkCallbacks(Context->FileWork, TRUE);
+        ResetFileWorkList(Context);
     }
 
     //
