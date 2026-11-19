@@ -874,10 +874,23 @@ TEST_F(PerfectHashOnlineTests, RawDogMulshrolate4RXIndex32x8NeonAndScalarFallbac
   const bool has_neon = HostHasNeon();
   const auto keys = MakePseudoRandomKeys(64);
   const std::vector<uint32_t> queries(keys.begin(), keys.end());
-  for (bool assigned16 : {false, true}) {
+  // A zero user byte keeps the random seed byte. Supply 0x20 so the
+  // solver's five-bit mask fixes that vertex's rotation at zero.
+  const struct {
+    bool assigned16;
+    ULONG seed3;
+  } fixtures[] = {
+      {false, 0x011f2019u}, {false, 0x01201f19u},
+      {true,  0x011f2019u}, {true,  0x01201f19u},
+  };
+  for (const auto &[assigned16, seed3] : fixtures) {
     SCOPED_TRACE(assigned16);
+    SCOPED_TRACE(seed3);
+    const std::vector<ULONG> seeds = {
+        0x50c187fdu, 0x66b2bc5bu, seed3, 0x448aaa9fu, 0x10f1bc81u,
+    };
     auto *table = CreateTableFromKeys(keys, PerfectHashHashMulshrolate4RXFunctionId,
-                                      assigned16, 3);
+                                      assigned16, 3, &seeds);
     ASSERT_NE(table, nullptr);
     auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
     const auto release = [shim](PPERFECT_HASH_TABLE t) { shim->Vtbl->Release(t); };
@@ -886,6 +899,7 @@ TEST_F(PerfectHashOnlineTests, RawDogMulshrolate4RXIndex32x8NeonAndScalarFallbac
     PH_ONLINE_JIT_TABLE_INFO table_info = {};
     ASSERT_GE(PhOnlineJitGetTableInfo(&wrapper, &table_info), 0);
     ASSERT_EQ(table_info.AssignedElementSizeInBytes, assigned16 ? 2u : 4u);
+    ASSERT_EQ(table_info.Seed3, seed3 & 0x1f1f1f1fu);
     std::vector<uint32_t> expected(keys.size());
     for (size_t i = 0; i < keys.size(); ++i) {
       ASSERT_GE(PhOnlineJitIndex32(&wrapper, queries[i], &expected[i]), 0);
