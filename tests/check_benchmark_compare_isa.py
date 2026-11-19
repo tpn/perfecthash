@@ -57,3 +57,10 @@ for name in ("Mulshrolate4RX", "Mulshrolate3RX"):
             available = width_available(hash_arg, backend, width, isa)
             if (entry in rows) != available or (entry in skipped) == available:
                 raise AssertionError(f"{entry} availability was {available}\n{output}")
+
+    if name == "Mulshrolate3RX":
+        output, capped_rows, capped_skips = compare(hash_arg, "--jit-max-isa=avx")
+        avx_entries = {(backend, width) for backend in ("llvm", "rawdog")
+                       for width in ("x1", "x4")}
+        if capped_rows != (rows & avx_entries) or capped_skips != (skipped & avx_entries):
+            raise AssertionError(f"Unexpected results or skips under the AVX cap\n{output}")
