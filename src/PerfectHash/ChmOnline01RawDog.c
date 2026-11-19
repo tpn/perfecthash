@@ -2623,6 +2623,15 @@ CompileChm01IndexVectorJitRawDog(
         return PH_E_NOT_IMPLEMENTED;
     }
 
+    // x64 has x8 and x16 kernels for Mulshrolate3RX, but no x4 kernel.
+    if (CompileIndex32x4 &&
+        Table->HashFunctionId == PerfectHashHashMulshrolate3RXFunctionId) {
+        if (!CompileIndex32x8 && !CompileIndex32x16) {
+            return PH_E_NOT_IMPLEMENTED;
+        }
+        CompileIndex32x4 = FALSE;
+    }
+
     UseAssigned16 = (Table->State.UsingAssigned16 != FALSE);
     if (UseAssigned16) {
         if (!ARGUMENT_PRESENT(Table->Assigned16)) {

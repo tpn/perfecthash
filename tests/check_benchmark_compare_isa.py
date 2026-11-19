@@ -1,11 +1,11 @@
-"""Check that the x64 Mulshrolate4RX comparison reports only compiled widths."""
+"""Check that the x64 ISA comparison reports only compiled lookup widths."""
 import os
 import re
 import subprocess
 import sys
 
 
-command = [*sys.argv[1:], "--hash=Mulshrolate4RX", "--keys=64",
+command = [*sys.argv[1:], "--keys=64",
            "--iterations=1", "--loops=1", "--no-std-map-baselines"]
 
 
@@ -15,17 +15,21 @@ def run(*arguments):
                           env=dict(os.environ, PERFECT_HASH_ONLINE_MAX_CONCURRENCY="1"))
 
 
-comparison = run("--compare-isa")
-if comparison.returncode:
-    raise AssertionError(comparison.stdout)
+def compare(*arguments):
+    comparison = run("--compare-isa", *arguments)
+    if comparison.returncode:
+        raise AssertionError(comparison.stdout)
+    rows = set(re.findall(r"^(llvm|rawdog)\s+\w+\s+\w+\s+(x\d+)\s+\d",
+                          comparison.stdout, re.MULTILINE))
+    skipped = set(re.findall(r"^Skipping unsupported (llvm|rawdog) \w+ (x\d+)$",
+                             comparison.stdout, re.MULTILINE))
+    return comparison.stdout, rows, skipped
 
-rows = set(re.findall(r"^(llvm|rawdog)\s+\w+\s+\w+\s+(x\d+)\s+\d",
-                      comparison.stdout, re.MULTILINE))
-skipped = set(re.findall(r"^Skipping unsupported (llvm|rawdog) \w+ (x\d+)$",
-                         comparison.stdout, re.MULTILINE))
+
+output, rows, skipped = compare("--hash=Mulshrolate4RX")
 for backend in ("llvm", "rawdog"):
     if (backend, "x1") not in rows:
-        raise AssertionError(f"Missing {backend} scalar baseline\n{comparison.stdout}")
+        raise AssertionError(f"Missing {backend} scalar baseline\n{output}")
     for width, isa in ((4, "avx"), (8, "avx2"), (16, "avx512")):
         entry = (backend, f"x{width}")
         # Compare to an independent single-width run. The ordinary benchmark
@@ -33,7 +37,7 @@ for backend in ("llvm", "rawdog"):
         flags = [f"--jit-backend={backend}", f"--jit-max-isa={isa}", f"--index32x{width}"]
         if width in (4, 8):
             flags.append(f"--jit-vector-index32x{width}")
-        probe = run(*flags)
+        probe = run("--hash=Mulshrolate4RX", *flags)
         if probe.returncode:
             if "CompileTable failed: 0xe0040230" not in probe.stdout:  # PH_E_NOT_IMPLEMENTED
                 raise AssertionError(probe.stdout)
@@ -44,4 +48,9 @@ for backend in ("llvm", "rawdog"):
                 raise AssertionError(probe.stdout)
             available = str(width) in compiled[1].split()
         if (entry in rows) != available or (entry in skipped) == available:
-            raise AssertionError(f"{entry} availability was {available}\n{comparison.stdout}")
+            raise AssertionError(f"{entry} availability was {available}\n{output}")
+
+# RawDog has no x64 x4 kernel for Mulshrolate3RX, including on AVX-512 hosts.
+output, rows, skipped = compare("--hash=Mulshrolate3RX", "--jit-max-isa=avx")
+if ("rawdog", "x1") not in rows or ("rawdog", "x4") in rows or ("rawdog", "x4") not in skipped:
+    raise AssertionError(f"Expected RawDog scalar results and an x4 skip\n{output}")
