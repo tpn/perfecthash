@@ -1,6 +1,5 @@
-// A PerfectHashLLVM plugin from before the hash JIT existed. It exports the
-// two index JIT entry points and neither hash JIT one, so the loader must
-// reject it without calling either.
+// Model a plugin with the current index ABI but no hash JIT, or an older
+// plugin with all four unversioned entry points. Both must be rejected.
 
 #ifdef _WIN32
 #define PH_PLUGIN_EXPORT __declspec(dllexport)
@@ -29,3 +28,19 @@ PerfectHashTableJitRundown(
     (void)Table;
     return -1;
 }
+
+#ifdef PH_TEST_UNVERSIONED_LLVM
+PH_PLUGIN_EXPORT
+int
+PerfectHashTableCompileHashJit(void *Table, void *CompileFlags)
+{
+    return PerfectHashTableCompileJit(Table, CompileFlags);
+}
+
+PH_PLUGIN_EXPORT
+void
+PerfectHashTableHashJitRundown(void *Table)
+{
+    (void)Table;
+}
+#endif

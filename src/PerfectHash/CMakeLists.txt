@@ -5248,6 +5248,13 @@ set(llvm_target PerfectHashLLVM)
 
 if(PERFECTHASH_HAS_LLVM)
     add_library(${llvm_target} SHARED ${LLVM_SOURCE_FILES})
+    # A legacy host must fail lookup before passing its private table layout.
+    # Only the loadable plugin uses these versioned names.
+    target_compile_definitions(${llvm_target} PRIVATE
+        PerfectHashTableCompileJit=PerfectHashTableCompileJitV1
+        PerfectHashTableJitRundown=PerfectHashTableJitRundownV1
+        PerfectHashTableCompileHashJit=PerfectHashTableCompileHashJitV1
+        PerfectHashTableHashJitRundown=PerfectHashTableHashJitRundownV1)
     # Online clients load this plugin on demand, including in a subproject
     # where only the downstream client's link dependencies are built.
     foreach(ph_library ${online_target} ${online_static_target} ${online_core_target} ${online_core_static_target})
