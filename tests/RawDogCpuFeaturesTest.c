@@ -2,6 +2,9 @@
 #include <PerfectHash/PerfectHashOnlineJit.h>
 #include "PerfectHashOnlineJitPrivate.h"
 
+#if defined(__GNUC__) || defined(__clang__)
+__attribute__((target("xsave")))
+#endif
 int
 CanExecuteAvx512F(
     PH_ONLINE_JIT_TABLE *Table
