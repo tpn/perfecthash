@@ -1888,6 +1888,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     };
 
     ULONG CuIsAcyclicPhase1Attempts;
+    ULONG CuTimingPadding;
 
     //
     // Explicit CUDA phase timings for performance benchmarking.
@@ -1903,6 +1904,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     //
 
     PERFECT_HASH_CU_RNG_ID CuRngId;
+    ULONG CuRngPadding;
     ULONGLONG CuRngSeed;
     ULONGLONG CuRngSubsequence;
     ULONGLONG CuRngOffset;

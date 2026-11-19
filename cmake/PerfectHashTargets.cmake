@@ -147,4 +147,8 @@ endfunction()
 function(perfecthash_apply_cuda_settings target)
     perfecthash_apply_common_definitions(${target})
     target_compile_definitions(${target} PUBLIC PH_CUDA)
+    if(MSVC AND CMAKE_CUDA_COMPILER_ID STREQUAL "NVIDIA")
+        target_compile_options(${target} PRIVATE
+            $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=/Zc:preprocessor>)
+    endif()
 endfunction()
