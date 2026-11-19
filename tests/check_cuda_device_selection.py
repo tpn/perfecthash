@@ -17,7 +17,9 @@ def visible_devices():
         else:
             driver = ctypes.CDLL("libcuda.so.1")
     except OSError as error:
-        if getattr(error, "winerror", None) == 126 or "No such file or directory" in str(error):
+        if (isinstance(error, FileNotFoundError) or
+                getattr(error, "winerror", None) == 126 or
+                "No such file or directory" in str(error)):
             return []
         raise
     # CUDA_ERROR_NO_DEVICE is a valid result on GPU-less build hosts.
