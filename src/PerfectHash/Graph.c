@@ -4201,6 +4201,7 @@ Return Value:
         }
 
         if (Result == PH_S_USE_NEW_GRAPH_FOR_SOLVING) {
+            ULONG PreviousNumberOfVertices = Graph->NumberOfVertices;
 
             if (NewGraph == NULL) {
                 PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
@@ -4213,19 +4214,18 @@ Return Value:
 
             AcquireGraphLockExclusive(NewGraph);
             ReleaseGraphLockExclusive(Graph);
+            Graph = NewGraph;
 
-            if (!IsGraphInfoLoaded(NewGraph) ||
-                NewGraph->LastLoadedNumberOfVertices <
-                Graph->NumberOfVertices) {
+            if (!IsGraphInfoLoaded(Graph) ||
+                Graph->LastLoadedNumberOfVertices < PreviousNumberOfVertices) {
 
-                Result = NewGraph->Vtbl->LoadInfo(NewGraph);
+                Result = Graph->Vtbl->LoadInfo(Graph);
                 if (FAILED(Result)) {
                     PH_ERROR(GraphLoadInfo_NewGraph, Result);
                     goto End;
                 }
             }
 
-            Graph = NewGraph;
             continue;
         }
 

@@ -2,8 +2,9 @@
 #include <stdio.h>
 
 static PERFECT_HASH_CONTEXT Context;
-static PH_CU_SOLVE_CONTEXT SolveContext;
+static PH_CU_SOLVE_CONTEXT SolveContext, OtherSolveContext;
 static GRAPH Cpu, CpuSpare, Gpu, GpuSpare;
+static GRAPH OtherGpu, OtherGpuSpare;
 
 int main(void)
 {
@@ -41,6 +42,20 @@ int main(void)
     if (GraphGetReplacementForNewBest(&GpuSpare, &CpuSpare) != &Gpu ||
         Context.SpareGraph != &CpuSpare) {
         fprintf(stderr, "The CUDA worker could not resume on its primary graph.\n");
+        return 1;
+    }
+
+    // A different CUDA worker must continue on its own stream and graph pair.
+    OtherGpu.Context = OtherGpuSpare.Context = &Context;
+    OtherGpu.Flags.IsCuGraph = OtherGpuSpare.Flags.IsCuGraph = TRUE;
+    OtherGpu.CuSolveContext = OtherGpuSpare.CuSolveContext = &OtherSolveContext;
+    OtherGpu.CuHostGraph = OtherGpuSpare.CuHostGraph = &OtherGpu;
+    OtherGpu.CuHostSpareGraph = OtherGpuSpare.CuHostSpareGraph = &OtherGpuSpare;
+    OtherGpuSpare.Flags.IsSpare = TRUE;
+    if (GraphGetReplacementForNewBest(&OtherGpu, &GpuSpare) != &OtherGpuSpare ||
+        GraphGetReplacementForNewBest(&Gpu, &OtherGpu) != &GpuSpare ||
+        Context.SpareGraph != &CpuSpare) {
+        fprintf(stderr, "A CUDA worker acquired another worker's graph.\n");
         return 1;
     }
     return 0;
