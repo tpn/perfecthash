@@ -123,6 +123,18 @@ protected:
         reinterpret_cast<void **>(&retryTable_)));
   }
 
+  // A run writes its .csv report to the output directory, --NoFileIo or not.
+  static bool HasCsvReport(const std::filesystem::path &outputDirectory) {
+    std::error_code error;
+    for (const auto &entry :
+         std::filesystem::directory_iterator(outputDirectory, error)) {
+      if (entry.path().extension() == ".csv") {
+        return true;
+      }
+    }
+    return false;
+  }
+
   std::filesystem::path retryDirectory_;
 
   PPERFECT_HASH_TABLE retryTable_ = nullptr;
@@ -323,6 +335,87 @@ TEST_F(PerfectHashArgvTests, RejectedCudaOrdinalsCanBeCorrectedOnSameContext) {
   EXPECT_EQ(S_OK, vtbl->Test(retryTable_, retryKeys_, FALSE));
 }
 #endif
+
+TEST_F(PerfectHashArgvTests, CreatesMissingParentsOfTheOutputDirectory) {
+  std::random_device entropy;
+  const auto candidate = std::filesystem::temp_directory_path() /
+      ("perfecthash-parents-" + std::to_string(entropy()) + "-" +
+       std::to_string(entropy()));
+  ASSERT_TRUE(std::filesystem::create_directory(candidate));
+  retryDirectory_ = candidate;
+  const auto keysPath = retryDirectory_ / "Parents.keys";
+  {
+    const ULONG keys[] = {1, 3, 5, 7};
+    std::ofstream file(keysPath, std::ios::binary);
+    file.write(reinterpret_cast<const char *>(keys), sizeof(keys));
+    ASSERT_TRUE(file.good());
+  }
+
+  const auto outputPath = retryDirectory_ / "a" / "b" / "out";
+  ASSERT_EQ(S_OK, RunTableCreate({
+      "PerfectHashCreate", keysPath.string(), outputPath.string(), "Chm01",
+      "MultiplyShiftR", "And", "1", "--Quiet", "--NoFileIo"}));
+  EXPECT_TRUE(HasCsvReport(outputPath));
+}
+
+#ifndef PH_WINDOWS
+// A relative output directory, with parents that are one character long.
+TEST_F(PerfectHashArgvTests, CreatesMissingParentsOfARelativeOutputDirectory) {
+  std::random_device entropy;
+  const auto candidate = std::filesystem::temp_directory_path() /
+      ("perfecthash-relative-" + std::to_string(entropy()) + "-" +
+       std::to_string(entropy()));
+  ASSERT_TRUE(std::filesystem::create_directory(candidate));
+  retryDirectory_ = candidate;
+  const auto keysPath = retryDirectory_ / "Relative.keys";
+  {
+    const ULONG keys[] = {1, 3, 5, 7};
+    std::ofstream file(keysPath, std::ios::binary);
+    file.write(reinterpret_cast<const char *>(keys), sizeof(keys));
+    ASSERT_TRUE(file.good());
+  }
+
+  const auto previous = std::filesystem::current_path();
+  std::filesystem::current_path(retryDirectory_);
+  const HRESULT result = RunTableCreate({
+      "PerfectHashCreate", keysPath.string(), "a/b/out", "Chm01",
+      "MultiplyShiftR", "And", "1", "--Quiet", "--NoFileIo"});
+  std::filesystem::current_path(previous);
+
+  ASSERT_EQ(S_OK, result);
+  EXPECT_TRUE(HasCsvReport(retryDirectory_ / "a" / "b" / "out"));
+}
+#endif
+
+// A keys path as short as "/k", or "C:\k" on Windows, is accepted as a path,
+// whatever becomes of it later.
+TEST_F(PerfectHashArgvTests, AcceptsShortPaths) {
+#ifdef PH_WINDOWS
+  const std::string shortest = "C:\\k";
+#else
+  const std::string shortest = "/k";
+#endif
+  if (std::filesystem::exists(shortest)) {
+    GTEST_SKIP() << shortest << " exists";
+  }
+  std::random_device entropy;
+  const auto candidate = std::filesystem::temp_directory_path() /
+      ("perfecthash-short-" + std::to_string(entropy()) + "-" +
+       std::to_string(entropy()));
+  ASSERT_TRUE(std::filesystem::create_directory(candidate));
+  retryDirectory_ = candidate;
+  auto create = [&](const std::string &keysPath) {
+    return RunTableCreate({
+        "PerfectHashCreate", keysPath, retryDirectory_.string(), "Chm01",
+        "MultiplyShiftR", "And", "1", "--Quiet", "--NoFileIo"});
+  };
+
+  EXPECT_NE(E_INVALIDARG, create(shortest));
+#ifdef PH_WINDOWS
+  // Without a name after the drive there is no directory to speak of.
+  EXPECT_EQ(E_INVALIDARG, create("C:\\"));
+#endif
+}
 
 TEST_F(PerfectHashArgvTests, InvalidAlgorithmId) {
   const std::vector<std::string> args = {
