@@ -503,16 +503,20 @@ TEST_F(PerfectHashOnlineTests, SkipGraphVerificationReturnsUsableTable) {
   shim->Vtbl->Release(table);
 }
 
-TEST_F(PerfectHashOnlineTests, NeonHashAllKeysHandlesWidthsTailsAndFallback) {
-  bool hasNeon = false;
+bool HostHasNeon() {
 #if defined(PH_WINDOWS) && defined(_M_ARM64)
-  hasNeon = IsProcessorFeaturePresent(PF_ARM_NEON_INSTRUCTIONS_AVAILABLE);
+  return IsProcessorFeaturePresent(PF_ARM_NEON_INSTRUCTIONS_AVAILABLE);
 #elif defined(PH_LINUX) && defined(__aarch64__) && defined(__ARM_NEON)
-  hasNeon = (getauxval(AT_HWCAP) & HWCAP_ASIMD) != 0;
+  return (getauxval(AT_HWCAP) & HWCAP_ASIMD) != 0;
 #elif defined(PH_MAC) && defined(__aarch64__) && defined(__ARM_NEON)
-  hasNeon = true;
+  return true;
+#else
+  return false;
 #endif
+}
 
+TEST_F(PerfectHashOnlineTests, NeonHashAllKeysHandlesWidthsTailsAndFallback) {
+  const bool hasNeon = HostHasNeon();
   const PERFECT_HASH_HASH_FUNCTION_ID hashes[] = {
 #define NEON_TEST_HASH(Name) PerfectHashHash##Name##FunctionId,
       PERFECT_HASH_GOOD_HASH_FUNCTION_TABLE_ENTRY(NEON_TEST_HASH)
@@ -866,6 +870,79 @@ TEST_F(PerfectHashOnlineTests, HeldJitInterfaceFollowsBackendRecompile) {
 #endif
 
 #if defined(_M_ARM64) || defined(__aarch64__)
+TEST_F(PerfectHashOnlineTests, RawDogMulshrolate4RXIndex32x8NeonAndScalarFallback) {
+  const bool has_neon = HostHasNeon();
+  const auto keys = MakePseudoRandomKeys(64);
+  const std::vector<uint32_t> queries(keys.begin(), keys.end());
+  for (bool assigned16 : {false, true}) {
+    SCOPED_TRACE(assigned16);
+    auto *table = CreateTableFromKeys(keys, PerfectHashHashMulshrolate4RXFunctionId,
+                                      assigned16, 3);
+    ASSERT_NE(table, nullptr);
+    auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
+    const auto release = [shim](PPERFECT_HASH_TABLE t) { shim->Vtbl->Release(t); };
+    std::unique_ptr<PERFECT_HASH_TABLE, decltype(release)> owner(table, release);
+    PH_ONLINE_JIT_TABLE wrapper = {table};
+    PH_ONLINE_JIT_TABLE_INFO table_info = {};
+    ASSERT_GE(PhOnlineJitGetTableInfo(&wrapper, &table_info), 0);
+    ASSERT_EQ(table_info.AssignedElementSizeInBytes, assigned16 ? 2u : 4u);
+    std::vector<uint32_t> expected(keys.size());
+    for (size_t i = 0; i < keys.size(); ++i) {
+      ASSERT_GE(PhOnlineJitIndex32(&wrapper, queries[i], &expected[i]), 0);
+    }
+
+    for (auto cap : {PerfectHashJitMaxIsaAuto, PerfectHashJitMaxIsaNeon,
+                     PerfectHashJitMaxIsaSve, PerfectHashJitMaxIsaSve2,
+                     PerfectHashJitMaxIsaAvx}) {
+      SCOPED_TRACE(cap);
+      const bool use_neon = has_neon && cap != PerfectHashJitMaxIsaAvx;
+      for (bool require_vector : {false, true}) {
+        SCOPED_TRACE(require_vector);
+        PERFECT_HASH_TABLE_COMPILE_FLAGS flags = {};
+        flags.Jit = TRUE;
+        flags.JitBackendRawDog = TRUE;
+        flags.JitMaxIsa = cap;
+        flags.JitRequireRequestedWidth = TRUE;
+        flags.JitIndex32x8 = !require_vector;
+        flags.JitVectorIndex32x8 = require_vector;
+        HRESULT result = online_->Vtbl->CompileTable(online_, table, &flags);
+        if (require_vector && !use_neon) {
+          ASSERT_EQ(result, PH_E_NOT_IMPLEMENTED);
+          continue;
+        }
+        ASSERT_GE(result, 0);
+        PPERFECT_HASH_TABLE_JIT_INTERFACE jit = nullptr;
+        result = shim->Vtbl->QueryInterface(
+            table,
+#ifdef PH_WINDOWS
+            IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
+#else
+            &IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
+#endif
+            reinterpret_cast<void **>(&jit));
+        ASSERT_GE(result, 0);
+        ASSERT_NE(jit, nullptr);
+        PERFECT_HASH_TABLE_JIT_INFO info = {};
+        result = jit->Vtbl->GetInfo(jit, &info);
+        jit->Vtbl->Release(jit);
+        ASSERT_GE(result, 0);
+        EXPECT_TRUE(info.Flags.BackendRawDog);
+        EXPECT_TRUE(info.Flags.Index32x8Compiled);
+        EXPECT_EQ(!!info.Flags.Index32x8Vector, use_neon);
+        if (use_neon) {
+          EXPECT_EQ(info.JitMaxIsa, PerfectHashJitMaxIsaNeon);
+          EXPECT_STREQ(info.TargetFeatures, "neon");
+        }
+        std::vector<uint32_t> actual(keys.size());
+        for (size_t i = 0; i < keys.size(); i += 8) {
+          ASSERT_GE(PhOnlineJitIndex32x8(&wrapper, &queries[i], &actual[i]), 0);
+        }
+        EXPECT_EQ(actual, expected);
+      }
+    }
+  }
+}
+
 TEST_F(PerfectHashOnlineTests, FailedRawDogVectorCompilePreservesBatchIndex) {
   const std::vector<ULONG> keys = {1, 3, 5, 7, 11, 13, 17, 19};
   auto *table = CreateTableFromKeys(keys, PerfectHashHashMultiplyShiftRFunctionId);

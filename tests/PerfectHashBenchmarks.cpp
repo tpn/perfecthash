@@ -108,6 +108,7 @@ struct BenchmarkResult {
   bool index32x8 = false;
   bool index32x16 = false;
   bool index32x16_available = true;
+  bool index32x8_vector = false;
   ULONG assigned_element_bits = 0;
   std::string jit_target_cpu;
   std::string jit_target_features;
@@ -1195,6 +1196,7 @@ int RunBenchmark(const BenchmarkOptions &base,
         std::cout << "  JIT Target Features: " << features << "\n";
       }
       if (result) {
+        result->index32x8_vector = info.Flags.Index32x8Vector;
         result->jit_target_cpu = cpu;
         result->jit_target_features = features;
       }
@@ -1888,6 +1890,10 @@ int RunCompare(const BenchmarkOptions &base) {
                 << " index=" << (entry.index_label ? entry.index_label : "x1")
                 << "\n";
       return runResult;
+    }
+    if (arm64Compare && entry.options.jit_backend == BenchmarkOptions::JitBackend::RawDog &&
+        entry.options.index32x8 && entry.result.index32x8_vector) {
+      entry.label = "neon";
     }
     ++it;
   }

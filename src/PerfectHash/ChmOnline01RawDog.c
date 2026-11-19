@@ -151,6 +151,8 @@ Abstract:
 #include "PerfectHashJitRawDogMulshrolate4RX16Index32x4_arm64.h"
 #include "PerfectHashJitRawDogMulshrolate4RXIndex32x8_arm64.h"
 #include "PerfectHashJitRawDogMulshrolate4RX16Index32x8_arm64.h"
+#include "PerfectHashJitRawDogMulshrolate4RXIndex32x8Neon_arm64.h"
+#include "PerfectHashJitRawDogMulshrolate4RX16Index32x8Neon_arm64.h"
 #include "PerfectHashJitRawDogMulshrolate4RXIndex32x16_arm64.h"
 #include "PerfectHashJitRawDogMulshrolate4RX16Index32x16_arm64.h"
 #endif
@@ -297,6 +299,12 @@ static const RAW_DOG_BLOB RawDogMulshrolate4RXIndex32x8[] = {
     RAWDOG_BLOB(Mulshrolate4RXIndex32x8),
     RAWDOG_BLOB(Mulshrolate4RX16Index32x8)
 };
+#if defined(PH_RAWDOG_ARM64)
+static const RAW_DOG_BLOB RawDogMulshrolate4RXIndex32x8Neon[] = {
+    RAWDOG_BLOB(Mulshrolate4RXIndex32x8Neon),
+    RAWDOG_BLOB(Mulshrolate4RX16Index32x8Neon)
+};
+#endif
 static const RAW_DOG_BLOB RawDogMulshrolate4RXIndex32x16[] = {
     RAWDOG_BLOB(Mulshrolate4RXIndex32x16),
     RAWDOG_BLOB(Mulshrolate4RX16Index32x16)
@@ -311,6 +319,58 @@ static const CHAR RawDogTargetCpu[] = "rawdog-x64";
 static const CHAR RawDogTargetCpu[] = "rawdog-arm64";
 #else
 static const CHAR RawDogTargetCpu[] = "";
+#endif
+
+#if defined(PH_RAWDOG_ARM64)
+// Copy the template before specializing its shift immediates. The last three
+// words are byte offsets emitted by the assembler in NeonShiftOffsets.
+static
+HRESULT
+SpecializeRawDogNeonX8Shifts(
+    _Out_writes_bytes_(Template->Size) PULONG Words,
+    _In_ const RAW_DOG_BLOB *Template,
+    _In_ ULONG_BYTES Seed3
+    )
+{
+    const ULONG Shifts[] = { Seed3.Byte2, Seed3.Byte3, Seed3.Byte1 };
+    const SIZE_T WordCount = Template->Size / sizeof(*Words);
+    const ULONG *Offsets;
+
+    if (Template->Size % sizeof(*Words) != 0 || WordCount < ARRAYSIZE(Shifts) + 4) {
+        return PH_E_INVARIANT_CHECK_FAILED;
+    }
+    memcpy(Words, Template->Code, Template->Size);
+    Offsets = Words + WordCount - ARRAYSIZE(Shifts);
+
+    for (ULONG Group = 0; Group < ARRAYSIZE(Shifts); Group++) {
+        ULONG Offset = Offsets[Group];
+        ULONG Shift = Shifts[Group] & 31;
+        PULONG Instructions;
+        if (Offset % sizeof(*Words) != 0 ||
+            Offset / sizeof(*Words) > WordCount - ARRAYSIZE(Shifts) - 4) {
+            return PH_E_INVARIANT_CHECK_FAILED;
+        }
+        Instructions = Words + Offset / sizeof(*Words);
+        for (ULONG Index = 0; Index < 4; Index++) {
+            // Rotations use SHL #0 twice, then SRI #32 twice. The final
+            // group uses four in-place USHR #32 instructions. Bits 0..9
+            // identify the registers and bits 16..20 encode the shift.
+            const ULONG Shl = 0x4f205400u;
+            const ULONG Sri = 0x6f204400u;
+            const ULONG Ushr = 0x6f200400u;
+            ULONG Opcode = Group == 2 ? Ushr : (Index < 2 ? Shl : Sri);
+            if ((Instructions[Index] & ~0x3ffu) != Opcode) {
+                return PH_E_INVARIANT_CHECK_FAILED;
+            }
+            if (Group == 2 && Shift == 0) {
+                Instructions[Index] = 0xd503201fu; // NOP: USHR has no #0 encoding.
+            } else {
+                Instructions[Index] |= ((0u - Shift) & 31u) << 16;
+            }
+        }
+    }
+    return S_OK;
+}
 #endif
 
 static
@@ -2095,6 +2155,7 @@ CompileChm01IndexVectorJitRawDog(
     RAW_DOG_PATCH_ENTRY Entries[10];
     ULONG EntryCount = 0;
     BOOLEAN UseAssigned16;
+    BOOLEAN UseNeonX8 = FALSE;
     PBYTE SourceCode = NULL;
     SIZE_T CodeSize = 0;
     PBYTE Code;
@@ -2107,8 +2168,17 @@ CompileChm01IndexVectorJitRawDog(
         return S_OK;
     }
 
-    // These multi-key blobs use scalar instructions.
-    if (CompileFlags->JitVectorIndex32x4 || CompileFlags->JitVectorIndex32x8) {
+#if defined(PH_HAS_ARM64_NEON)
+    UseNeonX8 = (CompileIndex32x8 &&
+                 Table->HashFunctionId == PerfectHashHashMulshrolate4RXFunctionId &&
+                 (CompileFlags->JitMaxIsa == PerfectHashJitMaxIsaAuto ||
+                  CompileFlags->JitMaxIsa == PerfectHashJitMaxIsaNeon ||
+                  CompileFlags->JitMaxIsa == PerfectHashJitMaxIsaSve ||
+                  CompileFlags->JitMaxIsa == PerfectHashJitMaxIsaSve2) &&
+                 GraphHasNeon());
+#endif
+    if (CompileFlags->JitVectorIndex32x4 ||
+        (CompileFlags->JitVectorIndex32x8 && !UseNeonX8)) {
         return PH_E_NOT_IMPLEMENTED;
     }
 
@@ -2467,6 +2537,9 @@ CompileChm01IndexVectorJitRawDog(
     }
 
     if (CompileIndex32x8) {
+        ULONG NeonWords[max(sizeof(PerfectHashJitRawDogMulshrolate4RXIndex32x8Neon_arm64),
+                            sizeof(PerfectHashJitRawDogMulshrolate4RX16Index32x8Neon_arm64))
+                        / sizeof(ULONG)];
         if (Table->HashFunctionId ==
             PerfectHashHashMultiplyShiftRFunctionId) {
             if (UseAssigned16) {
@@ -2499,8 +2572,18 @@ CompileChm01IndexVectorJitRawDog(
             }
         } else if (Table->HashFunctionId ==
                    PerfectHashHashMulshrolate4RXFunctionId) {
-            SourceCode = RawDogMulshrolate4RXIndex32x8[UseAssigned16].Code;
-            CodeSize = RawDogMulshrolate4RXIndex32x8[UseAssigned16].Size;
+            if (UseNeonX8) {
+                const RAW_DOG_BLOB *Neon = &RawDogMulshrolate4RXIndex32x8Neon[UseAssigned16];
+                Result = SpecializeRawDogNeonX8Shifts(NeonWords, Neon, Seed3Bytes);
+                if (FAILED(Result)) {
+                    return Result;
+                }
+                SourceCode = (PBYTE)NeonWords;
+                CodeSize = Neon->Size;
+            } else {
+                SourceCode = RawDogMulshrolate4RXIndex32x8[UseAssigned16].Code;
+                CodeSize = RawDogMulshrolate4RXIndex32x8[UseAssigned16].Size;
+            }
         } else if (Table->HashFunctionId ==
                    PerfectHashHashMulshrolate3RXFunctionId) {
             if (UseAssigned16) {
@@ -2558,17 +2641,22 @@ CompileChm01IndexVectorJitRawDog(
 
         Jit->Index32x8Function = Code;
 #if defined(PH_WINDOWS)
-        Result = RegisterRawDogBatchUnwind(Code, CodeSize, 48,
-                                           &Jit->RawDogBatchUnwind[1]);
-        if (FAILED(Result)) {
-            return Result;
+        // The NEON x8 kernel is a leaf that leaves SP, LR and nonvolatile
+        // registers untouched. Only the scalar x8 kernel needs unwind data.
+        if (!UseNeonX8) {
+            Result = RegisterRawDogBatchUnwind(Code, CodeSize, 48,
+                                               &Jit->RawDogBatchUnwind[1]);
+            if (FAILED(Result)) {
+                return Result;
+            }
         }
 #endif
         Jit->Flags.Index32x8Compiled = TRUE;
+        Jit->Flags.Index32x8Vector = UseNeonX8;
     }
 
     if (ARGUMENT_PRESENT(UsedIsa)) {
-        *UsedIsa = PerfectHashJitMaxIsaAuto;
+        *UsedIsa = UseNeonX8 ? PerfectHashJitMaxIsaNeon : PerfectHashJitMaxIsaAuto;
     }
 
     return S_OK;
@@ -3717,7 +3805,10 @@ PerfectHashTableCompileJitRawDog(
             return Result;
         }
 
-        if (UsedIsa == PerfectHashJitMaxIsaAvx) {
+        if (UsedIsa == PerfectHashJitMaxIsaNeon) {
+            CopyRawDogString(Jit->TargetFeatures, sizeof(Jit->TargetFeatures), "neon");
+            Jit->JitMaxIsa = UsedIsa;
+        } else if (UsedIsa == PerfectHashJitMaxIsaAvx) {
             CopyRawDogString(Jit->TargetFeatures,
                              sizeof(Jit->TargetFeatures),
                              "avx");

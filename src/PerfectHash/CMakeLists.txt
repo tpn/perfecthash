@@ -5029,11 +5029,17 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND
                 else()
                     set(hash_name Mulshrolate4RX)
                 endif()
-                foreach(key_count IN ITEMS 1 4 8 16)
+                foreach(batch IN ITEMS 1 4 8 8Neon 16)
+                    set(key_count ${batch})
+                    set(neon_flag)
+                    if(batch STREQUAL "8Neon")
+                        set(key_count 8)
+                        set(neon_flag -DRAWDOG_NEON_X8)
+                    endif()
                     if(key_count EQUAL 1)
                         set(variant "${hash_name}_arm64")
                     else()
-                        set(variant "${hash_name}Index32x${key_count}_arm64")
+                        set(variant "${hash_name}Index32x${batch}_arm64")
                     endif()
                     set(obj "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndex${variant}.o")
                     set(bin "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndex${variant}.bin")
@@ -5046,7 +5052,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND
                                 -DRAWDOG_FUNCTION=PerfectHashJitIndex${variant}
                                 -DRAWDOG_KEY_COUNT=${key_count}
                                 -DRAWDOG_ASSIGNED_BITS=${assigned_bits}
-                                -o "${obj}" "${m4_arm64_asm}"
+                                ${neon_flag} -o "${obj}" "${m4_arm64_asm}"
                         COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                                 --dump-section=${RAWDOG_OBJCOPY_TEXT_SECTION}=${bin}
                                 "${obj}"
