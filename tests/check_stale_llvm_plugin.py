@@ -8,7 +8,9 @@ import sys
 
 PH_E_LLVM_BACKEND_NOT_FOUND = "0xe004041c"
 REPORT = ("LLVM JIT support is unavailable: the PerfectHashLLVM library lacks "
-          "2 of the 4 expected entry points.")
+          "these entry points: PerfectHashTableCompileHashJit, "
+          "PerfectHashTableHashJitRundown. It was built from a different "
+          "PerfectHash version.")
 
 result = subprocess.run(sys.argv[1:], capture_output=True, text=True, timeout=60)
 if result.returncode:
@@ -17,6 +19,5 @@ if result.returncode:
     )
 if result.stdout.split() != [PH_E_LLVM_BACKEND_NOT_FOUND] * 2:
     raise AssertionError(f"LLVM compiles returned {result.stdout!r}")
-reports = [line for line in result.stderr.splitlines() if "LLVM JIT support" in line]
-if len(reports) != 1 or not reports[0].startswith(REPORT):
-    raise AssertionError(f"Expected one report starting {REPORT!r}, got {result.stderr!r}")
+if result.stderr.splitlines() != [REPORT]:
+    raise AssertionError(f"Expected only {REPORT!r} on stderr, got {result.stderr!r}")

@@ -162,4 +162,5 @@ jobs:
         env:
           PERFECT_HASH_ONLINE_MAX_CONCURRENCY: 1
         run: |
-          ctest --test-dir build -C Release -R '^perfecthash_unit_tests\.' --no-tests=error --output-on-failure --timeout 180
+          # The x64 job has no LLVM plugin, so the tests that need one run here.
+          ctest --test-dir build -C Release -R '^perfecthash_unit_tests\.|^perfecthash\.llvm\.|^perfecthash\.cli\.hash_jit$' --no-tests=error --output-on-failure --timeout 180

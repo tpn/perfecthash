@@ -2,6 +2,7 @@
 
 #include <PerfectHash/PerfectHashOnlineJit.h>
 #include <PerfectHash/PerfectHash.h>
+#include <PerfectHash/PerfectHashOnlineJitPrivate.h>
 
 #include <array>
 #include <cstdint>
@@ -88,6 +89,22 @@ std::vector<uint64_t> MakeNonDownsized64Keys(size_t count) {
     keys.push_back(Mix64(i + 1));
   }
   return keys;
+}
+
+// What each backend returns while ScriptedCompileTable stands in for a
+// context's Online interface.
+HRESULT scripted_rawdog_result;
+HRESULT scripted_llvm_result;
+int scripted_llvm_compiles;
+
+HRESULT STDAPICALLTYPE ScriptedCompileTable(
+    PPERFECT_HASH_ONLINE, PPERFECT_HASH_TABLE,
+    PPERFECT_HASH_TABLE_COMPILE_FLAGS flags) {
+  if (flags->JitBackendLlvm) {
+    ++scripted_llvm_compiles;
+    return scripted_llvm_result;
+  }
+  return scripted_rawdog_result;
 }
 
 }  // namespace
@@ -372,6 +389,59 @@ TEST(PerfectHashOnlineJitTests, CreateTable32AndIndex32) {
     ASSERT_GE(PhOnlineJitIndex32(table.get(), key, &index), 0);
     ASSERT_TRUE(seen.insert(index).second);
   }
+}
+
+TEST(PerfectHashOnlineJitTests, AutoBackendKeepsRawDogFailureLlvmCannotExplain) {
+  const std::array<uint32_t, 8> keys = {1, 3, 5, 7, 11, 13, 17, 19};
+  PH_ONLINE_JIT_CONTEXT *raw_context = nullptr;
+  ASSERT_GE(PhOnlineJitOpen(&raw_context), 0);
+  std::unique_ptr<PH_ONLINE_JIT_CONTEXT, decltype(&PhOnlineJitClose)> context(
+      raw_context, &PhOnlineJitClose);
+  PH_ONLINE_JIT_TABLE *raw_table = nullptr;
+  ASSERT_GE(PhOnlineJitCreateTable32(context.get(), PhOnlineJitHashMultiplyShiftR,
+                                     keys.data(), keys.size(), &raw_table), 0);
+  std::unique_ptr<PH_ONLINE_JIT_TABLE, decltype(&PhOnlineJitReleaseTable)> table(
+      raw_table, &PhOnlineJitReleaseTable);
+
+  // Answer for both backends until the real interface is restored below.
+  PERFECT_HASH_ONLINE_VTBL scripted = *context->Online->Vtbl;
+  scripted.CompileTable = ScriptedCompileTable;
+  PPERFECT_HASH_ONLINE_VTBL real = context->Online->Vtbl;
+  context->Online->Vtbl = &scripted;
+
+  PH_ONLINE_JIT_BACKEND backend = PhOnlineJitBackendAuto;
+  auto compile = [&](HRESULT rawdog, HRESULT llvm) {
+    scripted_rawdog_result = rawdog;
+    scripted_llvm_result = llvm;
+    scripted_llvm_compiles = 0;
+    backend = PhOnlineJitBackendAuto;
+    return PhOnlineJitCompileTableEx(context.get(), table.get(),
+                                     PhOnlineJitBackendAuto, 8,
+                                     PhOnlineJitMaxIsaAuto, 0, &backend, nullptr);
+  };
+
+  // RawDog has no routine for the request, so the absent plugin is the reason.
+  EXPECT_EQ(compile(PH_E_NOT_IMPLEMENTED, PH_E_LLVM_BACKEND_NOT_FOUND),
+            PH_E_LLVM_BACKEND_NOT_FOUND);
+
+  // RawDog failed outright. An absent plugin, or one with no routine for the
+  // request, does not explain that.
+  EXPECT_EQ(compile(PH_E_SYSTEM_CALL_FAILED, PH_E_LLVM_BACKEND_NOT_FOUND),
+            PH_E_SYSTEM_CALL_FAILED);
+  EXPECT_EQ(scripted_llvm_compiles, 1);
+  EXPECT_EQ(compile(PH_E_SYSTEM_CALL_FAILED, PH_E_NOT_IMPLEMENTED),
+            PH_E_SYSTEM_CALL_FAILED);
+
+  // LLVM still serves the request when it can, and reports its own failures.
+  EXPECT_EQ(compile(PH_E_SYSTEM_CALL_FAILED, S_OK), S_OK);
+  EXPECT_EQ(backend, PhOnlineJitBackendLlvmJit);
+  EXPECT_EQ(compile(PH_E_SYSTEM_CALL_FAILED, E_OUTOFMEMORY), E_OUTOFMEMORY);
+
+  // Contention ends the attempt before LLVM is tried.
+  EXPECT_EQ(compile(PH_E_TABLE_LOCKED, S_OK), PH_E_TABLE_LOCKED);
+  EXPECT_EQ(scripted_llvm_compiles, 0);
+
+  context->Online->Vtbl = real;
 }
 
 TEST(PerfectHashOnlineJitTests, Index64On32BitTableIsNotImplemented) {

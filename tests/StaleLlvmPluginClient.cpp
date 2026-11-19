@@ -1,5 +1,6 @@
-// Ask for the LLVM backend twice and print each result. The build places a
-// plugin that lacks entry points where this client loads PerfectHashLLVM from.
+// Ask for the LLVM backend twice and print each result. Tests run this where
+// the PerfectHashLLVM plugin it loads lacks entry points, is absent, or cannot
+// load LLVM.
 
 #include <PerfectHash/PerfectHashOnlineJit.h>
 

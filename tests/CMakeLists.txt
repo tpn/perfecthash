@@ -139,6 +139,22 @@ if(TARGET PerfectHashLLVM)
         COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/check_stale_llvm_plugin.py
             $<TARGET_FILE:perfecthash_stale_llvm_plugin_client>
     )
+    if(WIN32)
+        # Windows also says why a plugin could not be loaded. Run the same
+        # client with no plugin, then with the real one and no LLVM-C.dll.
+        get_target_property(ph_llvm_plugin_libraries PerfectHashLLVM LINK_LIBRARIES)
+        set(ph_llvm_plugin_imports_llvm_c 0)
+        if("LLVM-C" IN_LIST ph_llvm_plugin_libraries)
+            set(ph_llvm_plugin_imports_llvm_c 1)
+        endif()
+        add_test(
+            NAME perfecthash.llvm.plugin_load_failures
+            COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/check_llvm_plugin_load_failures.py
+                $<TARGET_FILE:perfecthash_stale_llvm_plugin_client>
+                $<TARGET_FILE:PerfectHashLLVM>
+                ${ph_llvm_plugin_imports_llvm_c}
+        )
+    endif()
 endif()
 
 gtest_discover_tests(perfecthash_unit_tests
@@ -230,6 +246,8 @@ if(TARGET PerfectHashCreateExe AND TARGET PerfectHashBulkCreateExe)
             COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/check_cli_hash_jit.py
                 $<TARGET_FILE:PerfectHashCreateExe> ${TEST_KEYS_FILE}
         )
+        # Ten solves in one test. A shorter ctest --timeout must not cut it off.
+        set_tests_properties(perfecthash.cli.hash_jit PROPERTIES TIMEOUT 600)
     endif()
 
     add_test(
