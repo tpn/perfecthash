@@ -13,6 +13,11 @@
 #include <unordered_set>
 #include <vector>
 
+#if defined(PH_HAS_RAWDOG_JIT) && (defined(_M_X64) || defined(__x86_64__))
+extern "C" int32_t CompileRawDogX4WithoutAvx2(
+    PH_ONLINE_JIT_CONTEXT *, PH_ONLINE_JIT_TABLE *, PH_ONLINE_JIT_MAX_ISA);
+#endif
+
 #if defined(PH_LINUX) && defined(__aarch64__)
 #include <asm/hwcap.h>
 #include <sys/auxv.h>
@@ -3943,6 +3948,11 @@ TEST_F(PerfectHashOnlineTests, RawDogJitMulshrolate4RXStrictWidthsMatchIndex) {
   PH_ONLINE_JIT_CONTEXT context = {classFactory_, online_};
   const auto compile = [&](PH_ONLINE_JIT_TABLE *table, uint32_t width,
                            PH_ONLINE_JIT_MAX_ISA max_isa) {
+#if defined(_M_X64) || defined(__x86_64__)
+    if (width == 4 && max_isa != PhOnlineJitMaxIsaAuto) {
+      return CompileRawDogX4WithoutAvx2(&context, table, max_isa);
+    }
+#endif
     return PhOnlineJitCompileTableEx(
         &context, table, PhOnlineJitBackendRawDogJit, width, max_isa,
         PH_ONLINE_JIT_COMPILE_FLAG_STRICT_VECTOR_WIDTH, nullptr, nullptr);
