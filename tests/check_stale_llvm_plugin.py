@@ -8,8 +8,8 @@ import sys
 
 PH_E_LLVM_BACKEND_NOT_FOUND = "0xe004041c"
 REPORT = ("LLVM JIT support is unavailable: the PerfectHashLLVM library lacks "
-          "these entry points: PerfectHashTableCompileHashJit, "
-          "PerfectHashTableHashJitRundown. It was built from a different "
+          "these entry points: PerfectHashTableCompileHashJitV1, "
+          "PerfectHashTableHashJitRundownV1. It was built from a different "
           "PerfectHash version.")
 
 result = subprocess.run(sys.argv[1:], capture_output=True, text=True, timeout=60)

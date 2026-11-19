@@ -175,10 +175,12 @@ static VOID
 LoadPerfectHashLLVMFunctions(VOID)
 {
     CONST PCSZ Names[] = {
-        "PerfectHashTableCompileJit",
-        "PerfectHashTableJitRundown",
-        "PerfectHashTableCompileHashJit",
-        "PerfectHashTableHashJitRundown",
+        // Index and hash plugins have had independent loaders. Version every
+        // entry point together when their private layouts or signatures change.
+        "PerfectHashTableCompileJitV1",
+        "PerfectHashTableJitRundownV1",
+        "PerfectHashTableCompileHashJitV1",
+        "PerfectHashTableHashJitRundownV1",
     };
     PULONG_PTR Addresses = (PULONG_PTR)&Functions;
     ULONG Missing = 0;

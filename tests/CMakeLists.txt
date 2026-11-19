@@ -110,6 +110,9 @@ if(TARGET PerfectHashLLVM)
     # and through its rpath elsewhere. Give this one a plugin that lacks the
     # hash JIT entry points, in a directory of its own.
     add_library(perfecthash_stale_llvm_plugin SHARED StaleLlvmPlugin.c)
+    target_compile_definitions(perfecthash_stale_llvm_plugin PRIVATE
+        PerfectHashTableCompileJit=PerfectHashTableCompileJitV1
+        PerfectHashTableJitRundown=PerfectHashTableJitRundownV1)
     add_executable(perfecthash_stale_llvm_plugin_client StaleLlvmPluginClient.cpp)
     set(ph_stale_dir "${CMAKE_CURRENT_BINARY_DIR}/stale-llvm-plugin")
     set(ph_stale_dirs)
@@ -129,6 +132,16 @@ if(TARGET PerfectHashLLVM)
     target_link_libraries(perfecthash_stale_llvm_plugin_client PRIVATE PerfectHashOnlineCoreStatic)
     target_compile_features(perfecthash_stale_llvm_plugin_client PRIVATE cxx_std_17)
     add_dependencies(perfecthash_stale_llvm_plugin_client perfecthash_stale_llvm_plugin)
+    add_library(perfecthash_unversioned_llvm_plugin MODULE StaleLlvmPlugin.c)
+    target_compile_definitions(perfecthash_unversioned_llvm_plugin PRIVATE PH_TEST_UNVERSIONED_LLVM)
+    add_dependencies(perfecthash_stale_llvm_plugin_client perfecthash_unversioned_llvm_plugin)
+    add_test(
+        NAME perfecthash.llvm.unversioned_plugin
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/check_unversioned_llvm_plugin.py
+            $<TARGET_FILE:perfecthash_stale_llvm_plugin_client>
+            $<TARGET_FILE:perfecthash_unversioned_llvm_plugin>
+            $<TARGET_FILE_NAME:PerfectHashLLVM>
+    )
     if(NOT WIN32)
         # A target's own link options precede the archive's rpath to the real plugin.
         target_link_options(perfecthash_stale_llvm_plugin_client PRIVATE

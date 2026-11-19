@@ -1,6 +1,6 @@
 LIBRARY PerfectHashLLVM
 EXPORTS
-    PerfectHashTableCompileJit
-    PerfectHashTableJitRundown
-    PerfectHashTableCompileHashJit
-    PerfectHashTableHashJitRundown
+    PerfectHashTableCompileJitV1
+    PerfectHashTableJitRundownV1
+    PerfectHashTableCompileHashJitV1
+    PerfectHashTableHashJitRundownV1
