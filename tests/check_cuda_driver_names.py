@@ -32,6 +32,7 @@ with tempfile.TemporaryDirectory() as tmp:
         env = {**os.environ, "LD_LIBRARY_PATH": os.pathsep.join(search)}
         trace_lookup = usable == names and platform.libc_ver()[0] == "glibc"
         if trace_lookup:
+            env.pop("LD_DEBUG_OUTPUT", None)
             env["LD_DEBUG"] = "libs"
         result = subprocess.run(
             [exe, keys, directory, "Chm02", "Mulshrolate3RX", "And", "1",
