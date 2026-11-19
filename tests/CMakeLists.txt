@@ -465,6 +465,11 @@ if(TARGET PerfectHashCreateExe AND TARGET PerfectHashBulkCreateExe)
         endforeach()
 
         add_test(
+            NAME perfecthash.cuda.chm02.retained-graph.skip-verify
+            COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/check_cuda_retained_graph.py
+                $<TARGET_FILE:PerfectHashCreateExe> ${TEST_KEYS_FILE} 16 --skip-verify
+        )
+        add_test(
             NAME perfecthash.cuda.chm02.retained-graph.key-subset
             COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/check_cuda_retained_graph.py
                 $<TARGET_FILE:PerfectHashCreateExe> ${TEST_KEYS_FILE} 32 --subset
@@ -494,6 +499,7 @@ if(TARGET PerfectHashCreateExe AND TARGET PerfectHashBulkCreateExe)
             perfecthash.cuda.chm02.retained-graph.mixed.assigned16
             perfecthash.cuda.chm02.retained-graph.mixed.assigned32
             perfecthash.cuda.chm02.retained-graph.key-subset
+            perfecthash.cuda.chm02.retained-graph.skip-verify
             perfecthash.cuda.chm02.key-subset-fallback
             perfecthash.cuda.chm02.perf-surface
             PROPERTIES

@@ -683,6 +683,11 @@ Return Value:
         }
     }
 
+    Result = WaitForChm02WinnerStream(Graph);
+    if (FAILED(Result)) {
+        goto Error;
+    }
+
     //
     // Capture the maximum traversal depth, number of empty vertices, and graph
     // collisions during assignment.  (These are used in the .csv output, hence

@@ -37,6 +37,11 @@ InitializeCudaAndGraphsChm02(
     );
 
 HRESULT
+WaitForChm02WinnerStream(
+    _In_ PGRAPH Graph
+    );
+
+HRESULT
 CopyKeysToDevices(
     _In_ PPERFECT_HASH_CONTEXT Context,
     _In_ PPERFECT_HASH_KEYS Keys

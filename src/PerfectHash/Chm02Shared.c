@@ -16,6 +16,49 @@ Abstract:
 #include "Chm01.h"
 #include "Chm02Private.h"
 
+_Use_decl_annotations_
+HRESULT
+WaitForChm02WinnerStream(
+    PGRAPH Graph
+    )
+{
+    PCU Cu;
+    CU_RESULT CuResult;
+    HRESULT Result = S_OK;
+    PPH_CU_SOLVE_CONTEXT SolveContext;
+
+    if (!IsCuGraph(Graph)) {
+        return S_OK;
+    }
+
+    // The worker may have queued a reset of its spare before it stopped.
+    // Both graphs belong to this stream on basic unified-memory devices.
+    SolveContext = Graph->CuSolveContext;
+    Cu = SolveContext->DeviceContext->Cu;
+    CuResult = Cu->CtxPushCurrent(SolveContext->DeviceContext->Context);
+    if (CU_FAILED(CuResult)) {
+        CU_ERROR(WaitForChm02WinnerStream_CtxPushCurrent, CuResult);
+        return PH_E_CUDA_DRIVER_API_CALL_FAILED;
+    }
+
+    CuResult = Cu->StreamSynchronize(SolveContext->Stream);
+    if (CU_FAILED(CuResult)) {
+        CU_ERROR(WaitForChm02WinnerStream_StreamSynchronize, CuResult);
+        Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+    }
+
+    CuResult = Cu->CtxPopCurrent(NULL);
+    if (CU_FAILED(CuResult)) {
+        CU_ERROR(WaitForChm02WinnerStream_CtxPopCurrent, CuResult);
+        Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+    }
+
+    if (SUCCEEDED(Result) && IsPerfectHashCudaDebugEnabled()) {
+        fprintf(stderr, "[Chm02] Winning CUDA stream synchronized.\n");
+    }
+    return Result;
+}
+
 //
 // Main initialization routine.
 //
