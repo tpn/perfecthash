@@ -218,8 +218,9 @@ needs no other PerfectHash DLL. A build without the optional tools
 continues to support native lookup.
 
 Windows ARM64 RawDog provides scalar and 4-, 8-, and 16-key batch lookup for
-MultiplyShiftR, MultiplyShiftRX, and Mulshrolate1RX through Mulshrolate3RX.
-LLVM also supports Mulshrolate4RX and can generate SIMD lookup kernels.
+MultiplyShiftR, MultiplyShiftRX, and Mulshrolate1RX through Mulshrolate4RX.
+These routines support both 16-bit and 32-bit assigned tables. LLVM can
+generate SIMD lookup kernels for the same hashes.
 
 With `--HashAllKeysFirst`, the ARM64 solver can hash four keys at a time
 using NEON for MultiplyShiftR, MultiplyShiftRX, and Mulshrolate1RX through

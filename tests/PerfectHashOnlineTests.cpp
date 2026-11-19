@@ -1,14 +1,23 @@
 #include <gtest/gtest.h>
 
 #include <PerfectHash/PerfectHash.h>
+#include <PerfectHash/PerfectHashOnlineJit.h>
+#include <PerfectHash/PerfectHashOnlineJitPrivate.h>
 
 #include <algorithm>
 #include <cctype>
 #include <cstdlib>
 #include <fstream>
+#include <memory>
 #include <string>
 #include <unordered_set>
 #include <vector>
+
+#if defined(PH_HAS_RAWDOG_JIT) && (defined(_M_X64) || defined(__x86_64__))
+extern "C" int CanExecuteAvx512F(PH_ONLINE_JIT_TABLE *);
+extern "C" int32_t CompileRawDogWithMinimumFeatures(
+    PH_ONLINE_JIT_CONTEXT *, PH_ONLINE_JIT_TABLE *, uint32_t, PH_ONLINE_JIT_MAX_ISA);
+#endif
 
 #if defined(PH_LINUX) && defined(__aarch64__)
 #include <asm/hwcap.h>
@@ -3934,44 +3943,129 @@ TEST_F(PerfectHashOnlineTests,
   shim->Vtbl->Release(table);
 }
 
-TEST_F(PerfectHashOnlineTests, RawDogJitMulshrolate4RXMatchesSlowIndex) {
-  const std::vector<ULONG> keys = {
-      1, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53,
-      59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113,
+TEST_F(PerfectHashOnlineTests, RawDogJitMulshrolate4RXStrictWidthsMatchIndex) {
+  const auto keys = MakePseudoRandomKeys(64);
+  const std::vector<uint32_t> queries(keys.begin(), keys.end());
+  PH_ONLINE_JIT_CONTEXT context = {classFactory_, online_};
+  struct Request {
+    uint32_t width;
+    PH_ONLINE_JIT_MAX_ISA max_isa;
+    bool mask_extra_features = false;
+  };
+  const auto compile = [&](PH_ONLINE_JIT_TABLE *table, const Request &request) {
+#if defined(_M_X64) || defined(__x86_64__)
+    if (request.mask_extra_features) {
+      return CompileRawDogWithMinimumFeatures(&context, table, request.width,
+                                              request.max_isa);
+    }
+#endif
+    return PhOnlineJitCompileTableEx(
+        &context, table, PhOnlineJitBackendRawDogJit, request.width, request.max_isa,
+        PH_ONLINE_JIT_COMPILE_FLAG_STRICT_VECTOR_WIDTH, nullptr, nullptr);
   };
 
-  PPERFECT_HASH_TABLE table =
-      CreateTableFromKeys(keys, PerfectHashHashMulshrolate4RXFunctionId);
-  ASSERT_NE(table, nullptr);
-
-  auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
-  ASSERT_NE(shim->Vtbl->SlowIndex, nullptr);
-
-  PERFECT_HASH_TABLE_COMPILE_FLAGS compileFlags = {0};
-  compileFlags.Jit = TRUE;
-  compileFlags.JitBackendRawDog = TRUE;
-
-  HRESULT result = online_->Vtbl->CompileTable(online_, table, &compileFlags);
-  if (result == PH_E_NOT_IMPLEMENTED) {
-    shim->Vtbl->Release(table);
-    GTEST_SKIP() << "RawDog Mulshrolate4RX unavailable on this host.";
-  }
-  ASSERT_GE(result, 0);
-
-  for (ULONG key : keys) {
-    ULONG slowIndex = 0;
-    ULONG jitIndex = 0;
-
-    result = shim->Vtbl->SlowIndex(table, key, &slowIndex);
+#if defined(_M_X64) || defined(__x86_64__)
+  std::vector<Request> requests = {{1, PhOnlineJitMaxIsaAuto}};
+  const auto add_capped_requests = [&](uint32_t width) {
+    for (const auto cap : {PhOnlineJitMaxIsaAuto, PhOnlineJitMaxIsaAvx,
+                           PhOnlineJitMaxIsaAvx2, PhOnlineJitMaxIsaAvx512}) {
+      requests.push_back({width, cap, false});
+      requests.push_back({width, cap, true});
+    }
+  };
+  // MultiplyShiftRX has the same ISA requirements for x4 and x8.
+  PH_ONLINE_JIT_TABLE *probe = nullptr;
+  ASSERT_GE(PhOnlineJitCreateTable32(&context, PhOnlineJitHashMultiplyShiftRX,
+                                     queries.data(), queries.size(), &probe), 0);
+  std::unique_ptr<PH_ONLINE_JIT_TABLE, decltype(&PhOnlineJitReleaseTable)>
+      probe_owner(probe, &PhOnlineJitReleaseTable);
+  for (uint32_t width : {4u, 8u}) {
+    const auto result = compile(probe, {width, PhOnlineJitMaxIsaAuto});
+    if (result == PH_E_NOT_IMPLEMENTED) {
+      continue;
+    }
     ASSERT_GE(result, 0);
-
-    result = shim->Vtbl->Index(table, key, &jitIndex);
-    ASSERT_GE(result, 0);
-
-    EXPECT_EQ(slowIndex, jitIndex);
+    if (width == 4) {
+      add_capped_requests(width);
+    } else {
+      requests.push_back({width, PhOnlineJitMaxIsaAuto});
+    }
   }
+  const bool has_avx512f = CanExecuteAvx512F(probe);
+  add_capped_requests(16);
+#else
+  const Request requests[] = {{1, PhOnlineJitMaxIsaAuto}, {4, PhOnlineJitMaxIsaAuto},
+                              {8, PhOnlineJitMaxIsaAuto}, {16, PhOnlineJitMaxIsaAuto}};
+#endif
 
-  shim->Vtbl->Release(table);
+  for (bool assigned16 : {false, true}) {
+    SCOPED_TRACE(assigned16);
+    PPERFECT_HASH_TABLE table = CreateTableFromKeys(
+        keys, PerfectHashHashMulshrolate4RXFunctionId, assigned16, 3);
+    ASSERT_NE(table, nullptr);
+    const auto release = [](PPERFECT_HASH_TABLE t) {
+      reinterpret_cast<PerfectHashTableShim *>(t)->Vtbl->Release(t);
+    };
+    std::unique_ptr<PERFECT_HASH_TABLE, decltype(release)> owner(table, release);
+    PH_ONLINE_JIT_TABLE wrapper = {table};
+    PH_ONLINE_JIT_TABLE_INFO info = {};
+    ASSERT_GE(PhOnlineJitGetTableInfo(&wrapper, &info), 0);
+    ASSERT_EQ(info.AssignedElementSizeInBytes, assigned16 ? 2u : 4u);
+
+    std::vector<uint32_t> expected(keys.size());
+    for (size_t i = 0; i < keys.size(); ++i) {
+      ASSERT_GE(PhOnlineJitIndex32(&wrapper, queries[i], &expected[i]), 0);
+    }
+
+    for (const auto &request : requests) {
+      const auto width = request.width;
+      SCOPED_TRACE(width);
+      SCOPED_TRACE(request.max_isa);
+      SCOPED_TRACE(request.mask_extra_features);
+      const auto compiled = compile(&wrapper, request);
+#if defined(_M_X64) || defined(__x86_64__)
+      if (width == 16 && (!has_avx512f || request.max_isa == PhOnlineJitMaxIsaAvx ||
+                          request.max_isa == PhOnlineJitMaxIsaAvx2)) {
+        ASSERT_EQ(compiled, PH_E_NOT_IMPLEMENTED);
+        continue;
+      }
+#endif
+      ASSERT_GE(compiled, 0);
+#if defined(_M_X64) || defined(__x86_64__)
+      if (width == 4 || width == 16) {
+        auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
+        PPERFECT_HASH_TABLE_JIT_INTERFACE jit = nullptr;
+        HRESULT result = shim->Vtbl->QueryInterface(
+            table,
+#ifdef PH_WINDOWS
+            IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
+#else
+            &IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
+#endif
+            reinterpret_cast<void **>(&jit));
+        ASSERT_GE(result, 0);
+        ASSERT_NE(jit, nullptr);
+        PERFECT_HASH_TABLE_JIT_INFO jit_info = {};
+        result = jit->Vtbl->GetInfo(jit, &jit_info);
+        jit->Vtbl->Release(jit);
+        ASSERT_GE(result, 0);
+        EXPECT_EQ(jit_info.JitMaxIsa,
+                  width == 4 ? PerfectHashJitMaxIsaAvx : PerfectHashJitMaxIsaAvx512);
+      }
+#endif
+      std::vector<uint32_t> actual(keys.size());
+      for (size_t i = 0; i < keys.size(); i += width) {
+        if (width == 1) {
+          ASSERT_GE(PhOnlineJitIndex32(&wrapper, queries[i], &actual[i]), 0);
+        } else {
+          const auto index = width == 4 ? PhOnlineJitIndex32x4 :
+                             width == 8 ? PhOnlineJitIndex32x8 : PhOnlineJitIndex32x16;
+          ASSERT_GE(index(&wrapper, &queries[i], &actual[i]), 0);
+        }
+      }
+      EXPECT_EQ(actual, expected);
+    }
+  }
 }
 
 TEST_F(PerfectHashOnlineTests,

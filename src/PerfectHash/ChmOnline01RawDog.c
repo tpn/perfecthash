@@ -73,10 +73,6 @@ Abstract:
 #include "PerfectHashJitRawDogMulshrolate3RX16Index32x8_x64.h"
 #include "PerfectHashJitRawDogMulshrolate3RXIndex32x16_x64.h"
 #include "PerfectHashJitRawDogMulshrolate3RX16Index32x16_x64.h"
-#include "PerfectHashJitRawDogMulshrolate4RXIndex32x8_x64.h"
-#include "PerfectHashJitRawDogMulshrolate4RX16Index32x8_x64.h"
-#include "PerfectHashJitRawDogMulshrolate4RXIndex32x16_x64.h"
-#include "PerfectHashJitRawDogMulshrolate4RX16Index32x16_x64.h"
 #endif
 #include "PerfectHashJitRawDogMulshrolate2RXAvx2_v1_x64.h"
 #include "PerfectHashJitRawDogMulshrolate2RXAvx2_v2_x64.h"
@@ -100,10 +96,14 @@ Abstract:
 #include "PerfectHashJitRawDogMulshrolate3RX16Avx2_v3_x64.h"
 #include "PerfectHashJitRawDogMulshrolate3RX16Avx512_v1_x64.h"
 #include "PerfectHashJitRawDogMulshrolate3RX16Avx512_v2_x64.h"
-#if defined(PH_LINUX)
 #include "PerfectHashJitRawDogMulshrolate4RX_x64.h"
 #include "PerfectHashJitRawDogMulshrolate4RX16_x64.h"
-#endif
+#include "PerfectHashJitRawDogMulshrolate4RXIndex32x4_x64.h"
+#include "PerfectHashJitRawDogMulshrolate4RX16Index32x4_x64.h"
+#include "PerfectHashJitRawDogMulshrolate4RXIndex32x8_x64.h"
+#include "PerfectHashJitRawDogMulshrolate4RX16Index32x8_x64.h"
+#include "PerfectHashJitRawDogMulshrolate4RXIndex32x16_x64.h"
+#include "PerfectHashJitRawDogMulshrolate4RX16Index32x16_x64.h"
 #elif defined(PH_RAWDOG_ARM64)
 #include "PerfectHashJitRawDogMultiplyShiftR_arm64.h"
 #include "PerfectHashJitRawDogMultiplyShiftR16_arm64.h"
@@ -145,6 +145,14 @@ Abstract:
 #include "PerfectHashJitRawDogMulshrolate3RX16Index32x8_arm64.h"
 #include "PerfectHashJitRawDogMulshrolate3RXIndex32x16_arm64.h"
 #include "PerfectHashJitRawDogMulshrolate3RX16Index32x16_arm64.h"
+#include "PerfectHashJitRawDogMulshrolate4RX_arm64.h"
+#include "PerfectHashJitRawDogMulshrolate4RX16_arm64.h"
+#include "PerfectHashJitRawDogMulshrolate4RXIndex32x4_arm64.h"
+#include "PerfectHashJitRawDogMulshrolate4RX16Index32x4_arm64.h"
+#include "PerfectHashJitRawDogMulshrolate4RXIndex32x8_arm64.h"
+#include "PerfectHashJitRawDogMulshrolate4RX16Index32x8_arm64.h"
+#include "PerfectHashJitRawDogMulshrolate4RXIndex32x16_arm64.h"
+#include "PerfectHashJitRawDogMulshrolate4RX16Index32x16_arm64.h"
 #endif
 
 #define RAWDOG_SENTINEL_ASSIGNED    0xA1A1A1A1A1A1A1A1ULL
@@ -166,38 +174,20 @@ Abstract:
 #define RAWDOG_IMM8_TABLE_MAGIC           0x8C4B2A1D9F573E61ULL
 
 #if defined(PH_RAWDOG_X64)
+#if defined(__GNUC__) || defined(__clang__)
+__attribute__((target("xsave")))
+#endif
 static
-BOOLEAN
-RawDogOsAvxEnabled(
+ULONGLONG
+RawDogGetXcr0(
     _In_opt_ PRTL Rtl
     )
 {
     if (!ARGUMENT_PRESENT(Rtl) || Rtl->CpuFeatures.OSXSAVE == FALSE) {
-        return FALSE;
+        return 0;
     }
 
-#if defined(_M_AMD64) || defined(_M_X64)
-    return ((_xgetbv(0) & 0x6) == 0x6);
-#else
-    return FALSE;
-#endif
-}
-
-static
-BOOLEAN
-RawDogOsAvx512Enabled(
-    _In_opt_ PRTL Rtl
-    )
-{
-    if (!ARGUMENT_PRESENT(Rtl) || Rtl->CpuFeatures.OSXSAVE == FALSE) {
-        return FALSE;
-    }
-
-#if defined(_M_AMD64) || defined(_M_X64)
-    return ((_xgetbv(0) & 0xE6) == 0xE6);
-#else
-    return FALSE;
-#endif
+    return _xgetbv(0);
 }
 
 static
@@ -208,13 +198,16 @@ RawDogHostHasAvx(
 {
     if (!ARGUMENT_PRESENT(Rtl) ||
         Rtl->CpuFeatures.AVX == FALSE ||
-        !RawDogOsAvxEnabled(Rtl)) {
+        (RawDogGetXcr0(Rtl) & 0x6) != 0x6) {
         return FALSE;
     }
 
     return TRUE;
 }
 
+#if defined(__GNUC__) || defined(__clang__)
+__attribute__((target("avx2")))
+#endif
 DECLSPEC_NOINLINE
 static
 VOID
@@ -237,8 +230,7 @@ RawDogHostHasAvx2(
 {
     if (!ARGUMENT_PRESENT(Rtl) ||
         Rtl->CpuFeatures.AVX2 == FALSE ||
-        Rtl->CpuFeatures.AVX == FALSE ||
-        !RawDogOsAvxEnabled(Rtl)) {
+        !RawDogHostHasAvx(Rtl)) {
         return FALSE;
     }
 
@@ -253,20 +245,22 @@ RawDogHostHasAvx2(
 
 static
 BOOLEAN
-RawDogHostHasAvx512(
-    _In_opt_ PRTL Rtl
+RawDogHostSupportsAvx512Kernel(
+    _In_opt_ PRTL Rtl,
+    _In_ PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId
     )
 {
     if (!ARGUMENT_PRESENT(Rtl) ||
         Rtl->CpuFeatures.AVX512F == FALSE ||
-        Rtl->CpuFeatures.AVX512DQ == FALSE ||
-        Rtl->CpuFeatures.AVX512BW == FALSE ||
-        Rtl->CpuFeatures.AVX512VL == FALSE ||
-        !RawDogOsAvx512Enabled(Rtl)) {
+        (RawDogGetXcr0(Rtl) & 0xE6) != 0xE6) {
         return FALSE;
     }
 
-    return TRUE;
+    // Both Mulshrolate4RX x16 kernels use only AVX-512F instructions.
+    return (HashFunctionId == PerfectHashHashMulshrolate4RXFunctionId ||
+            (Rtl->CpuFeatures.AVX512DQ &&
+             Rtl->CpuFeatures.AVX512BW &&
+             Rtl->CpuFeatures.AVX512VL));
 }
 #endif
 
@@ -277,6 +271,39 @@ typedef struct _RAW_DOG_PATCH_ENTRY {
     ULONG SizeInBytes;
     ULONG Reserved;
 } RAW_DOG_PATCH_ENTRY;
+
+typedef struct _RAW_DOG_BLOB {
+    PBYTE Code;
+    SIZE_T Size;
+} RAW_DOG_BLOB;
+
+#if defined(PH_RAWDOG_ARM64)
+#define RAWDOG_BLOB_NAME(Name) PerfectHashJitRawDog##Name##_arm64
+#else
+#define RAWDOG_BLOB_NAME(Name) PerfectHashJitRawDog##Name##_x64
+#endif
+#define RAWDOG_BLOB(Name) { (PBYTE)RAWDOG_BLOB_NAME(Name), sizeof(RAWDOG_BLOB_NAME(Name)) }
+
+// Each pair contains the 32-bit and 16-bit assigned-table variants, respectively.
+static const RAW_DOG_BLOB RawDogMulshrolate4RXIndex32[] = {
+    RAWDOG_BLOB(Mulshrolate4RX),
+    RAWDOG_BLOB(Mulshrolate4RX16)
+};
+static const RAW_DOG_BLOB RawDogMulshrolate4RXIndex32x4[] = {
+    RAWDOG_BLOB(Mulshrolate4RXIndex32x4),
+    RAWDOG_BLOB(Mulshrolate4RX16Index32x4)
+};
+static const RAW_DOG_BLOB RawDogMulshrolate4RXIndex32x8[] = {
+    RAWDOG_BLOB(Mulshrolate4RXIndex32x8),
+    RAWDOG_BLOB(Mulshrolate4RX16Index32x8)
+};
+static const RAW_DOG_BLOB RawDogMulshrolate4RXIndex32x16[] = {
+    RAWDOG_BLOB(Mulshrolate4RXIndex32x16),
+    RAWDOG_BLOB(Mulshrolate4RX16Index32x16)
+};
+
+#undef RAWDOG_BLOB
+#undef RAWDOG_BLOB_NAME
 
 #if defined(PH_RAWDOG_X64)
 static const CHAR RawDogTargetCpu[] = "rawdog-x64";
@@ -404,9 +431,7 @@ RawDogTraceCpuFeatures(
         Avx2 = (ULONG)Rtl->CpuFeatures.AVX2;
         Avx512 = (ULONG)Rtl->CpuFeatures.AVX512F;
         Osxsave = (ULONG)Rtl->CpuFeatures.OSXSAVE;
-        if (Rtl->CpuFeatures.OSXSAVE != FALSE) {
-            Xcr0 = (unsigned long long)_xgetbv(0);
-        }
+        Xcr0 = RawDogGetXcr0(Rtl);
     }
 
     fprintf(stderr,
@@ -777,40 +802,12 @@ CompileChm01IndexJitRawDog(
     BOOLEAN UseAssigned16;
     HRESULT Result;
 
-#if defined(PH_RAWDOG_ARM64)
-    if ((Table->HashFunctionId != PerfectHashHashMultiplyShiftRFunctionId &&
-         Table->HashFunctionId != PerfectHashHashMultiplyShiftRXFunctionId &&
-         Table->HashFunctionId != PerfectHashHashMulshrolate1RXFunctionId &&
-         Table->HashFunctionId != PerfectHashHashMulshrolate2RXFunctionId &&
-         Table->HashFunctionId != PerfectHashHashMulshrolate3RXFunctionId &&
-         Table->HashFunctionId != PerfectHashHashMulshrolate4RXFunctionId) ||
+    if (!IsGoodPerfectHashHashFunctionId(Table->HashFunctionId) ||
         Table->MaskFunctionId != PerfectHashAndMaskFunctionId) {
         return PH_E_NOT_IMPLEMENTED;
     }
-#else
-    if ((Table->HashFunctionId != PerfectHashHashMultiplyShiftRFunctionId &&
-         Table->HashFunctionId != PerfectHashHashMultiplyShiftRXFunctionId &&
-         Table->HashFunctionId != PerfectHashHashMulshrolate1RXFunctionId &&
-         Table->HashFunctionId != PerfectHashHashMulshrolate2RXFunctionId &&
-         Table->HashFunctionId != PerfectHashHashMulshrolate3RXFunctionId &&
-         Table->HashFunctionId != PerfectHashHashMulshrolate4RXFunctionId) ||
-        Table->MaskFunctionId != PerfectHashAndMaskFunctionId) {
-        return PH_E_NOT_IMPLEMENTED;
-    }
-#endif
 
     UseAssigned16 = (Table->State.UsingAssigned16 != FALSE);
-#if defined(PH_RAWDOG_ARM64)
-    if (UseAssigned16 &&
-        Table->HashFunctionId != PerfectHashHashMultiplyShiftRFunctionId &&
-        Table->HashFunctionId != PerfectHashHashMultiplyShiftRXFunctionId &&
-        Table->HashFunctionId != PerfectHashHashMulshrolate1RXFunctionId &&
-        Table->HashFunctionId != PerfectHashHashMulshrolate2RXFunctionId &&
-        Table->HashFunctionId != PerfectHashHashMulshrolate3RXFunctionId) {
-        return PH_E_NOT_IMPLEMENTED;
-    }
-#endif
-
     if (UseAssigned16) {
         if (!ARGUMENT_PRESENT(Table->Assigned16)) {
             return PH_E_INVARIANT_CHECK_FAILED;
@@ -1199,15 +1196,11 @@ CompileChm01IndexJitRawDog(
                 "IndexMask"
             };
             break;
-#if defined(PH_LINUX)
+#endif
+
         case PerfectHashHashMulshrolate4RXFunctionId:
-            if (UseAssigned16) {
-                SourceCode = (PBYTE)PerfectHashJitRawDogMulshrolate4RX16_x64;
-                CodeSize = sizeof(PerfectHashJitRawDogMulshrolate4RX16_x64);
-            } else {
-                SourceCode = (PBYTE)PerfectHashJitRawDogMulshrolate4RX_x64;
-                CodeSize = sizeof(PerfectHashJitRawDogMulshrolate4RX_x64);
-            }
+            SourceCode = RawDogMulshrolate4RXIndex32[UseAssigned16].Code;
+            CodeSize = RawDogMulshrolate4RXIndex32[UseAssigned16].Size;
             Entries[EntryCount++] = (RAW_DOG_PATCH_ENTRY){
                 RAWDOG_SENTINEL_ASSIGNED,
                 Assigned,
@@ -1254,8 +1247,6 @@ CompileChm01IndexJitRawDog(
                 "IndexMask"
             };
             break;
-#endif
-#endif
 
         default:
             return PH_E_NOT_IMPLEMENTED;
@@ -1347,19 +1338,13 @@ CompileChm01IndexVectorJitRawDog(
         return S_OK;
     }
 
-    if ((Table->HashFunctionId != PerfectHashHashMultiplyShiftRFunctionId &&
-         Table->HashFunctionId != PerfectHashHashMultiplyShiftRXFunctionId &&
-         Table->HashFunctionId != PerfectHashHashMulshrolate1RXFunctionId &&
-         Table->HashFunctionId != PerfectHashHashMulshrolate2RXFunctionId &&
-         Table->HashFunctionId != PerfectHashHashMulshrolate3RXFunctionId &&
-         Table->HashFunctionId != PerfectHashHashMulshrolate4RXFunctionId) ||
+    if (!IsGoodPerfectHashHashFunctionId(Table->HashFunctionId) ||
         Table->MaskFunctionId != PerfectHashAndMaskFunctionId) {
         return PH_E_NOT_IMPLEMENTED;
     }
 
     if (Table->HashFunctionId == PerfectHashHashMulshrolate2RXFunctionId ||
-        Table->HashFunctionId == PerfectHashHashMulshrolate3RXFunctionId ||
-        Table->HashFunctionId == PerfectHashHashMulshrolate4RXFunctionId) {
+        Table->HashFunctionId == PerfectHashHashMulshrolate3RXFunctionId) {
         if (CompileIndex32x4 && !CompileIndex32x8 && !CompileIndex32x16) {
             return PH_E_NOT_IMPLEMENTED;
         }
@@ -1383,7 +1368,7 @@ CompileChm01IndexVectorJitRawDog(
     Rtl = Table->Rtl;
     HostHasAvx = RawDogHostHasAvx(Rtl);
     HostHasAvx2 = RawDogHostHasAvx2(Rtl);
-    HostHasAvx512 = RawDogHostHasAvx512(Rtl);
+    HostHasAvx512 = RawDogHostSupportsAvx512Kernel(Rtl, Table->HashFunctionId);
     RequestedIsa = (PERFECT_HASH_JIT_MAX_ISA_ID)CompileFlags->JitMaxIsa;
     AllowAvx512 = (RequestedIsa == PerfectHashJitMaxIsaAuto ||
                    RequestedIsa == PerfectHashJitMaxIsaAvx512);
@@ -1490,8 +1475,8 @@ CompileChm01IndexVectorJitRawDog(
             (ULONGLONG)Table->IndexMask,
             "IndexMask"
         };
-    } else if (Table->HashFunctionId ==
-               PerfectHashHashMulshrolate3RXFunctionId) {
+    } else if (Table->HashFunctionId == PerfectHashHashMulshrolate3RXFunctionId ||
+               Table->HashFunctionId == PerfectHashHashMulshrolate4RXFunctionId) {
         Entries[EntryCount++] = (RAW_DOG_PATCH_ENTRY){
             RAWDOG_SENTINEL_SEED3_BYTE1,
             (ULONGLONG)Seed3Bytes.Byte1,
@@ -1512,70 +1497,13 @@ CompileChm01IndexVectorJitRawDog(
             (ULONGLONG)TableInfo->Seed4,
             "Seed4"
         };
-        Entries[EntryCount++] = (RAW_DOG_PATCH_ENTRY){
-            RAWDOG_SENTINEL_INDEX_MASK,
-            (ULONGLONG)Table->IndexMask,
-            "IndexMask"
-        };
-    } else if (Table->HashFunctionId ==
-               PerfectHashHashMulshrolate4RXFunctionId) {
-        Entries[EntryCount++] = (RAW_DOG_PATCH_ENTRY){
-            RAWDOG_SENTINEL_SEED3_BYTE1,
-            (ULONGLONG)Seed3Bytes.Byte1,
-            "Seed3Byte1"
-        };
-        Entries[EntryCount++] = (RAW_DOG_PATCH_ENTRY){
-            RAWDOG_SENTINEL_SEED3_BYTE2,
-            (ULONGLONG)Seed3Bytes.Byte2,
-            "Seed3Byte2"
-        };
-        Entries[EntryCount++] = (RAW_DOG_PATCH_ENTRY){
-            RAWDOG_SENTINEL_SEED3_BYTE3,
-            (ULONGLONG)Seed3Bytes.Byte3,
-            "Seed3Byte3"
-        };
-        Entries[EntryCount++] = (RAW_DOG_PATCH_ENTRY){
-            RAWDOG_SENTINEL_SEED4,
-            (ULONGLONG)TableInfo->Seed4,
-            "Seed4"
-        };
-        Entries[EntryCount++] = (RAW_DOG_PATCH_ENTRY){
-            RAWDOG_SENTINEL_SEED5,
-            (ULONGLONG)TableInfo->Seed5,
-            "Seed5"
-        };
-        Entries[EntryCount++] = (RAW_DOG_PATCH_ENTRY){
-            RAWDOG_SENTINEL_INDEX_MASK,
-            (ULONGLONG)Table->IndexMask,
-            "IndexMask"
-        };
-    } else if (Table->HashFunctionId ==
-               PerfectHashHashMulshrolate4RXFunctionId) {
-        Entries[EntryCount++] = (RAW_DOG_PATCH_ENTRY){
-            RAWDOG_SENTINEL_SEED3_BYTE1,
-            (ULONGLONG)Seed3Bytes.Byte1,
-            "Seed3Byte1"
-        };
-        Entries[EntryCount++] = (RAW_DOG_PATCH_ENTRY){
-            RAWDOG_SENTINEL_SEED3_BYTE2,
-            (ULONGLONG)Seed3Bytes.Byte2,
-            "Seed3Byte2"
-        };
-        Entries[EntryCount++] = (RAW_DOG_PATCH_ENTRY){
-            RAWDOG_SENTINEL_SEED3_BYTE3,
-            (ULONGLONG)Seed3Bytes.Byte3,
-            "Seed3Byte3"
-        };
-        Entries[EntryCount++] = (RAW_DOG_PATCH_ENTRY){
-            RAWDOG_SENTINEL_SEED4,
-            (ULONGLONG)TableInfo->Seed4,
-            "Seed4"
-        };
-        Entries[EntryCount++] = (RAW_DOG_PATCH_ENTRY){
-            RAWDOG_SENTINEL_SEED5,
-            (ULONGLONG)TableInfo->Seed5,
-            "Seed5"
-        };
+        if (Table->HashFunctionId == PerfectHashHashMulshrolate4RXFunctionId) {
+            Entries[EntryCount++] = (RAW_DOG_PATCH_ENTRY){
+                RAWDOG_SENTINEL_SEED5,
+                (ULONGLONG)TableInfo->Seed5,
+                "Seed5"
+            };
+        }
         Entries[EntryCount++] = (RAW_DOG_PATCH_ENTRY){
             RAWDOG_SENTINEL_INDEX_MASK,
             (ULONGLONG)Table->IndexMask,
@@ -1757,27 +1685,8 @@ CompileChm01IndexVectorJitRawDog(
             }
         } else if (Table->HashFunctionId ==
                    PerfectHashHashMulshrolate4RXFunctionId) {
-#if defined(PH_LINUX)
-            if (VectorVersion >= 4) {
-                if (UseAssigned16) {
-                    SourceCode = (PBYTE)
-                        PerfectHashJitRawDogMulshrolate4RX16Index32x16_x64;
-                    CodeSize = sizeof(
-                        PerfectHashJitRawDogMulshrolate4RX16Index32x16_x64
-                    );
-                } else {
-                    SourceCode = (PBYTE)
-                        PerfectHashJitRawDogMulshrolate4RXIndex32x16_x64;
-                    CodeSize = sizeof(
-                        PerfectHashJitRawDogMulshrolate4RXIndex32x16_x64
-                    );
-                }
-            } else {
-                return PH_E_NOT_IMPLEMENTED;
-            }
-#else
-            return PH_E_NOT_IMPLEMENTED;
-#endif
+            SourceCode = RawDogMulshrolate4RXIndex32x16[UseAssigned16].Code;
+            CodeSize = RawDogMulshrolate4RXIndex32x16[UseAssigned16].Size;
         } else {
             if (UseAssigned16) {
                 SourceCode = (PBYTE)
@@ -1970,27 +1879,8 @@ CompileChm01IndexVectorJitRawDog(
             }
         } else if (Table->HashFunctionId ==
                    PerfectHashHashMulshrolate4RXFunctionId) {
-#if defined(PH_LINUX)
-            if (VectorVersion >= 4) {
-                if (UseAssigned16) {
-                    SourceCode = (PBYTE)
-                        PerfectHashJitRawDogMulshrolate4RX16Index32x8_x64;
-                    CodeSize = sizeof(
-                        PerfectHashJitRawDogMulshrolate4RX16Index32x8_x64
-                    );
-                } else {
-                    SourceCode = (PBYTE)
-                        PerfectHashJitRawDogMulshrolate4RXIndex32x8_x64;
-                    CodeSize = sizeof(
-                        PerfectHashJitRawDogMulshrolate4RXIndex32x8_x64
-                    );
-                }
-            } else {
-                return PH_E_NOT_IMPLEMENTED;
-            }
-#else
-            return PH_E_NOT_IMPLEMENTED;
-#endif
+            SourceCode = RawDogMulshrolate4RXIndex32x8[UseAssigned16].Code;
+            CodeSize = RawDogMulshrolate4RXIndex32x8[UseAssigned16].Size;
         } else {
             if (UseAssigned16) {
                 SourceCode = (PBYTE)
@@ -2039,7 +1929,9 @@ CompileChm01IndexVectorJitRawDog(
             return PH_E_NOT_IMPLEMENTED;
         }
 
-        if ((RequestedIsa == PerfectHashJitMaxIsaAvx2 ||
+        // The Mulshrolate4RX x4 kernel uses AVX at every supported ISA cap.
+        if (Table->HashFunctionId != PerfectHashHashMulshrolate4RXFunctionId &&
+            (RequestedIsa == PerfectHashJitMaxIsaAvx2 ||
              RequestedIsa == PerfectHashJitMaxIsaAvx512) &&
             !HostHasAvx2) {
             return PH_E_NOT_IMPLEMENTED;
@@ -2048,7 +1940,11 @@ CompileChm01IndexVectorJitRawDog(
         UseAvx2 = (AllowAvx2 && HostHasAvx2 &&
                    RequestedIsa != PerfectHashJitMaxIsaAvx);
 
-        if (UseAssigned16) {
+        if (Table->HashFunctionId == PerfectHashHashMulshrolate4RXFunctionId) {
+            UseAvx2 = FALSE;
+            SourceCode = RawDogMulshrolate4RXIndex32x4[UseAssigned16].Code;
+            CodeSize = RawDogMulshrolate4RXIndex32x4[UseAssigned16].Size;
+        } else if (UseAssigned16) {
             if (Table->HashFunctionId ==
                 PerfectHashHashMultiplyShiftRXFunctionId) {
                 SourceCode = (PBYTE)(
@@ -2216,12 +2112,7 @@ CompileChm01IndexVectorJitRawDog(
         return PH_E_NOT_IMPLEMENTED;
     }
 
-    if ((Table->HashFunctionId != PerfectHashHashMultiplyShiftRFunctionId &&
-         Table->HashFunctionId != PerfectHashHashMultiplyShiftRXFunctionId &&
-         Table->HashFunctionId != PerfectHashHashMulshrolate1RXFunctionId &&
-         Table->HashFunctionId != PerfectHashHashMulshrolate2RXFunctionId &&
-         Table->HashFunctionId != PerfectHashHashMulshrolate3RXFunctionId &&
-         Table->HashFunctionId != PerfectHashHashMulshrolate4RXFunctionId) ||
+    if (!IsGoodPerfectHashHashFunctionId(Table->HashFunctionId) ||
         Table->MaskFunctionId != PerfectHashAndMaskFunctionId) {
         return PH_E_NOT_IMPLEMENTED;
     }
@@ -2326,8 +2217,8 @@ CompileChm01IndexVectorJitRawDog(
             (ULONGLONG)Table->IndexMask,
             "IndexMask"
         };
-    } else if (Table->HashFunctionId ==
-               PerfectHashHashMulshrolate3RXFunctionId) {
+    } else if (Table->HashFunctionId == PerfectHashHashMulshrolate3RXFunctionId ||
+               Table->HashFunctionId == PerfectHashHashMulshrolate4RXFunctionId) {
         Entries[EntryCount++] = (RAW_DOG_PATCH_ENTRY){
             RAWDOG_SENTINEL_SEED3_BYTE1,
             (ULONGLONG)Seed3Bytes.Byte1,
@@ -2348,70 +2239,13 @@ CompileChm01IndexVectorJitRawDog(
             (ULONGLONG)TableInfo->Seed4,
             "Seed4"
         };
-        Entries[EntryCount++] = (RAW_DOG_PATCH_ENTRY){
-            RAWDOG_SENTINEL_INDEX_MASK,
-            (ULONGLONG)Table->IndexMask,
-            "IndexMask"
-        };
-    } else if (Table->HashFunctionId ==
-               PerfectHashHashMulshrolate4RXFunctionId) {
-        Entries[EntryCount++] = (RAW_DOG_PATCH_ENTRY){
-            RAWDOG_SENTINEL_SEED3_BYTE1,
-            (ULONGLONG)Seed3Bytes.Byte1,
-            "Seed3Byte1"
-        };
-        Entries[EntryCount++] = (RAW_DOG_PATCH_ENTRY){
-            RAWDOG_SENTINEL_SEED3_BYTE2,
-            (ULONGLONG)Seed3Bytes.Byte2,
-            "Seed3Byte2"
-        };
-        Entries[EntryCount++] = (RAW_DOG_PATCH_ENTRY){
-            RAWDOG_SENTINEL_SEED3_BYTE3,
-            (ULONGLONG)Seed3Bytes.Byte3,
-            "Seed3Byte3"
-        };
-        Entries[EntryCount++] = (RAW_DOG_PATCH_ENTRY){
-            RAWDOG_SENTINEL_SEED4,
-            (ULONGLONG)TableInfo->Seed4,
-            "Seed4"
-        };
-        Entries[EntryCount++] = (RAW_DOG_PATCH_ENTRY){
-            RAWDOG_SENTINEL_SEED5,
-            (ULONGLONG)TableInfo->Seed5,
-            "Seed5"
-        };
-        Entries[EntryCount++] = (RAW_DOG_PATCH_ENTRY){
-            RAWDOG_SENTINEL_INDEX_MASK,
-            (ULONGLONG)Table->IndexMask,
-            "IndexMask"
-        };
-    } else if (Table->HashFunctionId ==
-               PerfectHashHashMulshrolate4RXFunctionId) {
-        Entries[EntryCount++] = (RAW_DOG_PATCH_ENTRY){
-            RAWDOG_SENTINEL_SEED3_BYTE1,
-            (ULONGLONG)Seed3Bytes.Byte1,
-            "Seed3Byte1"
-        };
-        Entries[EntryCount++] = (RAW_DOG_PATCH_ENTRY){
-            RAWDOG_SENTINEL_SEED3_BYTE2,
-            (ULONGLONG)Seed3Bytes.Byte2,
-            "Seed3Byte2"
-        };
-        Entries[EntryCount++] = (RAW_DOG_PATCH_ENTRY){
-            RAWDOG_SENTINEL_SEED3_BYTE3,
-            (ULONGLONG)Seed3Bytes.Byte3,
-            "Seed3Byte3"
-        };
-        Entries[EntryCount++] = (RAW_DOG_PATCH_ENTRY){
-            RAWDOG_SENTINEL_SEED4,
-            (ULONGLONG)TableInfo->Seed4,
-            "Seed4"
-        };
-        Entries[EntryCount++] = (RAW_DOG_PATCH_ENTRY){
-            RAWDOG_SENTINEL_SEED5,
-            (ULONGLONG)TableInfo->Seed5,
-            "Seed5"
-        };
+        if (Table->HashFunctionId == PerfectHashHashMulshrolate4RXFunctionId) {
+            Entries[EntryCount++] = (RAW_DOG_PATCH_ENTRY){
+                RAWDOG_SENTINEL_SEED5,
+                (ULONGLONG)TableInfo->Seed5,
+                "Seed5"
+            };
+        }
         Entries[EntryCount++] = (RAW_DOG_PATCH_ENTRY){
             RAWDOG_SENTINEL_INDEX_MASK,
             (ULONGLONG)Table->IndexMask,
@@ -2461,6 +2295,10 @@ CompileChm01IndexVectorJitRawDog(
                     PerfectHashJitRawDogMultiplyShiftRXIndex32x4_arm64
                 );
             }
+        } else if (Table->HashFunctionId ==
+                   PerfectHashHashMulshrolate4RXFunctionId) {
+            SourceCode = RawDogMulshrolate4RXIndex32x4[UseAssigned16].Code;
+            CodeSize = RawDogMulshrolate4RXIndex32x4[UseAssigned16].Size;
         } else if (Table->HashFunctionId ==
                    PerfectHashHashMulshrolate3RXFunctionId) {
             if (UseAssigned16) {
@@ -2559,6 +2397,10 @@ CompileChm01IndexVectorJitRawDog(
                 );
             }
         } else if (Table->HashFunctionId ==
+                   PerfectHashHashMulshrolate4RXFunctionId) {
+            SourceCode = RawDogMulshrolate4RXIndex32x16[UseAssigned16].Code;
+            CodeSize = RawDogMulshrolate4RXIndex32x16[UseAssigned16].Size;
+        } else if (Table->HashFunctionId ==
                    PerfectHashHashMulshrolate3RXFunctionId) {
             if (UseAssigned16) {
                 SourceCode = (PBYTE)
@@ -2655,6 +2497,10 @@ CompileChm01IndexVectorJitRawDog(
                     PerfectHashJitRawDogMultiplyShiftRXIndex32x8_arm64
                 );
             }
+        } else if (Table->HashFunctionId ==
+                   PerfectHashHashMulshrolate4RXFunctionId) {
+            SourceCode = RawDogMulshrolate4RXIndex32x8[UseAssigned16].Code;
+            CodeSize = RawDogMulshrolate4RXIndex32x8[UseAssigned16].Size;
         } else if (Table->HashFunctionId ==
                    PerfectHashHashMulshrolate3RXFunctionId) {
             if (UseAssigned16) {
@@ -2756,14 +2602,18 @@ CompileChm01IndexVectorJitRawDog(
         return S_OK;
     }
 
-    if ((Table->HashFunctionId != PerfectHashHashMultiplyShiftRFunctionId &&
-         Table->HashFunctionId != PerfectHashHashMultiplyShiftRXFunctionId &&
-         Table->HashFunctionId != PerfectHashHashMulshrolate1RXFunctionId &&
-         Table->HashFunctionId != PerfectHashHashMulshrolate2RXFunctionId &&
-         Table->HashFunctionId != PerfectHashHashMulshrolate3RXFunctionId &&
-         Table->HashFunctionId != PerfectHashHashMulshrolate4RXFunctionId) ||
+    if (!IsGoodPerfectHashHashFunctionId(Table->HashFunctionId) ||
         Table->MaskFunctionId != PerfectHashAndMaskFunctionId) {
         return PH_E_NOT_IMPLEMENTED;
+    }
+
+    // x64 has x8 and x16 kernels for Mulshrolate3RX, but no x4 kernel.
+    if (CompileIndex32x4 &&
+        Table->HashFunctionId == PerfectHashHashMulshrolate3RXFunctionId) {
+        if (!CompileIndex32x8 && !CompileIndex32x16) {
+            return PH_E_NOT_IMPLEMENTED;
+        }
+        CompileIndex32x4 = FALSE;
     }
 
     UseAssigned16 = (Table->State.UsingAssigned16 != FALSE);
@@ -2865,8 +2715,8 @@ CompileChm01IndexVectorJitRawDog(
             (ULONGLONG)Table->IndexMask,
             "IndexMask"
         };
-    } else if (Table->HashFunctionId ==
-               PerfectHashHashMulshrolate3RXFunctionId) {
+    } else if (Table->HashFunctionId == PerfectHashHashMulshrolate3RXFunctionId ||
+               Table->HashFunctionId == PerfectHashHashMulshrolate4RXFunctionId) {
         Entries[EntryCount++] = (RAW_DOG_PATCH_ENTRY){
             RAWDOG_SENTINEL_SEED3_BYTE1,
             (ULONGLONG)Seed3Bytes.Byte1,
@@ -2887,38 +2737,13 @@ CompileChm01IndexVectorJitRawDog(
             (ULONGLONG)TableInfo->Seed4,
             "Seed4"
         };
-        Entries[EntryCount++] = (RAW_DOG_PATCH_ENTRY){
-            RAWDOG_SENTINEL_INDEX_MASK,
-            (ULONGLONG)Table->IndexMask,
-            "IndexMask"
-        };
-    } else if (Table->HashFunctionId ==
-               PerfectHashHashMulshrolate4RXFunctionId) {
-        Entries[EntryCount++] = (RAW_DOG_PATCH_ENTRY){
-            RAWDOG_SENTINEL_SEED3_BYTE1,
-            (ULONGLONG)Seed3Bytes.Byte1,
-            "Seed3Byte1"
-        };
-        Entries[EntryCount++] = (RAW_DOG_PATCH_ENTRY){
-            RAWDOG_SENTINEL_SEED3_BYTE2,
-            (ULONGLONG)Seed3Bytes.Byte2,
-            "Seed3Byte2"
-        };
-        Entries[EntryCount++] = (RAW_DOG_PATCH_ENTRY){
-            RAWDOG_SENTINEL_SEED3_BYTE3,
-            (ULONGLONG)Seed3Bytes.Byte3,
-            "Seed3Byte3"
-        };
-        Entries[EntryCount++] = (RAW_DOG_PATCH_ENTRY){
-            RAWDOG_SENTINEL_SEED4,
-            (ULONGLONG)TableInfo->Seed4,
-            "Seed4"
-        };
-        Entries[EntryCount++] = (RAW_DOG_PATCH_ENTRY){
-            RAWDOG_SENTINEL_SEED5,
-            (ULONGLONG)TableInfo->Seed5,
-            "Seed5"
-        };
+        if (Table->HashFunctionId == PerfectHashHashMulshrolate4RXFunctionId) {
+            Entries[EntryCount++] = (RAW_DOG_PATCH_ENTRY){
+                RAWDOG_SENTINEL_SEED5,
+                (ULONGLONG)TableInfo->Seed5,
+                "Seed5"
+            };
+        }
         Entries[EntryCount++] = (RAW_DOG_PATCH_ENTRY){
             RAWDOG_SENTINEL_INDEX_MASK,
             (ULONGLONG)Table->IndexMask,
@@ -2938,9 +2763,9 @@ CompileChm01IndexVectorJitRawDog(
     }
 
     Rtl = Table->Rtl;
-    HostHasAvx = (ARGUMENT_PRESENT(Rtl) && Rtl->CpuFeatures.AVX != FALSE);
-    HostHasAvx2 = (ARGUMENT_PRESENT(Rtl) && Rtl->CpuFeatures.AVX2 != FALSE);
-    HostHasAvx512 = RawDogHostHasAvx512(Rtl);
+    HostHasAvx = RawDogHostHasAvx(Rtl);
+    HostHasAvx2 = (HostHasAvx && Rtl->CpuFeatures.AVX2 != FALSE);
+    HostHasAvx512 = RawDogHostSupportsAvx512Kernel(Rtl, Table->HashFunctionId);
 
     RequestedIsa = (PERFECT_HASH_JIT_MAX_ISA_ID)CompileFlags->JitMaxIsa;
     AllowAvx512 = (RequestedIsa == PerfectHashJitMaxIsaAuto ||
@@ -2965,7 +2790,8 @@ CompileChm01IndexVectorJitRawDog(
 #endif
 
     if (CompileIndex32x16) {
-        if (!AllowAvx2 || !HostHasAvx2) {
+        if (Table->HashFunctionId != PerfectHashHashMulshrolate4RXFunctionId &&
+            (!AllowAvx2 || !HostHasAvx2)) {
             return PH_E_NOT_IMPLEMENTED;
         }
 
@@ -3062,27 +2888,8 @@ CompileChm01IndexVectorJitRawDog(
             if (!AllowAvx512 || !HostHasAvx512) {
                 return PH_E_NOT_IMPLEMENTED;
             }
-#if defined(PH_LINUX)
-            if (VectorVersion >= 4) {
-                if (UseAssigned16) {
-                    SourceCode = (PBYTE)
-                        PerfectHashJitRawDogMulshrolate4RX16Index32x16_x64;
-                    CodeSize = sizeof(
-                        PerfectHashJitRawDogMulshrolate4RX16Index32x16_x64
-                    );
-                } else {
-                    SourceCode = (PBYTE)
-                        PerfectHashJitRawDogMulshrolate4RXIndex32x16_x64;
-                    CodeSize = sizeof(
-                        PerfectHashJitRawDogMulshrolate4RXIndex32x16_x64
-                    );
-                }
-            } else {
-                return PH_E_NOT_IMPLEMENTED;
-            }
-#else
-            return PH_E_NOT_IMPLEMENTED;
-#endif
+            SourceCode = RawDogMulshrolate4RXIndex32x16[UseAssigned16].Code;
+            CodeSize = RawDogMulshrolate4RXIndex32x16[UseAssigned16].Size;
 
             Result = CreateRawDogCode(SourceCode,
                                       CodeSize,
@@ -3288,27 +3095,8 @@ CompileChm01IndexVectorJitRawDog(
             if (!AllowAvx2 || !HostHasAvx2) {
                 return PH_E_NOT_IMPLEMENTED;
             }
-#if defined(PH_LINUX)
-            if (VectorVersion >= 4) {
-                if (UseAssigned16) {
-                    SourceCode = (PBYTE)
-                        PerfectHashJitRawDogMulshrolate4RX16Index32x8_x64;
-                    CodeSize = sizeof(
-                        PerfectHashJitRawDogMulshrolate4RX16Index32x8_x64
-                    );
-                } else {
-                    SourceCode = (PBYTE)
-                        PerfectHashJitRawDogMulshrolate4RXIndex32x8_x64;
-                    CodeSize = sizeof(
-                        PerfectHashJitRawDogMulshrolate4RXIndex32x8_x64
-                    );
-                }
-            } else {
-                return PH_E_NOT_IMPLEMENTED;
-            }
-#else
-            return PH_E_NOT_IMPLEMENTED;
-#endif
+            SourceCode = RawDogMulshrolate4RXIndex32x8[UseAssigned16].Code;
+            CodeSize = RawDogMulshrolate4RXIndex32x8[UseAssigned16].Size;
 
             Result = CreateRawDogCode(SourceCode,
                                       CodeSize,
@@ -3493,7 +3281,9 @@ CompileChm01IndexVectorJitRawDog(
             return PH_E_NOT_IMPLEMENTED;
         }
 
-        if ((RequestedIsa == PerfectHashJitMaxIsaAvx2 ||
+        // The Mulshrolate4RX x4 kernel uses AVX at every supported ISA cap.
+        if (Table->HashFunctionId != PerfectHashHashMulshrolate4RXFunctionId &&
+            (RequestedIsa == PerfectHashJitMaxIsaAvx2 ||
              RequestedIsa == PerfectHashJitMaxIsaAvx512) &&
             !HostHasAvx2) {
             return PH_E_NOT_IMPLEMENTED;
@@ -3502,7 +3292,11 @@ CompileChm01IndexVectorJitRawDog(
         UseAvx2 = (AllowAvx2 && HostHasAvx2 &&
                    RequestedIsa != PerfectHashJitMaxIsaAvx);
 
-        if (UseAssigned16) {
+        if (Table->HashFunctionId == PerfectHashHashMulshrolate4RXFunctionId) {
+            UseAvx2 = FALSE;
+            SourceCode = RawDogMulshrolate4RXIndex32x4[UseAssigned16].Code;
+            CodeSize = RawDogMulshrolate4RXIndex32x4[UseAssigned16].Size;
+        } else if (UseAssigned16) {
             if (Table->HashFunctionId ==
                 PerfectHashHashMultiplyShiftRXFunctionId) {
                 SourceCode = (PBYTE)(
@@ -3848,12 +3642,7 @@ PerfectHashTableCompileJitRawDog(
         return PH_E_NOT_IMPLEMENTED;
     }
 
-    if (Table->HashFunctionId != PerfectHashHashMultiplyShiftRFunctionId &&
-        Table->HashFunctionId != PerfectHashHashMultiplyShiftRXFunctionId &&
-        Table->HashFunctionId != PerfectHashHashMulshrolate1RXFunctionId &&
-        Table->HashFunctionId != PerfectHashHashMulshrolate2RXFunctionId &&
-        Table->HashFunctionId != PerfectHashHashMulshrolate3RXFunctionId &&
-        Table->HashFunctionId != PerfectHashHashMulshrolate4RXFunctionId) {
+    if (!IsGoodPerfectHashHashFunctionId(Table->HashFunctionId)) {
         return PH_E_NOT_IMPLEMENTED;
     }
 
@@ -3879,16 +3668,6 @@ PerfectHashTableCompileJitRawDog(
 
     if (CompileFlags.JitIndex64 ||
         WantsIndex32x2) {
-        return PH_E_NOT_IMPLEMENTED;
-    }
-
-    if (WantsVector &&
-        Table->HashFunctionId != PerfectHashHashMultiplyShiftRFunctionId &&
-        Table->HashFunctionId != PerfectHashHashMultiplyShiftRXFunctionId &&
-        Table->HashFunctionId != PerfectHashHashMulshrolate1RXFunctionId &&
-        Table->HashFunctionId != PerfectHashHashMulshrolate2RXFunctionId &&
-        Table->HashFunctionId != PerfectHashHashMulshrolate3RXFunctionId &&
-        Table->HashFunctionId != PerfectHashHashMulshrolate4RXFunctionId) {
         return PH_E_NOT_IMPLEMENTED;
     }
 

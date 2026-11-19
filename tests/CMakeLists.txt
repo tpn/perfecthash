@@ -43,6 +43,13 @@ set_target_properties(perfecthash_unit_tests PROPERTIES
 
 if(PERFECTHASH_HAS_RAWDOG_JIT)
     target_compile_definitions(perfecthash_unit_tests PRIVATE PH_HAS_RAWDOG_JIT)
+    if(PERFECTHASH_ARCH_X86_64)
+        target_sources(perfecthash_unit_tests PRIVATE RawDogCpuFeaturesTest.c)
+        set_source_files_properties(RawDogCpuFeaturesTest.c PROPERTIES
+            COMPILE_DEFINITIONS _PERFECT_HASH_INTERNAL_BUILD
+            INCLUDE_DIRECTORIES "${PERFECTHASH_SRC_DIR}/PerfectHash"
+        )
+    endif()
 endif()
 if(TARGET PerfectHashLLVM)
     add_dependencies(perfecthash_unit_tests PerfectHashLLVM)
@@ -82,6 +89,13 @@ set_target_properties(perfecthash_benchmarks PROPERTIES
 
 if(PERFECTHASH_HAS_RAWDOG_JIT)
     target_compile_definitions(perfecthash_benchmarks PRIVATE PH_HAS_RAWDOG_JIT)
+endif()
+
+if(PERFECTHASH_ARCH_X86_64 AND PERFECTHASH_HAS_RAWDOG_JIT AND TARGET PerfectHashLLVM)
+    add_dependencies(perfecthash_benchmarks PerfectHashLLVM)
+    add_test(NAME perfecthash.benchmarks.compare_isa_mulshrolate4rx
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/check_benchmark_compare_isa.py
+            ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:perfecthash_benchmarks>)
 endif()
 
 include(GoogleTest)

@@ -41,6 +41,8 @@ struct PerfectHashTableShim {
   PPERFECT_HASH_TABLE_VTBL Vtbl;
 };
 
+constexpr int kUnsupportedCompareWidth = 3;
+
 struct BenchmarkOptions {
   size_t key_count = 100000;
   size_t iterations = 5;
@@ -894,19 +896,9 @@ int RunBenchmark(const BenchmarkOptions &base,
       return 1;
     }
     if (wants_vector &&
-        options.hash_function_id !=
-            PerfectHashHashMultiplyShiftRFunctionId &&
-        options.hash_function_id !=
-            PerfectHashHashMultiplyShiftRXFunctionId &&
-        options.hash_function_id !=
-            PerfectHashHashMulshrolate1RXFunctionId &&
-        options.hash_function_id !=
-            PerfectHashHashMulshrolate2RXFunctionId &&
-        options.hash_function_id !=
-            PerfectHashHashMulshrolate3RXFunctionId) {
+        !IsGoodPerfectHashHashFunctionId(options.hash_function_id)) {
       std::cerr << "RawDog vector JIT only supports MultiplyShiftR, "
-                   "MultiplyShiftRX, Mulshrolate1RX, Mulshrolate2RX, or "
-                   "Mulshrolate3RX.\n";
+                   "MultiplyShiftRX, and Mulshrolate1RX through Mulshrolate4RX.\n";
       return 1;
     }
   }
@@ -1131,6 +1123,9 @@ int RunBenchmark(const BenchmarkOptions &base,
       break;
   }
   compileFlags.JitMaxIsa = options.jit_max_isa;
+  const bool compareWidth = options.compare_isa &&
+      (options.index32x4 || options.index32x8 || options.index32x16);
+  compileFlags.JitRequireRequestedWidth = compareWidth;
 
   double jitCompileMs = 0.0;
   if (options.jit) {
@@ -1139,8 +1134,11 @@ int RunBenchmark(const BenchmarkOptions &base,
     });
 
     if (resultValue < 0) {
-      std::cerr << "CompileTable failed: 0x" << std::hex
-                << static_cast<unsigned>(resultValue) << std::dec << "\n";
+      const bool unsupported = compareWidth && resultValue == PH_E_NOT_IMPLEMENTED;
+      if (!unsupported) {
+        std::cerr << "CompileTable failed: 0x" << std::hex
+                  << static_cast<unsigned>(resultValue) << std::dec << "\n";
+      }
       shim->Vtbl->Release(table);
       online->Vtbl->Release(online);
       classFactory->Vtbl->Release(classFactory);
@@ -1149,7 +1147,7 @@ int RunBenchmark(const BenchmarkOptions &base,
         FreeLibrary(module);
       }
 #endif
-      return 1;
+      return unsupported ? kUnsupportedCompareWidth : 1;
     }
   }
 
@@ -1796,11 +1794,7 @@ int RunCompare(const BenchmarkOptions &base) {
 
 #if defined(PH_HAS_RAWDOG_JIT)
   const bool rawdog_vector_supported =
-      options.hash_function_id == PerfectHashHashMultiplyShiftRFunctionId ||
-      options.hash_function_id == PerfectHashHashMultiplyShiftRXFunctionId ||
-      options.hash_function_id == PerfectHashHashMulshrolate1RXFunctionId ||
-      options.hash_function_id == PerfectHashHashMulshrolate2RXFunctionId ||
-      options.hash_function_id == PerfectHashHashMulshrolate3RXFunctionId;
+      IsGoodPerfectHashHashFunctionId(options.hash_function_id);
 
   if (!arm64Compare || rawdog_vector_supported) {
     addEntry("scalar", "rawdog", "x1", BenchmarkOptions::JitBackend::RawDog,
@@ -1876,8 +1870,16 @@ int RunCompare(const BenchmarkOptions &base) {
   }
 #endif
 
-  for (auto &entry : entries) {
+  for (auto it = entries.begin(); it != entries.end();) {
+    auto &entry = *it;
     int runResult = RunBenchmark(entry.options, &entry.result, false);
+    if (runResult == kUnsupportedCompareWidth) {
+      std::cout << "Skipping unsupported " << entry.backend_label << " "
+                << JitMaxIsaToString(entry.options.jit_max_isa) << " "
+                << entry.index_label << "\n";
+      it = entries.erase(it);
+      continue;
+    }
     if (runResult != 0) {
       std::cerr << "Compare entry failed: backend="
                 << (entry.backend_label ? entry.backend_label : "unknown")
@@ -1887,6 +1889,7 @@ int RunCompare(const BenchmarkOptions &base) {
                 << "\n";
       return runResult;
     }
+    ++it;
   }
 
   const BenchmarkResult &baseline = entries.front().result;
