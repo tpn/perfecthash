@@ -1945,7 +1945,9 @@ CompileChm01IndexVectorJitRawDog(
             return PH_E_NOT_IMPLEMENTED;
         }
 
-        if ((RequestedIsa == PerfectHashJitMaxIsaAvx2 ||
+        // The Mulshrolate4RX x4 kernel uses AVX at every supported ISA cap.
+        if (Table->HashFunctionId != PerfectHashHashMulshrolate4RXFunctionId &&
+            (RequestedIsa == PerfectHashJitMaxIsaAvx2 ||
              RequestedIsa == PerfectHashJitMaxIsaAvx512) &&
             !HostHasAvx2) {
             return PH_E_NOT_IMPLEMENTED;
@@ -3285,7 +3287,9 @@ CompileChm01IndexVectorJitRawDog(
             return PH_E_NOT_IMPLEMENTED;
         }
 
-        if ((RequestedIsa == PerfectHashJitMaxIsaAvx2 ||
+        // The Mulshrolate4RX x4 kernel uses AVX at every supported ISA cap.
+        if (Table->HashFunctionId != PerfectHashHashMulshrolate4RXFunctionId &&
+            (RequestedIsa == PerfectHashJitMaxIsaAvx2 ||
              RequestedIsa == PerfectHashJitMaxIsaAvx512) &&
             !HostHasAvx2) {
             return PH_E_NOT_IMPLEMENTED;
