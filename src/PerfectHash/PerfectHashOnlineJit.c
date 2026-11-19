@@ -15,68 +15,30 @@ Abstract:
 
 #include "stdafx.h"
 #include <PerfectHash/PerfectHashOnlineJit.h>
+#include "PerfectHashOnlineJitPrivate.h"
 
 #include <stdint.h>
 #include <stdlib.h>
 
 extern DLL_GET_CLASS_OBJECT PerfectHashDllGetClassObject;
 
-struct PH_ONLINE_JIT_CONTEXT {
-    PICLASSFACTORY ClassFactory;
-    PPERFECT_HASH_ONLINE Online;
-};
-
-struct PH_ONLINE_JIT_TABLE {
-    PPERFECT_HASH_TABLE Table;
-    PPERFECT_HASH_TABLE_JIT_INTERFACE JitInterface;
-};
-
+// The table owns this interface and its executable code. Callers quiesce
+// lookups before recompiling or releasing the table (see the public API).
 static
 HRESULT
-PhReleaseOnlineJitInterface(
-    _Inout_ PH_ONLINE_JIT_TABLE *Table
+PhGetOnlineJitInterface(
+    _In_ PH_ONLINE_JIT_TABLE *Table,
+    _Out_ PPERFECT_HASH_TABLE_JIT_INTERFACE *Interface
     )
 {
-    if (!ARGUMENT_PRESENT(Table)) {
+    if (!Table->Table) {
         return E_INVALIDARG;
     }
-
-    if (Table->JitInterface) {
-        Table->JitInterface->Vtbl->Release(Table->JitInterface);
-        Table->JitInterface = NULL;
+    if (!Table->Table->Jit || !Table->Table->Jit->Flags.Valid) {
+        return E_NOINTERFACE;
     }
-
+    *Interface = &Table->Table->JitInterface;
     return S_OK;
-}
-
-static
-HRESULT
-PhEnsureOnlineJitInterface(
-    _Inout_ PH_ONLINE_JIT_TABLE *Table
-    )
-{
-    HRESULT Result;
-
-    if (!ARGUMENT_PRESENT(Table) ||
-        !ARGUMENT_PRESENT(Table->Table)) {
-        return E_INVALIDARG;
-    }
-
-    if (ARGUMENT_PRESENT(Table->JitInterface)) {
-        return S_OK;
-    }
-
-    Result = Table->Table->Vtbl->QueryInterface(
-        Table->Table,
-#ifdef __cplusplus
-        IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
-#else
-        &IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
-#endif
-        (void **)&Table->JitInterface
-    );
-
-    return Result;
 }
 
 static
@@ -207,7 +169,6 @@ PhCompileOnlineJitBackend(
 {
     HRESULT Result;
     PERFECT_HASH_TABLE_COMPILE_FLAGS CompileFlags = {0};
-    PTABLE_INFO_ON_DISK TableInfo;
 
     if (!ARGUMENT_PRESENT(Context) ||
         !ARGUMENT_PRESENT(Table) ||
@@ -215,8 +176,6 @@ PhCompileOnlineJitBackend(
         !ARGUMENT_PRESENT(Table->Table->TableInfoOnDisk)) {
         return E_INVALIDARG;
     }
-
-    TableInfo = Table->Table->TableInfoOnDisk;
 
     CompileFlags.Jit = TRUE;
 
@@ -247,6 +206,7 @@ PhCompileOnlineJitBackend(
 
     CompileFlags.JitMaxIsa = (ULONG)JitMaxIsa;
 
+    CompileFlags.JitRequireRequestedWidth = TRUE;
     return Context->Online->Vtbl->CompileTable(Context->Online,
                                                Table->Table,
                                                &CompileFlags);
@@ -959,6 +919,12 @@ PhOnlineJitCompileTableEx(
 {
     HRESULT Result;
     HRESULT LastResult;
+    HRESULT RawDogFailure = S_OK;
+    const PH_ONLINE_JIT_BACKEND Backends[] = {
+        PhOnlineJitBackendRawDogJit,
+        PhOnlineJitBackendLlvmJit,
+    };
+    ULONG BackendIndex;
     ULONG CandidateWidths[8] = {0};
     ULONG CandidateCount = 0;
     ULONG Index;
@@ -970,13 +936,6 @@ PhOnlineJitCompileTableEx(
         !ARGUMENT_PRESENT(Table->Table)) {
         return E_INVALIDARG;
     }
-
-    //
-    // Force lazy re-acquisition on subsequent vector index requests after
-    // every compile path.
-    //
-
-    PhReleaseOnlineJitInterface(Table);
 
     if (!IsValidPerfectHashJitMaxIsaId((PERFECT_HASH_JIT_MAX_ISA_ID)JitMaxIsa)) {
         return E_INVALIDARG;
@@ -997,27 +956,10 @@ PhOnlineJitCompileTableEx(
         *EffectiveVectorWidth = VectorWidth;
     }
 
-    if (Backend == PhOnlineJitBackendLlvmJit) {
-        Result = PhCompileOnlineJitBackend(Context,
-                                           Table,
-                                           Backend,
-                                           VectorWidth,
-                                           JitMaxIsa);
-        if (SUCCEEDED(Result)) {
-            if (ARGUMENT_PRESENT(EffectiveBackend)) {
-                *EffectiveBackend = PhOnlineJitBackendLlvmJit;
-            }
-            if (ARGUMENT_PRESENT(EffectiveVectorWidth)) {
-                *EffectiveVectorWidth = VectorWidth;
-            }
-        }
-        return Result;
-    }
-
     switch (VectorWidth) {
         case 0:
         case 1:
-            CandidateWidths[CandidateCount++] = VectorWidth;
+            CandidateWidths[CandidateCount++] = 1;
             break;
         case 2:
             CandidateWidths[CandidateCount++] = 2;
@@ -1052,64 +994,50 @@ PhOnlineJitCompileTableEx(
 
     LastResult = PH_E_NOT_IMPLEMENTED;
 
-    for (Index = 0; Index < CandidateCount; Index++) {
-        Result = PhCompileOnlineJitBackend(Context,
-                                           Table,
-                                           PhOnlineJitBackendRawDogJit,
-                                           CandidateWidths[Index],
-                                           JitMaxIsa);
-        if (SUCCEEDED(Result)) {
-            if (ARGUMENT_PRESENT(EffectiveBackend)) {
-                *EffectiveBackend = PhOnlineJitBackendRawDogJit;
-            }
-            if (ARGUMENT_PRESENT(EffectiveVectorWidth)) {
-                *EffectiveVectorWidth = CandidateWidths[Index];
-            }
-            return S_OK;
+    for (BackendIndex = 0; BackendIndex < ARRAYSIZE(Backends); BackendIndex++) {
+        PH_ONLINE_JIT_BACKEND CandidateBackend = Backends[BackendIndex];
+        if (Backend != PhOnlineJitBackendAuto && Backend != CandidateBackend) {
+            continue;
         }
-
-        if (Result != PH_E_NOT_IMPLEMENTED &&
-            Result != PH_E_INVARIANT_CHECK_FAILED) {
-            if (Backend == PhOnlineJitBackendRawDogJit) {
-                return Result;
+        for (Index = 0; Index < CandidateCount; Index++) {
+            Result = PhCompileOnlineJitBackend(Context,
+                                               Table,
+                                               CandidateBackend,
+                                               CandidateWidths[Index],
+                                               JitMaxIsa);
+            if (SUCCEEDED(Result)) {
+                if (ARGUMENT_PRESENT(EffectiveBackend)) {
+                    *EffectiveBackend = CandidateBackend;
+                }
+                if (ARGUMENT_PRESENT(EffectiveVectorWidth)) {
+                    *EffectiveVectorWidth = CandidateWidths[Index];
+                }
+                return S_OK;
             }
             LastResult = Result;
-            break;
-        }
-
-        LastResult = Result;
-    }
-
-    if (Backend == PhOnlineJitBackendRawDogJit) {
-        return LastResult;
-    }
-
-    for (Index = 0; Index < CandidateCount; Index++) {
-        Result = PhCompileOnlineJitBackend(Context,
-                                           Table,
-                                           PhOnlineJitBackendLlvmJit,
-                                           CandidateWidths[Index],
-                                           JitMaxIsa);
-        if (SUCCEEDED(Result)) {
-            if (ARGUMENT_PRESENT(EffectiveBackend)) {
-                *EffectiveBackend = PhOnlineJitBackendLlvmJit;
+            if (Result == PH_E_NOT_IMPLEMENTED ||
+                Result == PH_E_INVARIANT_CHECK_FAILED) {
+                continue;
             }
-            if (ARGUMENT_PRESENT(EffectiveVectorWidth)) {
-                *EffectiveVectorWidth = CandidateWidths[Index];
+            // A concurrent compile holds the table. Report the contention
+            // rather than treating it as a RawDog failure and trying LLVM.
+            if (Result != PH_E_TABLE_LOCKED &&
+                Backend == PhOnlineJitBackendAuto &&
+                CandidateBackend == PhOnlineJitBackendRawDogJit) {
+                RawDogFailure = Result;
+                break;
             }
-            return S_OK;
-        }
-
-        if (Result != PH_E_LLVM_BACKEND_NOT_FOUND &&
-            Result != PH_E_NOT_IMPLEMENTED &&
-            Result != PH_E_INVARIANT_CHECK_FAILED) {
+            if (Result == PH_E_LLVM_BACKEND_NOT_FOUND &&
+                FAILED(RawDogFailure)) {
+                break;
+            }
             return Result;
         }
-
-        LastResult = Result;
     }
 
-    return LastResult;
+    // RawDog failed outright and LLVM is absent or has no routine for the
+    // request. Neither of those explains the failure, so report RawDog's.
+    return FAILED(RawDogFailure) ? RawDogFailure : LastResult;
 }
 
 PH_ONLINE_JIT_API
@@ -1361,12 +1289,11 @@ PhOnlineJitIndex32x2(
         return E_INVALIDARG;
     }
 
-    Result = PhEnsureOnlineJitInterface(Table);
+    Result = PhGetOnlineJitInterface(Table, &Jit);
     if (FAILED(Result)) {
         return Result;
     }
 
-    Jit = Table->JitInterface;
     return Jit->Vtbl->Index32x2(
         Jit,
         (ULONG)Keys[0],
@@ -1448,12 +1375,11 @@ PhOnlineJitIndex32x4(
         return E_INVALIDARG;
     }
 
-    Result = PhEnsureOnlineJitInterface(Table);
+    Result = PhGetOnlineJitInterface(Table, &Jit);
     if (FAILED(Result)) {
         return Result;
     }
 
-    Jit = Table->JitInterface;
     return Jit->Vtbl->Index32x4(
         Jit,
         (ULONG)Keys[0],
@@ -1484,12 +1410,11 @@ PhOnlineJitIndex32x8(
         return E_INVALIDARG;
     }
 
-    Result = PhEnsureOnlineJitInterface(Table);
+    Result = PhGetOnlineJitInterface(Table, &Jit);
     if (FAILED(Result)) {
         return Result;
     }
 
-    Jit = Table->JitInterface;
     return Jit->Vtbl->Index32x8(
         Jit,
         (ULONG)Keys[0],
@@ -1528,12 +1453,11 @@ PhOnlineJitIndex32x16(
         return E_INVALIDARG;
     }
 
-    Result = PhEnsureOnlineJitInterface(Table);
+    Result = PhGetOnlineJitInterface(Table, &Jit);
     if (FAILED(Result)) {
         return Result;
     }
 
-    Jit = Table->JitInterface;
     return Jit->Vtbl->Index32x16(
         Jit,
         (ULONG)Keys[0],
@@ -1580,8 +1504,6 @@ PhOnlineJitReleaseTable(
     if (!Table) {
         return;
     }
-
-    PhReleaseOnlineJitInterface(Table);
 
     if (Table->Table) {
         Table->Table->Vtbl->Release(Table->Table);

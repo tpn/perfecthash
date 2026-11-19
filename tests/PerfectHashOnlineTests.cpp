@@ -10,6 +10,11 @@
 #include <unordered_set>
 #include <vector>
 
+#if defined(PH_LINUX) && defined(__aarch64__)
+#include <asm/hwcap.h>
+#include <sys/auxv.h>
+#endif
+
 namespace {
 
 struct PerfectHashTableShim {
@@ -385,6 +390,7 @@ TEST_F(PerfectHashOnlineTests, UnsolvedTableDoesNotReturnAHandle) {
   flags.NoFileIo = TRUE;
   flags.Quiet = TRUE;
   flags.DoNotTryUseHash16Impl = TRUE;
+  flags.HashAllKeysFirst = TRUE;
   PERFECT_HASH_TABLE_CREATE_PARAMETER params[2] = {};
   params[0].Id = TableCreateParameterSeedsId;
   params[0].AsValueArray.Values = seeds;
@@ -487,6 +493,176 @@ TEST_F(PerfectHashOnlineTests, SkipGraphVerificationReturnsUsableTable) {
 
   shim->Vtbl->Release(table);
 }
+
+TEST_F(PerfectHashOnlineTests, NeonHashAllKeysHandlesWidthsTailsAndFallback) {
+  bool hasNeon = false;
+#if defined(PH_WINDOWS) && defined(_M_ARM64)
+  hasNeon = IsProcessorFeaturePresent(PF_ARM_NEON_INSTRUCTIONS_AVAILABLE);
+#elif defined(PH_LINUX) && defined(__aarch64__) && defined(__ARM_NEON)
+  hasNeon = (getauxval(AT_HWCAP) & HWCAP_ASIMD) != 0;
+#elif defined(PH_MAC) && defined(__aarch64__) && defined(__ARM_NEON)
+  hasNeon = true;
+#endif
+
+  const PERFECT_HASH_HASH_FUNCTION_ID hashes[] = {
+#define NEON_TEST_HASH(Name) PerfectHashHash##Name##FunctionId,
+      PERFECT_HASH_GOOD_HASH_FUNCTION_TABLE_ENTRY(NEON_TEST_HASH)
+#undef NEON_TEST_HASH
+      PerfectHashHashRotateMultiplyXorRotateFunctionId,
+  };
+  for (auto hash : hashes) {
+    for (bool assigned16 : {false, true}) {
+      for (ULONG tail = 0; tail < 4; ++tail) {
+        auto keys = MakePseudoRandomKeys(100 + tail, 0x31415926u);
+        PERFECT_HASH_TABLE_CREATE_FLAGS createFlags = {};
+        createFlags.HashAllKeysFirst = TRUE;
+        createFlags.Quiet = TRUE;
+        createFlags.DoNotTryUseHash16Impl = !assigned16;
+        for (bool disableNeon : {false, true}) {
+          SCOPED_TRACE(::testing::Message() << "hash " << hash << ", width "
+              << (assigned16 ? 16 : 32) << ", tail " << tail
+              << ", disableNeon " << disableNeon);
+          createFlags.DoNotTryUseNeonHashFunction = disableNeon;
+          PPERFECT_HASH_TABLE table = nullptr;
+          ASSERT_GE(online_->Vtbl->CreateTableFromKeys(
+              online_, PerfectHashChm01AlgorithmId, hash, PerfectHashAndMaskFunctionId,
+              sizeof(ULONG), keys.size(), keys.data(), nullptr, &createFlags,
+              nullptr, &table), 0);
+          ASSERT_NE(table, nullptr);
+          auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
+          PERFECT_HASH_TABLE_FLAGS flags = {};
+          EXPECT_GE(shim->Vtbl->GetFlags(table, sizeof(flags), &flags), 0);
+          EXPECT_EQ(flags.AssignedElementSizeInBits << 3, assigned16 ? 16u : 32u);
+          EXPECT_EQ(!!flags.UsedNeonHashFunction,
+                    hasNeon && !disableNeon && IsGoodPerfectHashHashFunctionId(hash));
+          std::unordered_set<ULONG> seen;
+          for (ULONG key : keys) {
+            ULONG index = 0;
+            EXPECT_GE(shim->Vtbl->Index(table, key, &index), 0);
+            EXPECT_TRUE(seen.insert(index).second);
+          }
+          shim->Vtbl->Release(table);
+        }
+      }
+    }
+  }
+}
+
+#if defined(PH_HAS_LLVM)
+// Every solver graph hashes through the table's one hash JIT with its own
+// seeds, at the context's default concurrency. The key counts leave tails
+// for the 16-, 8- and 4-key routines and the scalar routine.
+TEST_F(PerfectHashOnlineTests, HashJitHashAllKeysServesEveryGraphAndWidth) {
+  const PERFECT_HASH_HASH_FUNCTION_ID hashes[] = {
+#define HASH_JIT_TEST_HASH(Name) PerfectHashHash##Name##FunctionId,
+      PERFECT_HASH_GOOD_HASH_FUNCTION_TABLE_ENTRY(HASH_JIT_TEST_HASH)
+#undef HASH_JIT_TEST_HASH
+  };
+  for (auto hash : hashes) {
+    for (bool assigned16 : {false, true}) {
+      for (size_t count : {5000u, 5015u}) {
+        SCOPED_TRACE(::testing::Message() << "hash " << hash << ", width "
+            << (assigned16 ? 16 : 32) << ", keys " << count);
+        auto keys = MakePseudoRandomKeys(count, 0x27182818u);
+        PERFECT_HASH_TABLE_CREATE_FLAGS createFlags = {};
+        createFlags.HashAllKeysFirst = TRUE;
+        createFlags.TryUseJitHashFunction = TRUE;
+        createFlags.Quiet = TRUE;
+        createFlags.DoNotTryUseHash16Impl = !assigned16;
+        PPERFECT_HASH_TABLE table = nullptr;
+        ASSERT_GE(online_->Vtbl->CreateTableFromKeys(
+            online_, PerfectHashChm01AlgorithmId, hash, PerfectHashAndMaskFunctionId,
+            sizeof(ULONG), keys.size(), keys.data(), nullptr, &createFlags,
+            nullptr, &table), 0);
+        ASSERT_NE(table, nullptr);
+        auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
+        PERFECT_HASH_TABLE_FLAGS flags = {};
+        EXPECT_GE(shim->Vtbl->GetFlags(table, sizeof(flags), &flags), 0);
+        EXPECT_EQ(flags.AssignedElementSizeInBits << 3, assigned16 ? 16u : 32u);
+        EXPECT_TRUE(flags.UsedJitHashFunction);
+        EXPECT_FALSE(flags.UsedNeonHashFunction);
+        std::unordered_set<ULONG> seen;
+        for (ULONG key : keys) {
+          ULONG index = 0;
+          EXPECT_GE(shim->Vtbl->Index(table, key, &index), 0);
+          EXPECT_TRUE(seen.insert(index).second);
+        }
+        shim->Vtbl->Release(table);
+      }
+    }
+  }
+}
+#endif
+
+#if defined(PH_HAS_LLVM)
+// The interface's Bind methods return routines that share one set of seeds
+// per table: every routine hashes with the seeds of the most recent Bind.
+TEST_F(PerfectHashOnlineTests, HashJitBoundRoutinesHashWithTheLatestBoundSeeds) {
+  auto keys = MakePseudoRandomKeys(5000, 0x27182818u);
+  PERFECT_HASH_TABLE_CREATE_FLAGS createFlags = {};
+  createFlags.HashAllKeysFirst = TRUE;
+  createFlags.TryUseJitHashFunction = TRUE;
+  createFlags.Quiet = TRUE;
+  createFlags.DoNotTryUseHash16Impl = TRUE;
+  PPERFECT_HASH_TABLE table = nullptr;
+  ASSERT_GE(online_->Vtbl->CreateTableFromKeys(
+      online_, PerfectHashChm01AlgorithmId,
+      PerfectHashHashMultiplyShiftRXFunctionId, PerfectHashAndMaskFunctionId,
+      sizeof(ULONG), keys.size(), keys.data(), nullptr, &createFlags,
+      nullptr, &table), 0);
+  ASSERT_NE(table, nullptr);
+  auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
+  PPERFECT_HASH_TABLE_HASH_JIT_INTERFACE jit = nullptr;
+  HRESULT result = shim->Vtbl->QueryInterface(
+      table,
+#ifdef PH_WINDOWS
+      IID_PERFECT_HASH_TABLE_HASH_JIT_INTERFACE,
+#else
+      &IID_PERFECT_HASH_TABLE_HASH_JIT_INTERFACE,
+#endif
+      reinterpret_cast<void **>(&jit));
+  ASSERT_GE(result, 0);
+  ASSERT_NE(jit, nullptr);
+
+  ULONG seeds[2][MAX_NUMBER_OF_SEEDS] = {
+      {0x9E3779B1u, 0x85EBCA77u, 0x00000B07u},
+      {0xC2B2AE3Du, 0x27D4EB2Fu, 0x00000311u},
+  };
+  PPERFECT_HASH_SEEDED_HASH_EX_BOUND hashEx = nullptr;
+  PPERFECT_HASH_SEEDED_HASH_EX_BOUND32X4 hashEx32x4 = nullptr;
+  PPERFECT_HASH_SEEDED_HASH_EX_BOUND32X8 hashEx32x8 = nullptr;
+  for (auto &bound : seeds) {
+    // Rebinding the scalar routine alone also redirects the batch routines.
+    if (!hashEx32x4) {
+      ASSERT_GE(jit->Vtbl->BindHashEx32x4(jit, bound, ~0u, &hashEx32x4), 0);
+      ASSERT_GE(jit->Vtbl->BindHashEx32x8(jit, bound, ~0u, &hashEx32x8), 0);
+    }
+    ASSERT_GE(jit->Vtbl->BindHashEx(jit, bound, ~0u, &hashEx), 0);
+    ASSERT_NE(hashEx, nullptr);
+    ASSERT_NE(hashEx32x4, nullptr);
+    ASSERT_NE(hashEx32x8, nullptr);
+    for (size_t i = 0; i < 64; i += 8) {
+      ULONGLONG pairs4[4] = {};
+      ULONGLONG pairs8[8] = {};
+      hashEx32x4(&keys[i], pairs4);
+      hashEx32x8(&keys[i], pairs8);
+      for (size_t lane = 0; lane < 8; ++lane) {
+        ULONGLONG expected = 0;
+        ASSERT_GE(shim->Vtbl->SeededHash(table, keys[i + lane],
+                                         MAX_NUMBER_OF_SEEDS, bound,
+                                         &expected), 0);
+        EXPECT_EQ(hashEx(keys[i + lane]), expected);
+        EXPECT_EQ(pairs8[lane], expected);
+        if (lane < 4) {
+          EXPECT_EQ(pairs4[lane], expected);
+        }
+      }
+    }
+  }
+  jit->Vtbl->Release(jit);
+  shim->Vtbl->Release(table);
+}
+#endif
 
 TEST_F(PerfectHashOnlineTests, CreateTableFromUnsortedKeysReturnsUniqueIndexes) {
   const std::vector<ULONG> keys = {
@@ -632,6 +808,112 @@ TEST_F(PerfectHashOnlineTests, Assigned16RequiresGraphImpl3AndOptIn) {
 }
 
 #if defined(PH_HAS_RAWDOG_JIT)
+#if defined(PH_HAS_LLVM)
+TEST_F(PerfectHashOnlineTests, HeldJitInterfaceFollowsBackendRecompile) {
+  const std::vector<ULONG> keys = {1, 3, 5, 7, 11, 13, 17, 19};
+  auto *table = CreateTableFromKeys(keys, PerfectHashHashMultiplyShiftRFunctionId);
+  ASSERT_NE(table, nullptr);
+  auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
+  ULONG expected[2] = {};
+  ASSERT_GE(shim->Vtbl->Index(table, keys[0], &expected[0]), 0);
+  ASSERT_GE(shim->Vtbl->Index(table, keys[1], &expected[1]), 0);
+
+  PERFECT_HASH_TABLE_COMPILE_FLAGS flags = {};
+  flags.Jit = TRUE;
+  flags.JitBackendRawDog = TRUE;
+  ASSERT_GE(online_->Vtbl->CompileTable(online_, table, &flags), 0);
+  PPERFECT_HASH_TABLE_JIT_INTERFACE held = nullptr;
+  HRESULT result = shim->Vtbl->QueryInterface(
+      table,
+#ifdef PH_WINDOWS
+      IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
+#else
+      &IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
+#endif
+      reinterpret_cast<void **>(&held));
+  ASSERT_GE(result, 0);
+  ASSERT_NE(held, nullptr);
+
+  flags.JitBackendRawDog = FALSE;
+  flags.JitBackendLlvm = TRUE;
+  flags.JitIndex32x2 = TRUE;
+  ASSERT_GE(online_->Vtbl->CompileTable(online_, table, &flags), 0);
+  PERFECT_HASH_TABLE_JIT_INFO info = {};
+  ASSERT_GE(held->Vtbl->GetInfo(held, &info), 0);
+  ASSERT_TRUE(info.Flags.BackendLlvm);
+  ASSERT_TRUE(info.Flags.Index32x2Compiled);
+
+  // This table has only 32-bit keys. The failed request leaves the LLVM x2
+  // binding intact. The held interface owns its reference to the table.
+  flags.JitIndex64 = TRUE;
+  ASSERT_EQ(online_->Vtbl->CompileTable(online_, table, &flags), PH_E_NOT_IMPLEMENTED);
+  shim->Vtbl->Release(table);
+  ULONG actual[2] = {};
+  ASSERT_GE(held->Vtbl->Index32x2(held, keys[0], keys[1], &actual[0], &actual[1]), 0);
+  EXPECT_EQ(actual[0], expected[0]);
+  EXPECT_EQ(actual[1], expected[1]);
+  held->Vtbl->Release(held);
+}
+#endif
+
+#if defined(_M_ARM64) || defined(__aarch64__)
+TEST_F(PerfectHashOnlineTests, FailedRawDogVectorCompilePreservesBatchIndex) {
+  const std::vector<ULONG> keys = {1, 3, 5, 7, 11, 13, 17, 19};
+  auto *table = CreateTableFromKeys(keys, PerfectHashHashMultiplyShiftRFunctionId);
+  ASSERT_NE(table, nullptr);
+  auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
+  ULONG expected[4] = {};
+  for (size_t i = 0; i < 4; ++i) {
+    ASSERT_GE(shim->Vtbl->Index(table, keys[i], &expected[i]), 0);
+  }
+
+  PERFECT_HASH_TABLE_COMPILE_FLAGS flags = {};
+  flags.Jit = TRUE;
+  flags.JitBackendRawDog = TRUE;
+  flags.JitIndex32x4 = TRUE;
+  ASSERT_GE(online_->Vtbl->CompileTable(online_, table, &flags), 0);
+
+  // RawDog implements the ARM64 x4 entry using scalar instructions.
+  // The COM default permits partial widths, but this SIMD request fails.
+  flags.JitVectorIndex32x4 = TRUE;
+  ASSERT_EQ(online_->Vtbl->CompileTable(online_, table, &flags), PH_E_NOT_IMPLEMENTED);
+  PERFECT_HASH_TABLE_FLAGS table_flags = {};
+  ASSERT_GE(shim->Vtbl->GetFlags(table, sizeof(table_flags), &table_flags), 0);
+  ASSERT_TRUE(table_flags.JitEnabled);
+  PPERFECT_HASH_TABLE_JIT_INTERFACE jit = nullptr;
+  HRESULT result = shim->Vtbl->QueryInterface(
+      table,
+#ifdef PH_WINDOWS
+      IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
+#else
+      &IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
+#endif
+      reinterpret_cast<void **>(&jit));
+  ASSERT_GE(result, 0);
+  ASSERT_NE(jit, nullptr);
+  ULONG actual[4] = {};
+  ASSERT_GE(jit->Vtbl->Index32x4(jit, keys[0], keys[1], keys[2], keys[3],
+                                  &actual[0], &actual[1], &actual[2], &actual[3]), 0);
+  for (size_t i = 0; i < 4; ++i) {
+    EXPECT_EQ(actual[i], expected[i]);
+  }
+  jit->Vtbl->Release(jit);
+#if defined(PH_HAS_LLVM)
+  // With the default COM flags, LLVM can still install a usable scalar
+  // index when the requested ISA cap precludes its x16 routine.
+  flags = {};
+  flags.Jit = TRUE;
+  flags.JitBackendLlvm = TRUE;
+  flags.JitIndex32x16 = TRUE;
+  flags.JitMaxIsa = PerfectHashJitMaxIsaAvx2;
+  ASSERT_GE(online_->Vtbl->CompileTable(online_, table, &flags), 0);
+  ASSERT_GE(shim->Vtbl->Index(table, keys[0], &actual[0]), 0);
+  EXPECT_EQ(actual[0], expected[0]);
+#endif
+  shim->Vtbl->Release(table);
+}
+#endif
+
 TEST_F(PerfectHashOnlineTests, RawDogJitIndexMatchesSlowIndex) {
   const std::vector<ULONG> keys = {
       1, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53,
@@ -4335,11 +4617,21 @@ TEST_F(PerfectHashOnlineTests, JitInterfaceIndex32x16MatchesSlowIndex) {
   ASSERT_NE(shim->Vtbl->SlowIndex, nullptr);
 
   PERFECT_HASH_TABLE_COMPILE_FLAGS compileFlags = {0};
+  compileFlags.JitBackendLlvm = TRUE;
   compileFlags.JitIndex32x16 = TRUE;
+  const bool arm64 = PerfectHashGetCurrentCpuArch() == PerfectHashArm64CpuArchId;
+  if (arm64) {
+    compileFlags.JitMaxIsa = PerfectHashJitMaxIsaNeon;
+  }
 
   HRESULT result = online_->Vtbl->CompileTable(online_, table, &compileFlags);
   if (result < 0) {
     shim->Vtbl->Release(table);
+#ifdef PH_HAS_LLVM
+    if (arm64) {
+      FAIL() << "LLVM could not compile the NEON x16 index: " << result;
+    }
+#endif
     GTEST_SKIP() << "LLVM JIT unavailable on this host.";
   }
   ASSERT_GE(result, 0);
@@ -4363,6 +4655,9 @@ TEST_F(PerfectHashOnlineTests, JitInterfaceIndex32x16MatchesSlowIndex) {
   if (!info.Flags.Index32x16Compiled) {
     jit->Vtbl->Release(jit);
     shim->Vtbl->Release(table);
+    if (arm64) {
+      FAIL() << "LLVM did not compile the requested ARM64 x16 index.";
+    }
     GTEST_SKIP() << "JIT Index32x16 not supported on this host.";
   }
 

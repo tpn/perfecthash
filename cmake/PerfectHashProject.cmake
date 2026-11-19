@@ -10,6 +10,16 @@ if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
     set(PERFECTHASH_IS_TOP_LEVEL_PROJECT ON)
 endif()
 
+# Honor the older USE_CUDA and HookPenter spellings (the ninja-multi-cuda preset
+# sets USE_CUDA) unless the current option was given as well. This has to run
+# before option() defines the current names.
+if(DEFINED USE_CUDA AND NOT DEFINED PERFECTHASH_USE_CUDA)
+    set(PERFECTHASH_USE_CUDA "${USE_CUDA}" CACHE BOOL "Enable CUDA support if available" FORCE)
+endif()
+if(DEFINED HookPenter AND NOT DEFINED PERFECTHASH_ENABLE_PENTER)
+    set(PERFECTHASH_ENABLE_PENTER "${HookPenter}" CACHE BOOL "Enable FunctionHook support" FORCE)
+endif()
+
 option(PERFECTHASH_USE_CUDA "Enable CUDA support if available" OFF)
 option(PERFECTHASH_ENABLE_PENTER "Enable FunctionHook support" OFF)
 option(PERFECTHASH_ENABLE_NATIVE_ARCH "Enable -march=native on supported compilers" ON)
@@ -43,12 +53,6 @@ set_property(
     online-rawdog-and-llvm-jit
     online-llvm-jit
 )
-set(_perfecthash_static_llvm_default ON)
-if(APPLE)
-    set(_perfecthash_static_llvm_default OFF)
-endif()
-option(PERFECTHASH_STATIC_LLVM "Link LLVM statically when available" ${_perfecthash_static_llvm_default})
-
 string(TOLOWER "${PERFECTHASH_BUILD_PROFILE}" PERFECTHASH_BUILD_PROFILE_NORMALIZED)
 if(PERFECTHASH_BUILD_PROFILE_NORMALIZED STREQUAL "online-rawdog")
     message(WARNING
@@ -93,14 +97,7 @@ else()
     )
 endif()
 
-if(DEFINED USE_CUDA AND NOT DEFINED PERFECTHASH_USE_CUDA)
-    set(PERFECTHASH_USE_CUDA "${USE_CUDA}" CACHE BOOL "" FORCE)
-endif()
 set(USE_CUDA "${PERFECTHASH_USE_CUDA}" CACHE BOOL "" FORCE)
-
-if(DEFINED HookPenter AND NOT DEFINED PERFECTHASH_ENABLE_PENTER)
-    set(PERFECTHASH_ENABLE_PENTER "${HookPenter}" CACHE BOOL "" FORCE)
-endif()
 set(HookPenter "${PERFECTHASH_ENABLE_PENTER}" CACHE BOOL "" FORCE)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -186,6 +183,12 @@ if(CMAKE_SYSTEM_PROCESSOR)
         set(PERFECTHASH_ARCH_ARM TRUE)
     endif()
 endif()
+
+set(_perfecthash_static_llvm_default ON)
+if(APPLE OR (MSVC AND PERFECTHASH_ARCH_ARM64))
+    set(_perfecthash_static_llvm_default OFF)
+endif()
+option(PERFECTHASH_STATIC_LLVM "Link LLVM statically when available" ${_perfecthash_static_llvm_default})
 
 if(PERFECTHASH_IS_LINUX)
     # Ensure installed binaries can find ../lib without LD_LIBRARY_PATH.

@@ -161,6 +161,7 @@
     <ClInclude Include="PerfectHashNames.h" />
     <ClInclude Include="PerfectHashPath.h" />
     <ClInclude Include="PerfectHashPrimes.h" />
+    <ClInclude Include="PerfectHashOnlineJitPrivate.h" />
     <ClInclude Include="PerfectHashPrivate.h" />
     <ClInclude Include="PerfectHashTable.h" />
     <ClInclude Include="PerfectHashConstants.h" />
@@ -235,6 +236,8 @@
     <ClCompile Include="Chm01Index.c" />
     <ClCompile Include="ChmOnline01.c" />
     <ClCompile Include="ChmOnline01Stub.c" />
+    <ClCompile Include="PerfectHashLLVMLoader.c" />
+    <ClCompile Include="PerfectHashTableJitInterface.c" />
     <ClCompile Include="ChmOnline01HashJit.c" />
     <ClCompile Include="Chm01.c" />
     <ClCompile Include="Chm01Shared.c" />
@@ -248,6 +251,7 @@
     <ClCompile Include="dllmain.c" />
     <ClCompile Include="ExtractArg.c" />
     <ClCompile Include="Graph.c" />
+    <ClCompile Include="GraphNeon.c" />
     <ClCompile Include="GraphImpl1.c" />
     <ClCompile Include="GuardedList.c" />
     <ClCompile Include="PerfectHashContextBulkCreate.c" />

@@ -348,6 +348,14 @@ Abstract:
           (Table->Flags.UsedAvx512HashFunction != FALSE ? 'Y' : 'N'),                        \
           OUTPUT_CHR)                                                                        \
                                                                                              \
+    ENTRY(UsedNeonHashFunction,                                                              \
+          (Table->Flags.UsedNeonHashFunction != FALSE ? 'Y' : 'N'),                          \
+          OUTPUT_CHR)                                                                        \
+                                                                                             \
+    ENTRY(UsedJitHashFunction,                                                               \
+          (Table->Flags.UsedJitHashFunction != FALSE ? 'Y' : 'N'),                           \
+          OUTPUT_CHR)                                                                        \
+                                                                                             \
     ENTRY(DoNotTryUseAvx2MemoryCoverageFunction,                                             \
           (TableCreateFlags.DoNotTryUseAvx2MemoryCoverageFunction != FALSE ? 'Y' : 'N'),     \
           OUTPUT_CHR)                                                                        \

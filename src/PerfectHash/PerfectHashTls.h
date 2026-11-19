@@ -178,7 +178,13 @@ TlsContextIsGlobalComponentDisabled(
     return Result;
 }
 
+// Both Windows online archives run inside the consumer's image.
+#if defined(PH_WINDOWS) && (defined(PERFECT_HASH_ONLINE_JIT_STATIC) || \
+                            defined(PERFECT_HASH_ONLINE_RAWDOG_STATIC))
+#define PH_WINDOWS_STATIC_ONLINE
+#else
 extern TLS_KEY_TYPE PerfectHashTlsIndex;
+#endif
 
 //
 // The PROCESS_ATTACH and PROCESS_ATTACH functions share the same signature.
@@ -195,7 +201,7 @@ BOOLEAN
     );
 typedef PERFECT_HASH_TLS_FUNCTION *PPERFECT_HASH_TLS_FUNCTION;
 
-#ifdef PH_WINDOWS
+#if defined(PH_WINDOWS) && !defined(PH_WINDOWS_STATIC_ONLINE)
 PERFECT_HASH_TLS_FUNCTION PerfectHashTlsProcessAttach;
 PERFECT_HASH_TLS_FUNCTION PerfectHashTlsProcessDetach;
 #endif

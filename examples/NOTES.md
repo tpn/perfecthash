@@ -135,3 +135,36 @@ Start with `PerfectHashOnlineCore` / `PerfectHashOnlineCoreStatic` as the baseli
 - requested/effective vector width,
 - compile HRESULT,
 - JIT enabled/disabled state.
+
+## Windows Runtime Packaging (2026-11-18)
+- `PerfectHashLLVM` has no link or load dependency on `PerfectHash`. It reaches
+  its host through the table it is handed. Deploy `PerfectHashLLVM.dll` alone
+  beside a statically linked executable; `LLVM-C.dll` is still found beside the
+  plugin or on `PATH`.
+- A plugin and an `LLVM-C.dll` in the same directory are still treated as one
+  bundle by the finder, so a nested or excluded SDK cannot supply half of it.
+- The three modules in `<example>/cmake/` stay as per-example copies so that an
+  example copied out of the tree keeps working. They must be byte-identical.
+  Per-example choices belong in that example's `CMakeLists.txt`:
+  - `PH_ONLINE_JIT_LIBRARY_NAMES`: preferred online library names, in order.
+    `cpp-console-online-jit` prefers `PerfectHashOnlineCore`;
+    `sqlite-online-jit` prefers `PerfectHashOnline`.
+  - `PH_ONLINE_JIT_HEADER_NAMES`: accepted spellings of the public header.
+  - `PH_ONLINE_JIT_HEADER_SUFFIXES`: extra `PATH_SUFFIXES` for that header.
+- Staging is a custom command whose output is
+  `<output dir>/<example>.runtime.stamp`. Its dependencies are the selected
+  DLLs, `StagePerfectHashRuntime.cmake`, and
+  `CMakeFiles/perfecthash-runtime/<config>.selection`, which CMake rewrites only
+  when the selected files or the destination change.
+- Assumption: the stamp directory is the target's `RUNTIME_OUTPUT_DIRECTORY`,
+  or the build directory, plus the configuration name for multi-config
+  generators. With a per-configuration or generator-expression output
+  directory the stamp lands elsewhere; staging still follows its dependencies,
+  but deleting the real output directory no longer triggers it.
+- Known limit: deleting one staged DLL by hand does not stage again. Build
+  `<example>-runtime` after deleting the stamp, or clean, to force it.
+- The selected files go to `DEPENDS` as one quoted list. Each configuration's
+  files sit inside one generator expression, and an unquoted list would split it
+  at the semicolons.
+- Validation status: Linux x86_64 and Windows ARM64 verified locally. Windows
+  x64 and macOS are covered only by hosted CI and were not run locally.

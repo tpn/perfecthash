@@ -128,7 +128,7 @@ Return Value:
             !TableCompileFlags.JitBackendRawDog) {
             TableCompileFlags.JitBackendLlvm = TRUE;
         }
-        Result = PerfectHashTableCompileJit(Table, &TableCompileFlags);
+        Result = PerfectHashTableCompileJitLocked(Table, &TableCompileFlags);
         ReleasePerfectHashTableLockExclusive(Table);
         return Result;
     }

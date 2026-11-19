@@ -29,181 +29,6 @@ ULONG
 typedef PH_JIT_INDEX32_FUNCTION *PPH_JIT_INDEX32_FUNCTION;
 
 typedef
-ULONG
-(PH_JIT_INDEX64_FUNCTION)(
-    _In_ ULONGLONG Key
-    );
-typedef PH_JIT_INDEX64_FUNCTION *PPH_JIT_INDEX64_FUNCTION;
-
-typedef
-VOID
-(PH_JIT_INDEX32X2_FUNCTION)(
-    _In_ ULONG Key1,
-    _In_ ULONG Key2,
-    _Out_ PULONG Index1,
-    _Out_ PULONG Index2
-    );
-typedef PH_JIT_INDEX32X2_FUNCTION *PPH_JIT_INDEX32X2_FUNCTION;
-
-typedef
-VOID
-(PH_JIT_INDEX32X4_FUNCTION)(
-    _In_ ULONG Key1,
-    _In_ ULONG Key2,
-    _In_ ULONG Key3,
-    _In_ ULONG Key4,
-    _Out_ PULONG Index1,
-    _Out_ PULONG Index2,
-    _Out_ PULONG Index3,
-    _Out_ PULONG Index4
-    );
-typedef PH_JIT_INDEX32X4_FUNCTION *PPH_JIT_INDEX32X4_FUNCTION;
-
-typedef
-VOID
-(PH_JIT_INDEX32X8_FUNCTION)(
-    _In_ ULONG Key1,
-    _In_ ULONG Key2,
-    _In_ ULONG Key3,
-    _In_ ULONG Key4,
-    _In_ ULONG Key5,
-    _In_ ULONG Key6,
-    _In_ ULONG Key7,
-    _In_ ULONG Key8,
-    _Out_ PULONG Index1,
-    _Out_ PULONG Index2,
-    _Out_ PULONG Index3,
-    _Out_ PULONG Index4,
-    _Out_ PULONG Index5,
-    _Out_ PULONG Index6,
-    _Out_ PULONG Index7,
-    _Out_ PULONG Index8
-    );
-typedef PH_JIT_INDEX32X8_FUNCTION *PPH_JIT_INDEX32X8_FUNCTION;
-
-typedef
-VOID
-(PH_JIT_INDEX32X16_FUNCTION)(
-    _In_ ULONG Key1,
-    _In_ ULONG Key2,
-    _In_ ULONG Key3,
-    _In_ ULONG Key4,
-    _In_ ULONG Key5,
-    _In_ ULONG Key6,
-    _In_ ULONG Key7,
-    _In_ ULONG Key8,
-    _In_ ULONG Key9,
-    _In_ ULONG Key10,
-    _In_ ULONG Key11,
-    _In_ ULONG Key12,
-    _In_ ULONG Key13,
-    _In_ ULONG Key14,
-    _In_ ULONG Key15,
-    _In_ ULONG Key16,
-    _Out_ PULONG Index1,
-    _Out_ PULONG Index2,
-    _Out_ PULONG Index3,
-    _Out_ PULONG Index4,
-    _Out_ PULONG Index5,
-    _Out_ PULONG Index6,
-    _Out_ PULONG Index7,
-    _Out_ PULONG Index8,
-    _Out_ PULONG Index9,
-    _Out_ PULONG Index10,
-    _Out_ PULONG Index11,
-    _Out_ PULONG Index12,
-    _Out_ PULONG Index13,
-    _Out_ PULONG Index14,
-    _Out_ PULONG Index15,
-    _Out_ PULONG Index16
-    );
-typedef PH_JIT_INDEX32X16_FUNCTION *PPH_JIT_INDEX32X16_FUNCTION;
-
-typedef
-VOID
-(PH_JIT_INDEX64X2_FUNCTION)(
-    _In_ ULONGLONG Key1,
-    _In_ ULONGLONG Key2,
-    _Out_ PULONG Index1,
-    _Out_ PULONG Index2
-    );
-typedef PH_JIT_INDEX64X2_FUNCTION *PPH_JIT_INDEX64X2_FUNCTION;
-
-typedef
-VOID
-(PH_JIT_INDEX64X4_FUNCTION)(
-    _In_ ULONGLONG Key1,
-    _In_ ULONGLONG Key2,
-    _In_ ULONGLONG Key3,
-    _In_ ULONGLONG Key4,
-    _Out_ PULONG Index1,
-    _Out_ PULONG Index2,
-    _Out_ PULONG Index3,
-    _Out_ PULONG Index4
-    );
-typedef PH_JIT_INDEX64X4_FUNCTION *PPH_JIT_INDEX64X4_FUNCTION;
-
-typedef
-VOID
-(PH_JIT_INDEX64X8_FUNCTION)(
-    _In_ ULONGLONG Key1,
-    _In_ ULONGLONG Key2,
-    _In_ ULONGLONG Key3,
-    _In_ ULONGLONG Key4,
-    _In_ ULONGLONG Key5,
-    _In_ ULONGLONG Key6,
-    _In_ ULONGLONG Key7,
-    _In_ ULONGLONG Key8,
-    _Out_ PULONG Index1,
-    _Out_ PULONG Index2,
-    _Out_ PULONG Index3,
-    _Out_ PULONG Index4,
-    _Out_ PULONG Index5,
-    _Out_ PULONG Index6,
-    _Out_ PULONG Index7,
-    _Out_ PULONG Index8
-    );
-typedef PH_JIT_INDEX64X8_FUNCTION *PPH_JIT_INDEX64X8_FUNCTION;
-
-typedef
-VOID
-(PH_JIT_INDEX64X16_FUNCTION)(
-    _In_ ULONGLONG Key1,
-    _In_ ULONGLONG Key2,
-    _In_ ULONGLONG Key3,
-    _In_ ULONGLONG Key4,
-    _In_ ULONGLONG Key5,
-    _In_ ULONGLONG Key6,
-    _In_ ULONGLONG Key7,
-    _In_ ULONGLONG Key8,
-    _In_ ULONGLONG Key9,
-    _In_ ULONGLONG Key10,
-    _In_ ULONGLONG Key11,
-    _In_ ULONGLONG Key12,
-    _In_ ULONGLONG Key13,
-    _In_ ULONGLONG Key14,
-    _In_ ULONGLONG Key15,
-    _In_ ULONGLONG Key16,
-    _Out_ PULONG Index1,
-    _Out_ PULONG Index2,
-    _Out_ PULONG Index3,
-    _Out_ PULONG Index4,
-    _Out_ PULONG Index5,
-    _Out_ PULONG Index6,
-    _Out_ PULONG Index7,
-    _Out_ PULONG Index8,
-    _Out_ PULONG Index9,
-    _Out_ PULONG Index10,
-    _Out_ PULONG Index11,
-    _Out_ PULONG Index12,
-    _Out_ PULONG Index13,
-    _Out_ PULONG Index14,
-    _Out_ PULONG Index15,
-    _Out_ PULONG Index16
-    );
-typedef PH_JIT_INDEX64X16_FUNCTION *PPH_JIT_INDEX64X16_FUNCTION;
-
-typedef
 ULONGLONG
 (PH_JIT_HASH_FUNCTION)(
     _In_ ULONG Key
@@ -237,28 +62,6 @@ typedef PH_JIT_HASH32X16_FUNCTION *PPH_JIT_HASH32X16_FUNCTION;
 PERFECT_HASH_TABLE_INDEX PerfectHashTableIndexJit;
 PERFECT_HASH_TABLE_QUERY_INTERFACE PerfectHashTableQueryInterfaceJit;
 
-PERFECT_HASH_TABLE_JIT_INTERFACE_QUERY_INTERFACE
-    PerfectHashTableJitInterfaceQueryInterface;
-PERFECT_HASH_TABLE_JIT_INTERFACE_ADD_REF
-    PerfectHashTableJitInterfaceAddRef;
-PERFECT_HASH_TABLE_JIT_INTERFACE_RELEASE
-    PerfectHashTableJitInterfaceRelease;
-PERFECT_HASH_TABLE_JIT_INTERFACE_CREATE_INSTANCE
-    PerfectHashTableJitInterfaceCreateInstance;
-PERFECT_HASH_TABLE_JIT_INTERFACE_LOCK_SERVER
-    PerfectHashTableJitInterfaceLockServer;
-PERFECT_HASH_TABLE_JIT_INDEX32 PerfectHashTableJitInterfaceIndex32;
-PERFECT_HASH_TABLE_JIT_INDEX64 PerfectHashTableJitInterfaceIndex64;
-PERFECT_HASH_TABLE_JIT_INDEX32X2 PerfectHashTableJitInterfaceIndex32x2;
-PERFECT_HASH_TABLE_JIT_INDEX32X4 PerfectHashTableJitInterfaceIndex32x4;
-PERFECT_HASH_TABLE_JIT_INDEX32X8 PerfectHashTableJitInterfaceIndex32x8;
-PERFECT_HASH_TABLE_JIT_INDEX32X16 PerfectHashTableJitInterfaceIndex32x16;
-PERFECT_HASH_TABLE_JIT_INDEX64X2 PerfectHashTableJitInterfaceIndex64x2;
-PERFECT_HASH_TABLE_JIT_INDEX64X4 PerfectHashTableJitInterfaceIndex64x4;
-PERFECT_HASH_TABLE_JIT_INDEX64X8 PerfectHashTableJitInterfaceIndex64x8;
-PERFECT_HASH_TABLE_JIT_INDEX64X16 PerfectHashTableJitInterfaceIndex64x16;
-PERFECT_HASH_TABLE_JIT_GET_INFO PerfectHashTableJitInterfaceGetInfo;
-
 PERFECT_HASH_TABLE_HASH_JIT_INTERFACE_QUERY_INTERFACE
     PerfectHashTableHashJitInterfaceQueryInterface;
 PERFECT_HASH_TABLE_HASH_JIT_INTERFACE_ADD_REF
@@ -286,26 +89,6 @@ PERFECT_HASH_TABLE_HASH_JIT_BIND_HASH16_EX32X8
 PERFECT_HASH_TABLE_HASH_JIT_BIND_HASH16_EX32X16
     PerfectHashTableHashJitInterfaceBindHash16Ex32x16;
 
-static PERFECT_HASH_TABLE_JIT_INTERFACE_VTBL
-    PerfectHashTableJitInterfaceVtbl = {
-    &PerfectHashTableJitInterfaceQueryInterface,
-    &PerfectHashTableJitInterfaceAddRef,
-    &PerfectHashTableJitInterfaceRelease,
-    &PerfectHashTableJitInterfaceCreateInstance,
-    &PerfectHashTableJitInterfaceLockServer,
-    &PerfectHashTableJitInterfaceIndex32,
-    &PerfectHashTableJitInterfaceIndex64,
-    &PerfectHashTableJitInterfaceIndex32x2,
-    &PerfectHashTableJitInterfaceIndex32x4,
-    &PerfectHashTableJitInterfaceIndex32x8,
-    &PerfectHashTableJitInterfaceIndex32x16,
-    &PerfectHashTableJitInterfaceIndex64x2,
-    &PerfectHashTableJitInterfaceIndex64x4,
-    &PerfectHashTableJitInterfaceIndex64x8,
-    &PerfectHashTableJitInterfaceIndex64x16,
-    &PerfectHashTableJitInterfaceGetInfo,
-};
-
 static PERFECT_HASH_TABLE_HASH_JIT_INTERFACE_VTBL
     PerfectHashTableHashJitInterfaceVtbl = {
     &PerfectHashTableHashJitInterfaceQueryInterface,
@@ -330,11 +113,58 @@ static PERFECT_HASH_TABLE_HASH_JIT_INTERFACE_VTBL
 #include <llvm-c/ExecutionEngine.h>
 #include <llvm-c/Target.h>
 #include <llvm-c/TargetMachine.h>
+#include <llvm/Config/llvm-config.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #define PH_JIT_VECTOR_MAX_LANES 16
+
+static
+BOOLEAN
+CanCompileJit32x16(
+    _In_ PERFECT_HASH_JIT_MAX_ISA_ID MaxIsa,
+    _In_opt_ const char *HostFeatures
+    )
+{
+    if (PerfectHashGetCurrentCpuArch() == PerfectHashArm64CpuArchId) {
+        // LLVM legalizes fixed-width vectors to the selected ARM64 ISA.
+        return (MaxIsa == PerfectHashJitMaxIsaAuto ||
+                MaxIsa == PerfectHashJitMaxIsaNeon ||
+                MaxIsa == PerfectHashJitMaxIsaSve ||
+                MaxIsa == PerfectHashJitMaxIsaSve2);
+    }
+
+    return ((MaxIsa == PerfectHashJitMaxIsaAuto ||
+             MaxIsa == PerfectHashJitMaxIsaAvx512) &&
+            HostFeatures && strstr(HostFeatures, "+avx512f") != NULL);
+}
+
+static
+VOID
+SetJitFunctionTargets(
+    _In_ LLVMModuleRef Module,
+    _In_ const char *Cpu,
+    _In_ const char *Features
+    )
+{
+    LLVMValueRef Function;
+
+    // MCJIT creates its own target machine. Record the selected ISA in the
+    // module as well so it applies to the code that actually runs.
+    for (Function = LLVMGetFirstFunction(Module);
+         Function;
+         Function = LLVMGetNextFunction(Function)) {
+        if (*Cpu) {
+            LLVMAddTargetDependentFunctionAttr(Function, "target-cpu", Cpu);
+        }
+        if (*Features) {
+            LLVMAddTargetDependentFunctionAttr(Function,
+                                               "target-features",
+                                               Features);
+        }
+    }
+}
 
 static
 const char *
@@ -437,22 +267,6 @@ BuildSplatVectorConstant(
     return LLVMConstVector(Values, Lanes);
 }
 
-static
-LLVMValueRef
-AddGlobalI32(
-    _In_ LLVMModuleRef Module,
-    _In_ LLVMTypeRef I32,
-    _In_ PCSTR Name
-    )
-{
-    LLVMValueRef Global;
-
-    Global = LLVMAddGlobal(Module, I32, Name);
-    LLVMSetInitializer(Global, LLVMConstInt(I32, 0, FALSE));
-
-    return Global;
-}
-
 FORCEINLINE
 LLVMValueRef
 BuildConstIntLike(
@@ -490,35 +304,51 @@ BuildConstIntLike(
 }
 
 static
-char *
+HRESULT
 BuildClampedHostFeatures(
     _In_opt_ const char *HostFeatures,
-    _In_ PERFECT_HASH_JIT_MAX_ISA_ID MaxIsa
+    _In_ PERFECT_HASH_JIT_MAX_ISA_ID MaxIsa,
+    _Outptr_result_maybenull_ char **ClampedFeatures
     )
 {
     BOOLEAN DisableAvx2;
     BOOLEAN DisableAvx512;
     BOOLEAN DisableSve;
     BOOLEAN DisableSve2;
+    const char *FinalDisable = "";
     size_t Length;
     char *Buffer;
     char *Cursor;
     char *Next;
 
-    if (!HostFeatures || *HostFeatures == '\0') {
-        return NULL;
-    }
-
+    *ClampedFeatures = NULL;
     if (MaxIsa == PerfectHashJitMaxIsaAuto ||
-        MaxIsa == PerfectHashJitMaxIsaAvx512 ||
-        MaxIsa == PerfectHashJitMaxIsaSve2) {
-        return NULL;
+        MaxIsa == PerfectHashJitMaxIsaAvx512) {
+        return S_OK;
     }
 
+    // Apply the upper bound last: the CPU model or another enabled feature
+    // can imply the extension even when LLVM omits it from the host list.
+    if (PerfectHashGetCurrentCpuArch() == PerfectHashArm64CpuArchId) {
+        if (MaxIsa == PerfectHashJitMaxIsaNeon) {
+            FinalDisable = "-sme,-sve";
+        } else if (MaxIsa == PerfectHashJitMaxIsaSve) {
+            FinalDisable = "-sme,-sve2";
+        } else if (MaxIsa == PerfectHashJitMaxIsaSve2) {
+#if LLVM_VERSION_MAJOR >= 16
+            FinalDisable = "-sme,-sve2p1";
+#else
+            FinalDisable = "-sme";
+#endif
+        }
+    }
+    if (!HostFeatures) {
+        HostFeatures = "";
+    }
     Length = strlen(HostFeatures);
-    Buffer = (char *)malloc(Length + 1);
+    Buffer = (char *)malloc(Length + strlen(FinalDisable) + 2);
     if (!Buffer) {
-        return NULL;
+        return E_OUTOFMEMORY;
     }
 
     memcpy(Buffer, HostFeatures, Length + 1);
@@ -554,6 +384,13 @@ BuildClampedHostFeatures(
                        TokenLength >= 4 &&
                        strncmp(Cursor + 1, "sve", 3) == 0) {
                 Cursor[0] = '-';
+            } else if (*FinalDisable && TokenLength >= 4 &&
+                       strncmp(Cursor + 1, "sme", 3) == 0) {
+                Cursor[0] = '-';
+            } else if (MaxIsa == PerfectHashJitMaxIsaSve2 &&
+                       TokenLength >= 6 &&
+                       strncmp(Cursor + 1, "sve2p", 5) == 0) {
+                Cursor[0] = '-';
             }
         }
 
@@ -564,7 +401,14 @@ BuildClampedHostFeatures(
         Cursor = Next + 1;
     }
 
-    return Buffer;
+    if (*FinalDisable) {
+        if (Length) {
+            Buffer[Length++] = ',';
+        }
+        strcpy(Buffer + Length, FinalDisable);
+    }
+    *ClampedFeatures = Buffer;
+    return S_OK;
 }
 
 FORCEINLINE
@@ -648,16 +492,15 @@ typedef struct _CHM01_JIT_CONTEXT {
     LLVMValueRef HashMaskConst;
     LLVMValueRef IndexMaskConst;
     LLVMValueRef TableDataConst;
-    LLVMValueRef Seed1Global;
-    LLVMValueRef Seed2Global;
-    LLVMValueRef Seed3Global;
-    LLVMValueRef Seed3Byte1Global;
-    LLVMValueRef Seed3Byte2Global;
-    LLVMValueRef Seed3Byte3Global;
-    LLVMValueRef Seed3Byte4Global;
-    LLVMValueRef Seed4Global;
-    LLVMValueRef Seed5Global;
-    LLVMValueRef HashMaskGlobal;
+    LLVMValueRef Seed1Pointer;
+    LLVMValueRef Seed2Pointer;
+    LLVMValueRef Seed3Byte1Pointer;
+    LLVMValueRef Seed3Byte2Pointer;
+    LLVMValueRef Seed3Byte3Pointer;
+    LLVMValueRef Seed3Byte4Pointer;
+    LLVMValueRef Seed4Pointer;
+    LLVMValueRef Seed5Pointer;
+    LLVMValueRef HashMaskPointer;
     PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId;
     BOOLEAN UseAssigned16;
     BYTE Padding1[3];
@@ -1445,6 +1288,65 @@ BuildChm01IndexFunction(
     return Function;
 }
 
+//
+// Every hash routine takes a PERFECT_HASH_HASH_JIT_SEEDS pointer as its final
+// parameter, so that each caller hashes with its own seeds.  Point the context
+// at that parameter's fields before emitting the loads.
+//
+
+static
+LLVMValueRef
+BuildHashSeedPointer(
+    _In_ PCHM01_JIT_CONTEXT Ctx,
+    _In_ LLVMValueRef Seeds,
+    _In_ ULONG FieldOffset,
+    _In_ PCSTR Name
+    )
+{
+    LLVMValueRef Index;
+
+    Index = LLVMConstInt(Ctx->I64, FieldOffset / sizeof(ULONG), FALSE);
+
+    return LLVMBuildInBoundsGEP2(Ctx->Builder,
+                                 Ctx->I32,
+                                 Seeds,
+                                 &Index,
+                                 1,
+                                 Name);
+}
+
+static
+VOID
+SetHashSeedPointers(
+    _In_ PCHM01_JIT_CONTEXT Ctx,
+    _In_ LLVMValueRef Function
+    )
+{
+    LLVMValueRef Seeds;
+
+    Seeds = LLVMGetLastParam(Function);
+
+#define SEED_POINTER(Name)                                            \
+    Ctx->Name##Pointer = BuildHashSeedPointer(                        \
+        Ctx,                                                          \
+        Seeds,                                                        \
+        (ULONG)FIELD_OFFSET(PERFECT_HASH_HASH_JIT_SEEDS, Name),       \
+        #Name ".ptr"                                                  \
+    )
+
+    SEED_POINTER(Seed1);
+    SEED_POINTER(Seed2);
+    SEED_POINTER(Seed3Byte1);
+    SEED_POINTER(Seed3Byte2);
+    SEED_POINTER(Seed3Byte3);
+    SEED_POINTER(Seed3Byte4);
+    SEED_POINTER(Seed4);
+    SEED_POINTER(Seed5);
+    SEED_POINTER(HashMask);
+
+#undef SEED_POINTER
+}
+
 static
 LLVMValueRef
 BuildChm01HashFunction(
@@ -1454,6 +1356,7 @@ BuildChm01HashFunction(
     )
 {
     LLVMTypeRef FunctionType;
+    LLVMTypeRef Params[2];
     LLVMValueRef Function;
     LLVMValueRef Key;
     LLVMValueRef Key32;
@@ -1475,7 +1378,12 @@ BuildChm01HashFunction(
     LLVMValueRef Shift32;
     BOOLEAN UseHashMask;
 
-    FunctionType = LLVMFunctionType(Ctx->I64, &KeyType, 1, FALSE);
+    Params[0] = KeyType;
+    Params[1] = Ctx->I32Ptr;
+    FunctionType = LLVMFunctionType(Ctx->I64,
+                                    Params,
+                                    ARRAYSIZE(Params),
+                                    FALSE);
     Function = LLVMAddFunction(Ctx->Module, Name, FunctionType);
 
     LLVMPositionBuilderAtEnd(
@@ -1484,6 +1392,7 @@ BuildChm01HashFunction(
     );
 
     Key = LLVMGetParam(Function, 0);
+    SetHashSeedPointers(Ctx, Function);
 
     if (KeyType == Ctx->I64) {
         Key32 = LLVMBuildTrunc(Ctx->Builder, Key, Ctx->I32, "key32");
@@ -1493,39 +1402,39 @@ BuildChm01HashFunction(
 
     Seed1 = LLVMBuildLoad2(Ctx->Builder,
                            Ctx->I32,
-                           Ctx->Seed1Global,
+                           Ctx->Seed1Pointer,
                            "seed1");
     Seed2 = LLVMBuildLoad2(Ctx->Builder,
                            Ctx->I32,
-                           Ctx->Seed2Global,
+                           Ctx->Seed2Pointer,
                            "seed2");
     Seed3Byte1 = LLVMBuildLoad2(Ctx->Builder,
                                 Ctx->I32,
-                                Ctx->Seed3Byte1Global,
+                                Ctx->Seed3Byte1Pointer,
                                 "seed3_b1");
     Seed3Byte2 = LLVMBuildLoad2(Ctx->Builder,
                                 Ctx->I32,
-                                Ctx->Seed3Byte2Global,
+                                Ctx->Seed3Byte2Pointer,
                                 "seed3_b2");
     Seed3Byte3 = LLVMBuildLoad2(Ctx->Builder,
                                 Ctx->I32,
-                                Ctx->Seed3Byte3Global,
+                                Ctx->Seed3Byte3Pointer,
                                 "seed3_b3");
     Seed3Byte4 = LLVMBuildLoad2(Ctx->Builder,
                                 Ctx->I32,
-                                Ctx->Seed3Byte4Global,
+                                Ctx->Seed3Byte4Pointer,
                                 "seed3_b4");
     Seed4 = LLVMBuildLoad2(Ctx->Builder,
                            Ctx->I32,
-                           Ctx->Seed4Global,
+                           Ctx->Seed4Pointer,
                            "seed4");
     Seed5 = LLVMBuildLoad2(Ctx->Builder,
                            Ctx->I32,
-                           Ctx->Seed5Global,
+                           Ctx->Seed5Pointer,
                            "seed5");
     HashMask = LLVMBuildLoad2(Ctx->Builder,
                               Ctx->I32,
-                              Ctx->HashMaskGlobal,
+                              Ctx->HashMaskPointer,
                               "hash_mask");
 
     UseHashMask = FALSE;
@@ -1819,7 +1728,7 @@ BuildChm01HashGroupFunction(
     )
 {
     LLVMTypeRef FunctionType;
-    LLVMTypeRef Params[2];
+    LLVMTypeRef Params[3];
     LLVMTypeRef I64Ptr;
     LLVMValueRef Function;
     LLVMValueRef KeysPtr;
@@ -1827,6 +1736,7 @@ BuildChm01HashGroupFunction(
     LLVMValueRef KeyPtr;
     LLVMValueRef PairPtr;
     LLVMValueRef Key;
+    LLVMValueRef Args[2];
     LLVMValueRef Pair;
     LLVMValueRef LaneConst;
     ULONG Index;
@@ -1838,6 +1748,7 @@ BuildChm01HashGroupFunction(
     I64Ptr = LLVMPointerType(Ctx->I64, 0);
     Params[0] = Ctx->I32Ptr;
     Params[1] = I64Ptr;
+    Params[2] = Ctx->I32Ptr;
 
     FunctionType = LLVMFunctionType(LLVMVoidTypeInContext(Ctx->Context),
                                     Params,
@@ -1853,6 +1764,7 @@ BuildChm01HashGroupFunction(
 
     KeysPtr = LLVMGetParam(Function, 0);
     PairsPtr = LLVMGetParam(Function, 1);
+    Args[1] = LLVMGetParam(Function, 2);
 
     for (Index = 0; Index < Lanes; Index++) {
         LaneConst = LLVMConstInt(Ctx->I64, Index, FALSE);
@@ -1864,11 +1776,12 @@ BuildChm01HashGroupFunction(
                                        1,
                                        "key_ptr");
         Key = LLVMBuildLoad2(Ctx->Builder, Ctx->I32, KeyPtr, "key");
+        Args[0] = Key;
         Pair = LLVMBuildCall2(Ctx->Builder,
                               HashFunctionType,
                               HashFunction,
-                              &Key,
-                              1,
+                              Args,
+                              ARRAYSIZE(Args),
                               "pair");
         PairPtr = LLVMBuildInBoundsGEP2(Ctx->Builder,
                                         Ctx->I64,
@@ -1894,7 +1807,7 @@ BuildChm01HashVectorFunction(
 {
     LLVMTypeRef FunctionType;
     LLVMTypeRef VecType;
-    LLVMTypeRef Params[2];
+    LLVMTypeRef Params[3];
     LLVMTypeRef I64Ptr;
     LLVMValueRef Function;
     LLVMValueRef KeysPtr;
@@ -1941,6 +1854,7 @@ BuildChm01HashVectorFunction(
     I64Ptr = LLVMPointerType(Ctx->I64, 0);
     Params[0] = Ctx->I32Ptr;
     Params[1] = I64Ptr;
+    Params[2] = Ctx->I32Ptr;
 
     FunctionType = LLVMFunctionType(LLVMVoidTypeInContext(Ctx->Context),
                                     Params,
@@ -1956,6 +1870,7 @@ BuildChm01HashVectorFunction(
 
     KeysPtr = LLVMGetParam(Function, 0);
     PairsPtr = LLVMGetParam(Function, 1);
+    SetHashSeedPointers(Ctx, Function);
 
     VecType = LLVMVectorType(Ctx->I32, Lanes);
     KeyVec = LLVMGetUndef(VecType);
@@ -1979,39 +1894,39 @@ BuildChm01HashVectorFunction(
 
     Seed1 = LLVMBuildLoad2(Ctx->Builder,
                            Ctx->I32,
-                           Ctx->Seed1Global,
+                           Ctx->Seed1Pointer,
                            "seed1");
     Seed2 = LLVMBuildLoad2(Ctx->Builder,
                            Ctx->I32,
-                           Ctx->Seed2Global,
+                           Ctx->Seed2Pointer,
                            "seed2");
     Seed3Byte1 = LLVMBuildLoad2(Ctx->Builder,
                                 Ctx->I32,
-                                Ctx->Seed3Byte1Global,
+                                Ctx->Seed3Byte1Pointer,
                                 "seed3_b1");
     Seed3Byte2 = LLVMBuildLoad2(Ctx->Builder,
                                 Ctx->I32,
-                                Ctx->Seed3Byte2Global,
+                                Ctx->Seed3Byte2Pointer,
                                 "seed3_b2");
     Seed3Byte3 = LLVMBuildLoad2(Ctx->Builder,
                                 Ctx->I32,
-                                Ctx->Seed3Byte3Global,
+                                Ctx->Seed3Byte3Pointer,
                                 "seed3_b3");
     Seed3Byte4 = LLVMBuildLoad2(Ctx->Builder,
                                 Ctx->I32,
-                                Ctx->Seed3Byte4Global,
+                                Ctx->Seed3Byte4Pointer,
                                 "seed3_b4");
     Seed4 = LLVMBuildLoad2(Ctx->Builder,
                            Ctx->I32,
-                           Ctx->Seed4Global,
+                           Ctx->Seed4Pointer,
                            "seed4");
     Seed5 = LLVMBuildLoad2(Ctx->Builder,
                            Ctx->I32,
-                           Ctx->Seed5Global,
+                           Ctx->Seed5Pointer,
                            "seed5");
     HashMask = LLVMBuildLoad2(Ctx->Builder,
                               Ctx->I32,
-                              Ctx->HashMaskGlobal,
+                              Ctx->HashMaskPointer,
                               "hash_mask");
 
     Seed1Vec = BuildSplatVectorValue(Ctx, VecType, Seed1, Lanes);
@@ -2340,6 +2255,7 @@ BuildChm01Hash16Function(
     )
 {
     LLVMTypeRef FunctionType;
+    LLVMTypeRef Params[2];
     LLVMValueRef Function;
     LLVMValueRef Key;
     LLVMValueRef Key32;
@@ -2363,7 +2279,12 @@ BuildChm01Hash16Function(
     LLVMValueRef Shift16;
     BOOLEAN UseHashMask;
 
-    FunctionType = LLVMFunctionType(Ctx->I32, &KeyType, 1, FALSE);
+    Params[0] = KeyType;
+    Params[1] = Ctx->I32Ptr;
+    FunctionType = LLVMFunctionType(Ctx->I32,
+                                    Params,
+                                    ARRAYSIZE(Params),
+                                    FALSE);
     Function = LLVMAddFunction(Ctx->Module, Name, FunctionType);
 
     LLVMPositionBuilderAtEnd(
@@ -2372,6 +2293,7 @@ BuildChm01Hash16Function(
     );
 
     Key = LLVMGetParam(Function, 0);
+    SetHashSeedPointers(Ctx, Function);
 
     if (KeyType == Ctx->I64) {
         Key32 = LLVMBuildTrunc(Ctx->Builder, Key, Ctx->I32, "key32");
@@ -2381,39 +2303,39 @@ BuildChm01Hash16Function(
 
     Seed1 = LLVMBuildLoad2(Ctx->Builder,
                            Ctx->I32,
-                           Ctx->Seed1Global,
+                           Ctx->Seed1Pointer,
                            "seed1");
     Seed2 = LLVMBuildLoad2(Ctx->Builder,
                            Ctx->I32,
-                           Ctx->Seed2Global,
+                           Ctx->Seed2Pointer,
                            "seed2");
     Seed3Byte1 = LLVMBuildLoad2(Ctx->Builder,
                                 Ctx->I32,
-                                Ctx->Seed3Byte1Global,
+                                Ctx->Seed3Byte1Pointer,
                                 "seed3_b1");
     Seed3Byte2 = LLVMBuildLoad2(Ctx->Builder,
                                 Ctx->I32,
-                                Ctx->Seed3Byte2Global,
+                                Ctx->Seed3Byte2Pointer,
                                 "seed3_b2");
     Seed3Byte3 = LLVMBuildLoad2(Ctx->Builder,
                                 Ctx->I32,
-                                Ctx->Seed3Byte3Global,
+                                Ctx->Seed3Byte3Pointer,
                                 "seed3_b3");
     Seed3Byte4 = LLVMBuildLoad2(Ctx->Builder,
                                 Ctx->I32,
-                                Ctx->Seed3Byte4Global,
+                                Ctx->Seed3Byte4Pointer,
                                 "seed3_b4");
     Seed4 = LLVMBuildLoad2(Ctx->Builder,
                            Ctx->I32,
-                           Ctx->Seed4Global,
+                           Ctx->Seed4Pointer,
                            "seed4");
     Seed5 = LLVMBuildLoad2(Ctx->Builder,
                            Ctx->I32,
-                           Ctx->Seed5Global,
+                           Ctx->Seed5Pointer,
                            "seed5");
     HashMask = LLVMBuildLoad2(Ctx->Builder,
                               Ctx->I32,
-                              Ctx->HashMaskGlobal,
+                              Ctx->HashMaskPointer,
                               "hash_mask");
 
     UseHashMask = FALSE;
@@ -2721,13 +2643,14 @@ BuildChm01Hash16GroupFunction(
     )
 {
     LLVMTypeRef FunctionType;
-    LLVMTypeRef Params[2];
+    LLVMTypeRef Params[3];
     LLVMValueRef Function;
     LLVMValueRef KeysPtr;
     LLVMValueRef PairsPtr;
     LLVMValueRef KeyPtr;
     LLVMValueRef PairPtr;
     LLVMValueRef Key;
+    LLVMValueRef Args[2];
     LLVMValueRef Pair;
     LLVMValueRef LaneConst;
     ULONG Index;
@@ -2738,6 +2661,7 @@ BuildChm01Hash16GroupFunction(
 
     Params[0] = Ctx->I32Ptr;
     Params[1] = Ctx->I32Ptr;
+    Params[2] = Ctx->I32Ptr;
 
     FunctionType = LLVMFunctionType(LLVMVoidTypeInContext(Ctx->Context),
                                     Params,
@@ -2753,6 +2677,7 @@ BuildChm01Hash16GroupFunction(
 
     KeysPtr = LLVMGetParam(Function, 0);
     PairsPtr = LLVMGetParam(Function, 1);
+    Args[1] = LLVMGetParam(Function, 2);
 
     for (Index = 0; Index < Lanes; Index++) {
         LaneConst = LLVMConstInt(Ctx->I64, Index, FALSE);
@@ -2764,11 +2689,12 @@ BuildChm01Hash16GroupFunction(
                                        1,
                                        "key_ptr");
         Key = LLVMBuildLoad2(Ctx->Builder, Ctx->I32, KeyPtr, "key");
+        Args[0] = Key;
         Pair = LLVMBuildCall2(Ctx->Builder,
                               HashFunctionType,
                               HashFunction,
-                              &Key,
-                              1,
+                              Args,
+                              ARRAYSIZE(Args),
                               "pair");
         PairPtr = LLVMBuildInBoundsGEP2(Ctx->Builder,
                                         Ctx->I32,
@@ -2794,7 +2720,7 @@ BuildChm01Hash16VectorFunction(
 {
     LLVMTypeRef FunctionType;
     LLVMTypeRef VecType;
-    LLVMTypeRef Params[2];
+    LLVMTypeRef Params[3];
     LLVMValueRef Function;
     LLVMValueRef KeysPtr;
     LLVMValueRef PairsPtr;
@@ -2841,6 +2767,7 @@ BuildChm01Hash16VectorFunction(
 
     Params[0] = Ctx->I32Ptr;
     Params[1] = Ctx->I32Ptr;
+    Params[2] = Ctx->I32Ptr;
 
     FunctionType = LLVMFunctionType(LLVMVoidTypeInContext(Ctx->Context),
                                     Params,
@@ -2856,6 +2783,7 @@ BuildChm01Hash16VectorFunction(
 
     KeysPtr = LLVMGetParam(Function, 0);
     PairsPtr = LLVMGetParam(Function, 1);
+    SetHashSeedPointers(Ctx, Function);
 
     VecType = LLVMVectorType(Ctx->I32, Lanes);
     KeyVec = LLVMGetUndef(VecType);
@@ -2879,39 +2807,39 @@ BuildChm01Hash16VectorFunction(
 
     Seed1 = LLVMBuildLoad2(Ctx->Builder,
                            Ctx->I32,
-                           Ctx->Seed1Global,
+                           Ctx->Seed1Pointer,
                            "seed1");
     Seed2 = LLVMBuildLoad2(Ctx->Builder,
                            Ctx->I32,
-                           Ctx->Seed2Global,
+                           Ctx->Seed2Pointer,
                            "seed2");
     Seed3Byte1 = LLVMBuildLoad2(Ctx->Builder,
                                 Ctx->I32,
-                                Ctx->Seed3Byte1Global,
+                                Ctx->Seed3Byte1Pointer,
                                 "seed3_b1");
     Seed3Byte2 = LLVMBuildLoad2(Ctx->Builder,
                                 Ctx->I32,
-                                Ctx->Seed3Byte2Global,
+                                Ctx->Seed3Byte2Pointer,
                                 "seed3_b2");
     Seed3Byte3 = LLVMBuildLoad2(Ctx->Builder,
                                 Ctx->I32,
-                                Ctx->Seed3Byte3Global,
+                                Ctx->Seed3Byte3Pointer,
                                 "seed3_b3");
     Seed3Byte4 = LLVMBuildLoad2(Ctx->Builder,
                                 Ctx->I32,
-                                Ctx->Seed3Byte4Global,
+                                Ctx->Seed3Byte4Pointer,
                                 "seed3_b4");
     Seed4 = LLVMBuildLoad2(Ctx->Builder,
                            Ctx->I32,
-                           Ctx->Seed4Global,
+                           Ctx->Seed4Pointer,
                            "seed4");
     Seed5 = LLVMBuildLoad2(Ctx->Builder,
                            Ctx->I32,
-                           Ctx->Seed5Global,
+                           Ctx->Seed5Pointer,
                            "seed5");
     HashMask = LLVMBuildLoad2(Ctx->Builder,
                               Ctx->I32,
-                              Ctx->HashMaskGlobal,
+                              Ctx->HashMaskPointer,
                               "hash_mask");
 
     Seed1Vec = BuildSplatVectorValue(Ctx, VecType, Seed1, Lanes);
@@ -3885,6 +3813,30 @@ BuildChm01Index8Function(
 
 _Must_inspect_result_
 static
+LLVMBool
+CreateOptimizedMcjitEngine(
+    _Out_ LLVMExecutionEngineRef *Engine,
+    _Inout_ LLVMModuleRef *Module,
+    _Outptr_result_maybenull_ char **ErrorMessage
+    )
+{
+    struct LLVMMCJITCompilerOptions Options = { 0 };
+    LLVMModuleRef OwnedModule = *Module;
+
+    // OptLevel is the first field. LLVM supplies defaults for omitted fields
+    // and takes ownership as soon as it accepts this options prefix, even if
+    // it subsequently fails to create the engine.
+    Options.OptLevel = 3;
+    *Module = NULL;
+    return LLVMCreateMCJITCompilerForModule(Engine,
+                                            OwnedModule,
+                                            &Options,
+                                            sizeof(Options.OptLevel),
+                                            ErrorMessage);
+}
+
+_Must_inspect_result_
+static
 HRESULT
 CompileChm01IndexJit(
     _In_ PPERFECT_HASH_TABLE Table,
@@ -3922,7 +3874,6 @@ CompileChm01IndexJit(
     BOOLEAN CompileVectorIndex64x2;
     BOOLEAN CompileVectorIndex64x4;
     BOOLEAN CompileVectorIndex64x8;
-    BOOLEAN HostHasAvx512;
     HRESULT Result = S_OK;
     PTABLE_INFO_ON_DISK TableInfo;
     PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId;
@@ -3949,7 +3900,6 @@ CompileChm01IndexJit(
     LLVMExecutionEngineRef Engine = NULL;
     LLVMTargetMachineRef TargetMachine = NULL;
     LLVMTargetDataRef TargetData = NULL;
-    struct LLVMMCJITCompilerOptions McjitOptions;
 
     CHM01_JIT_CONTEXT JitContext;
     LLVMValueRef DownsizeFunction = NULL;
@@ -4079,22 +4029,24 @@ CompileChm01IndexJit(
     HostCpuFeatures = LLVMGetHostCPUFeatures();
     TargetCpu = HostCpuName ? HostCpuName : "";
     TargetFeatures = HostCpuFeatures ? HostCpuFeatures : "";
-    HostHasAvx512 = (HostCpuFeatures &&
-                     strstr(HostCpuFeatures, "+avx512f") != NULL);
 
     if (JitMaxIsa != PerfectHashJitMaxIsaAuto) {
-        ClampedFeatures = BuildClampedHostFeatures(HostCpuFeatures, JitMaxIsa);
+        Result = BuildClampedHostFeatures(HostCpuFeatures,
+                                          JitMaxIsa,
+                                          &ClampedFeatures);
+        if (FAILED(Result)) {
+            goto Error;
+        }
         if (ClampedFeatures) {
             TargetFeatures = ClampedFeatures;
         }
     }
 
-    if (JitMaxIsa != PerfectHashJitMaxIsaAuto &&
-        JitMaxIsa != PerfectHashJitMaxIsaAvx512) {
-        HostHasAvx512 = FALSE;
-    }
-
-    if (CompileIndex32x16 && !HostHasAvx512) {
+    if (CompileIndex32x16 && !CanCompileJit32x16(JitMaxIsa, HostCpuFeatures)) {
+        if (CompileFlags->JitRequireRequestedWidth) {
+            Result = PH_E_NOT_IMPLEMENTED;
+            goto Error;
+        }
         CompileIndex32x16 = FALSE;
         CompileVectorIndex32x16 = FALSE;
     }
@@ -4381,23 +4333,15 @@ CompileChm01IndexJit(
         }
     }
 
+    SetJitFunctionTargets(Module, TargetCpu, TargetFeatures);
     DumpJitModuleIfEnabled(Module, TargetMachine);
 
-    if (LLVMVerifyModule(Module,
-                         LLVMReturnStatusAction,
-                         &ErrorMessage) != 0) {
+    if (LLVMVerifyModule(Module, LLVMReturnStatusAction, NULL) != 0) {
         Result = PH_E_TABLE_COMPILATION_FAILED;
         goto Error;
     }
 
-    LLVMInitializeMCJITCompilerOptions(&McjitOptions,
-                                       sizeof(McjitOptions));
-    McjitOptions.OptLevel = 3;
-    if (LLVMCreateMCJITCompilerForModule(&Engine,
-                                         Module,
-                                         &McjitOptions,
-                                         sizeof(McjitOptions),
-                                         &ErrorMessage) != 0) {
+    if (CreateOptimizedMcjitEngine(&Engine, &Module, &ErrorMessage)) {
         Result = PH_E_TABLE_COMPILATION_FAILED;
         goto Error;
     }
@@ -4539,7 +4483,6 @@ CompileChm01IndexJit(
     Jit->Context = Context;
     Engine = NULL;
     Context = NULL;
-    Module = NULL;
 
     Result = S_OK;
 
@@ -4608,6 +4551,80 @@ Error:
     return Result;
 }
 
+//
+// Build BoundName: the routine Name with the table-wide bound seeds supplied
+// as its final argument.
+//
+
+static
+BOOLEAN
+BuildBoundHashFunction(
+    _In_ PCHM01_JIT_CONTEXT Ctx,
+    _In_ PCSTR Name,
+    _In_ PCSTR BoundName,
+    _In_ LLVMValueRef BoundSeeds
+    )
+{
+    ULONG Index;
+    ULONG NumberOfParams;
+    LLVMTypeRef Type;
+    LLVMTypeRef ReturnType;
+    LLVMTypeRef Params[3];
+    LLVMValueRef Args[3];
+    LLVMValueRef Function;
+    LLVMValueRef Bound;
+
+    Function = LLVMGetNamedFunction(Ctx->Module, Name);
+    if (!Function) {
+        return FALSE;
+    }
+
+    Type = LLVMGlobalGetValueType(Function);
+    NumberOfParams = LLVMCountParamTypes(Type);
+    if (NumberOfParams < 2 || NumberOfParams > ARRAYSIZE(Params)) {
+        return FALSE;
+    }
+
+    LLVMGetParamTypes(Type, Params);
+    ReturnType = LLVMGetReturnType(Type);
+
+    Bound = LLVMAddFunction(Ctx->Module,
+                            BoundName,
+                            LLVMFunctionType(ReturnType,
+                                             Params,
+                                             NumberOfParams - 1,
+                                             FALSE));
+
+    LLVMPositionBuilderAtEnd(
+        Ctx->Builder,
+        LLVMAppendBasicBlockInContext(Ctx->Context, Bound, "entry")
+    );
+
+    for (Index = 0; Index < NumberOfParams - 1; Index++) {
+        Args[Index] = LLVMGetParam(Bound, Index);
+    }
+
+    Args[Index] = LLVMBuildBitCast(Ctx->Builder,
+                                   BoundSeeds,
+                                   Ctx->I32Ptr,
+                                   "bound_seeds");
+
+    if (LLVMGetTypeKind(ReturnType) == LLVMVoidTypeKind) {
+        LLVMBuildCall2(Ctx->Builder, Type, Function, Args, NumberOfParams, "");
+        LLVMBuildRetVoid(Ctx->Builder);
+    } else {
+        LLVMBuildRet(Ctx->Builder,
+                     LLVMBuildCall2(Ctx->Builder,
+                                    Type,
+                                    Function,
+                                    Args,
+                                    NumberOfParams,
+                                    "pair"));
+    }
+
+    return TRUE;
+}
+
 _Must_inspect_result_
 static
 HRESULT
@@ -4631,7 +4648,6 @@ CompileChm01HashJit(
     BOOLEAN CompileVectorHash16Ex32x4;
     BOOLEAN CompileVectorHash16Ex32x8;
     BOOLEAN CompileVectorHash16Ex32x16;
-    BOOLEAN HostHasAvx512;
     HRESULT Result = S_OK;
     PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId;
     PRTL Rtl;
@@ -4652,14 +4668,23 @@ CompileChm01HashJit(
     LLVMExecutionEngineRef Engine = NULL;
     LLVMTargetMachineRef TargetMachine = NULL;
     LLVMTargetDataRef TargetData = NULL;
-    struct LLVMMCJITCompilerOptions McjitOptions;
 
     CHM01_JIT_CONTEXT JitContext;
     LLVMValueRef HashFunction = NULL;
     LLVMTypeRef HashFunctionType = NULL;
     LLVMValueRef Hash16Function = NULL;
     LLVMTypeRef Hash16FunctionType = NULL;
+    LLVMTypeRef ScalarParams[2];
+    LLVMTypeRef BoundSeedsType;
+    LLVMValueRef BoundSeeds;
     PERFECT_HASH_JIT_MAX_ISA_ID JitMaxIsa;
+    ULONG Index;
+    ULONG NumberOfRoutines = 0;
+    CHAR BoundName[64];
+    struct {
+        PCSTR Name;
+        PVOID *BoundFunction;
+    } Routines[8];
 
     HashFunctionId = Table->HashFunctionId;
     Rtl = Table->Rtl;
@@ -4723,27 +4748,23 @@ CompileChm01HashJit(
     HostCpuFeatures = LLVMGetHostCPUFeatures();
     TargetCpu = HostCpuName ? HostCpuName : "";
     TargetFeatures = HostCpuFeatures ? HostCpuFeatures : "";
-    HostHasAvx512 = (HostCpuFeatures &&
-                     strstr(HostCpuFeatures, "+avx512f") != NULL);
 
     JitMaxIsa = (PERFECT_HASH_JIT_MAX_ISA_ID)CompileFlags->JitMaxIsa;
     if (JitMaxIsa != PerfectHashJitMaxIsaAuto) {
-        ClampedFeatures = BuildClampedHostFeatures(HostCpuFeatures, JitMaxIsa);
+        Result = BuildClampedHostFeatures(HostCpuFeatures,
+                                          JitMaxIsa,
+                                          &ClampedFeatures);
+        if (FAILED(Result)) {
+            goto Error;
+        }
         if (ClampedFeatures) {
             TargetFeatures = ClampedFeatures;
         }
     }
 
-    if (JitMaxIsa != PerfectHashJitMaxIsaAuto &&
-        JitMaxIsa != PerfectHashJitMaxIsaAvx512) {
-        HostHasAvx512 = FALSE;
-    }
-
-    if (CompileHashEx32x16 && !HostHasAvx512) {
+    if (!CanCompileJit32x16(JitMaxIsa, HostCpuFeatures)) {
         CompileHashEx32x16 = FALSE;
         CompileVectorHashEx32x16 = FALSE;
-    }
-    if (CompileHash16Ex32x16 && !HostHasAvx512) {
         CompileHash16Ex32x16 = FALSE;
         CompileVectorHash16Ex32x16 = FALSE;
     }
@@ -4783,50 +4804,27 @@ CompileChm01HashJit(
     JitContext.I32Ptr = LLVMPointerType(JitContext.I32, 0);
     JitContext.HashFunctionId = HashFunctionId;
     JitContext.UseAssigned16 = FALSE;
+    ScalarParams[0] = JitContext.I32;
+    ScalarParams[1] = JitContext.I32Ptr;
 
-    JitContext.Seed1Global = AddGlobalI32(Module,
-                                          JitContext.I32,
-                                          "PerfectHashJitHashSeed1");
-    JitContext.Seed2Global = AddGlobalI32(Module,
-                                          JitContext.I32,
-                                          "PerfectHashJitHashSeed2");
-    JitContext.Seed3Global = AddGlobalI32(Module,
-                                          JitContext.I32,
-                                          "PerfectHashJitHashSeed3");
-    JitContext.Seed3Byte1Global = AddGlobalI32(
-        Module,
+    //
+    // The Bind methods of the hash JIT interface apply the routines below to
+    // this one table-wide copy of the seeds.  The solver passes its own.
+    //
+
+    BoundSeedsType = LLVMArrayType(
         JitContext.I32,
-        "PerfectHashJitHashSeed3Byte1"
+        sizeof(PERFECT_HASH_HASH_JIT_SEEDS) / sizeof(ULONG)
     );
-    JitContext.Seed3Byte2Global = AddGlobalI32(
-        Module,
-        JitContext.I32,
-        "PerfectHashJitHashSeed3Byte2"
-    );
-    JitContext.Seed3Byte3Global = AddGlobalI32(
-        Module,
-        JitContext.I32,
-        "PerfectHashJitHashSeed3Byte3"
-    );
-    JitContext.Seed3Byte4Global = AddGlobalI32(
-        Module,
-        JitContext.I32,
-        "PerfectHashJitHashSeed3Byte4"
-    );
-    JitContext.Seed4Global = AddGlobalI32(Module,
-                                          JitContext.I32,
-                                          "PerfectHashJitHashSeed4");
-    JitContext.Seed5Global = AddGlobalI32(Module,
-                                          JitContext.I32,
-                                          "PerfectHashJitHashSeed5");
-    JitContext.HashMaskGlobal = AddGlobalI32(Module,
-                                             JitContext.I32,
-                                             "PerfectHashJitHashMask");
+    BoundSeeds = LLVMAddGlobal(Module,
+                               BoundSeedsType,
+                               "PerfectHashJitHashBoundSeeds");
+    LLVMSetInitializer(BoundSeeds, LLVMConstNull(BoundSeedsType));
 
     if (CompileHashEx) {
         HashFunctionType = LLVMFunctionType(JitContext.I64,
-                                            &JitContext.I32,
-                                            1,
+                                            ScalarParams,
+                                            ARRAYSIZE(ScalarParams),
                                             FALSE);
         HashFunction = BuildChm01HashFunction(&JitContext,
                                               "PerfectHashJitHashEx",
@@ -4839,8 +4837,8 @@ CompileChm01HashJit(
 
     if (CompileHash16Ex) {
         Hash16FunctionType = LLVMFunctionType(JitContext.I32,
-                                              &JitContext.I32,
-                                              1,
+                                              ScalarParams,
+                                              ARRAYSIZE(ScalarParams),
                                               FALSE);
         Hash16Function = BuildChm01Hash16Function(&JitContext,
                                                   "PerfectHashJitHash16Ex",
@@ -4980,23 +4978,79 @@ CompileChm01HashJit(
         }
     }
 
+    //
+    // Add the routine each Bind method hands out: the corresponding routine
+    // above applied to the table-wide bound seeds.
+    //
+
+#define ADD_BOUND_ROUTINE(Compile, RoutineName, Field)                  \
+    if (Compile) {                                                      \
+        Routines[NumberOfRoutines].Name = RoutineName;                  \
+        Routines[NumberOfRoutines].BoundFunction = &HashJit->Field;     \
+        NumberOfRoutines++;                                             \
+    }
+
+#define BATCH_ROUTINE_NAME(Vector, BaseName) (                          \
+    (Vector) ? BaseName "Vector" : BaseName                             \
+)
+
+    ADD_BOUND_ROUTINE(CompileHashEx,
+                      "PerfectHashJitHashEx",
+                      BoundHashExFunction);
+    ADD_BOUND_ROUTINE(CompileHashEx32x4,
+                      BATCH_ROUTINE_NAME(CompileVectorHashEx32x4,
+                                         "PerfectHashJitHashEx32x4"),
+                      BoundHashEx32x4Function);
+    ADD_BOUND_ROUTINE(CompileHashEx32x8,
+                      BATCH_ROUTINE_NAME(CompileVectorHashEx32x8,
+                                         "PerfectHashJitHashEx32x8"),
+                      BoundHashEx32x8Function);
+    ADD_BOUND_ROUTINE(CompileHashEx32x16,
+                      BATCH_ROUTINE_NAME(CompileVectorHashEx32x16,
+                                         "PerfectHashJitHashEx32x16"),
+                      BoundHashEx32x16Function);
+    ADD_BOUND_ROUTINE(CompileHash16Ex,
+                      "PerfectHashJitHash16Ex",
+                      BoundHash16ExFunction);
+    ADD_BOUND_ROUTINE(CompileHash16Ex32x4,
+                      BATCH_ROUTINE_NAME(CompileVectorHash16Ex32x4,
+                                         "PerfectHashJitHash16Ex32x4"),
+                      BoundHash16Ex32x4Function);
+    ADD_BOUND_ROUTINE(CompileHash16Ex32x8,
+                      BATCH_ROUTINE_NAME(CompileVectorHash16Ex32x8,
+                                         "PerfectHashJitHash16Ex32x8"),
+                      BoundHash16Ex32x8Function);
+    ADD_BOUND_ROUTINE(CompileHash16Ex32x16,
+                      BATCH_ROUTINE_NAME(CompileVectorHash16Ex32x16,
+                                         "PerfectHashJitHash16Ex32x16"),
+                      BoundHash16Ex32x16Function);
+
+#undef BATCH_ROUTINE_NAME
+#undef ADD_BOUND_ROUTINE
+
+    for (Index = 0; Index < NumberOfRoutines; Index++) {
+        snprintf(BoundName,
+                 sizeof(BoundName),
+                 "%sBound",
+                 Routines[Index].Name);
+        if (!BuildBoundHashFunction(&JitContext,
+                                    Routines[Index].Name,
+                                    BoundName,
+                                    BoundSeeds)) {
+            Result = PH_E_TABLE_COMPILATION_FAILED;
+            goto Error;
+        }
+    }
+
+    SetJitFunctionTargets(Module, TargetCpu, TargetFeatures);
     DumpJitModuleIfEnabled(Module, TargetMachine);
 
-    if (LLVMVerifyModule(Module,
-                         LLVMReturnStatusAction,
-                         &ErrorMessage) != 0) {
+    if (LLVMVerifyModule(Module, LLVMReturnStatusAction, NULL) != 0) {
         Result = PH_E_TABLE_COMPILATION_FAILED;
         goto Error;
     }
 
-    LLVMInitializeMCJITCompilerOptions(&McjitOptions,
-                                       sizeof(McjitOptions));
-    McjitOptions.OptLevel = 3;
-    if (LLVMCreateMCJITCompilerForModule(&Engine,
-                                         Module,
-                                         &McjitOptions,
-                                         sizeof(McjitOptions),
-                                         &ErrorMessage) != 0) {
+    if (CreateOptimizedMcjitEngine(&Engine, &Module, &ErrorMessage)) {
         Result = PH_E_TABLE_COMPILATION_FAILED;
         goto Error;
     }
@@ -5133,32 +5187,30 @@ CompileChm01HashJit(
             (CompileVectorHash16Ex32x16 != FALSE);
     }
 
-    HashJit->Seed1 = (PULONG)(ULONG_PTR)
-        LLVMGetGlobalValueAddress(Engine, "PerfectHashJitHashSeed1");
-    HashJit->Seed2 = (PULONG)(ULONG_PTR)
-        LLVMGetGlobalValueAddress(Engine, "PerfectHashJitHashSeed2");
-    HashJit->Seed3 = (PULONG)(ULONG_PTR)
-        LLVMGetGlobalValueAddress(Engine, "PerfectHashJitHashSeed3");
-    HashJit->Seed3Byte1 = (PULONG)(ULONG_PTR)
-        LLVMGetGlobalValueAddress(Engine, "PerfectHashJitHashSeed3Byte1");
-    HashJit->Seed3Byte2 = (PULONG)(ULONG_PTR)
-        LLVMGetGlobalValueAddress(Engine, "PerfectHashJitHashSeed3Byte2");
-    HashJit->Seed3Byte3 = (PULONG)(ULONG_PTR)
-        LLVMGetGlobalValueAddress(Engine, "PerfectHashJitHashSeed3Byte3");
-    HashJit->Seed3Byte4 = (PULONG)(ULONG_PTR)
-        LLVMGetGlobalValueAddress(Engine, "PerfectHashJitHashSeed3Byte4");
-    HashJit->Seed4 = (PULONG)(ULONG_PTR)
-        LLVMGetGlobalValueAddress(Engine, "PerfectHashJitHashSeed4");
-    HashJit->Seed5 = (PULONG)(ULONG_PTR)
-        LLVMGetGlobalValueAddress(Engine, "PerfectHashJitHashSeed5");
-    HashJit->HashMask = (PULONG)(ULONG_PTR)
-        LLVMGetGlobalValueAddress(Engine, "PerfectHashJitHashMask");
+    for (Index = 0; Index < NumberOfRoutines; Index++) {
+        snprintf(BoundName,
+                 sizeof(BoundName),
+                 "%sBound",
+                 Routines[Index].Name);
+        *Routines[Index].BoundFunction = (PVOID)(ULONG_PTR)
+            LLVMGetFunctionAddress(Engine, BoundName);
+        if (!*Routines[Index].BoundFunction) {
+            Result = PH_E_TABLE_COMPILATION_FAILED;
+            goto Error;
+        }
+    }
+
+    HashJit->BoundSeeds = (PPERFECT_HASH_HASH_JIT_SEEDS)(ULONG_PTR)
+        LLVMGetGlobalValueAddress(Engine, "PerfectHashJitHashBoundSeeds");
+    if (!HashJit->BoundSeeds) {
+        Result = PH_E_TABLE_COMPILATION_FAILED;
+        goto Error;
+    }
 
     HashJit->ExecutionEngine = Engine;
     HashJit->Context = Context;
     Engine = NULL;
     Context = NULL;
-    Module = NULL;
 
     Result = S_OK;
 
@@ -5323,8 +5375,6 @@ PerfectHashTableCompileJit(
     Jit->MaskFunctionId = Table->MaskFunctionId;
     Jit->OriginalIndex = Table->Vtbl->Index;
     Jit->OriginalQueryInterface = Table->Vtbl->QueryInterface;
-    Jit->Interface.Table = Table;
-    Jit->Interface.Vtbl = &PerfectHashTableJitInterfaceVtbl;
     Table->Vtbl->QueryInterface = PerfectHashTableQueryInterfaceJit;
 
     Result = CompileChm01IndexJit(Table, Jit, &CompileFlags);
@@ -5392,7 +5442,18 @@ PerfectHashTableCompileHashJit(
         CompileFlags.JitBackendLlvm = TRUE;
     }
 
-    if (Table->HashJit) {
+    //
+    // Every graph requests the hash JIT as it is created.  The generated code
+    // depends only on the request, so the first graph's compilation serves
+    // them all; replacing it would free code other graphs still call.
+    //
+
+    HashJit = Table->HashJit;
+    if (HashJit) {
+        if (HashJit->Flags.Valid &&
+            HashJit->CompileFlags.AsULong == CompileFlags.AsULong) {
+            return S_OK;
+        }
         PerfectHashTableHashJitRundown(Table);
     }
 
@@ -5415,8 +5476,9 @@ PerfectHashTableCompileHashJit(
     HashJit->HashFunctionId = Table->HashFunctionId;
     HashJit->MaskFunctionId = Table->MaskFunctionId;
     HashJit->OriginalQueryInterface = Table->Vtbl->QueryInterface;
-    HashJit->Interface.Table = Table;
-    HashJit->Interface.Vtbl = &PerfectHashTableHashJitInterfaceVtbl;
+    if (!Table->HashJitInterface.Vtbl) {
+        Table->HashJitInterface.Vtbl = &PerfectHashTableHashJitInterfaceVtbl;
+    }
     Table->Vtbl->QueryInterface = PerfectHashTableQueryInterfaceJit;
 
     Result = CompileChm01HashJit(Table, HashJit, &CompileFlags);
@@ -5425,6 +5487,7 @@ PerfectHashTableCompileHashJit(
         return Result;
     }
 
+    HashJit->CompileFlags.AsULong = CompileFlags.AsULong;
     HashJit->Flags.BackendLlvm = TRUE;
     HashJit->Flags.Valid = TRUE;
 
@@ -5544,7 +5607,7 @@ PerfectHashTableQueryInterfaceJit(
             return E_NOINTERFACE;
         }
 
-        *Interface = &Jit->Interface;
+        *Interface = &Table->JitInterface;
         Table->Vtbl->AddRef(Table);
         return S_OK;
     }
@@ -5567,7 +5630,7 @@ PerfectHashTableQueryInterfaceJit(
             return E_NOINTERFACE;
         }
 
-        *Interface = &HashJit->Interface;
+        *Interface = &Table->HashJitInterface;
         Table->Vtbl->AddRef(Table);
         return S_OK;
     }
@@ -5587,768 +5650,6 @@ PerfectHashTableQueryInterfaceJit(
     return E_NOINTERFACE;
 }
 
-_Use_decl_annotations_
-HRESULT
-PerfectHashTableJitInterfaceQueryInterface(
-    PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
-    REFIID InterfaceId,
-    PVOID *Interface
-    )
-{
-    if (!ARGUMENT_PRESENT(Jit) ||
-        !ARGUMENT_PRESENT(Jit->Table) ||
-        !ARGUMENT_PRESENT(Interface)) {
-        return E_POINTER;
-    }
-
-    return Jit->Table->Vtbl->QueryInterface(Jit->Table,
-                                            InterfaceId,
-                                            Interface);
-}
-
-_Use_decl_annotations_
-ULONG
-PerfectHashTableJitInterfaceAddRef(
-    PPERFECT_HASH_TABLE_JIT_INTERFACE Jit
-    )
-{
-    if (!ARGUMENT_PRESENT(Jit) || !ARGUMENT_PRESENT(Jit->Table)) {
-        return 0;
-    }
-
-    return Jit->Table->Vtbl->AddRef(Jit->Table);
-}
-
-_Use_decl_annotations_
-ULONG
-PerfectHashTableJitInterfaceRelease(
-    PPERFECT_HASH_TABLE_JIT_INTERFACE Jit
-    )
-{
-    if (!ARGUMENT_PRESENT(Jit) || !ARGUMENT_PRESENT(Jit->Table)) {
-        return 0;
-    }
-
-    return Jit->Table->Vtbl->Release(Jit->Table);
-}
-
-_Use_decl_annotations_
-HRESULT
-PerfectHashTableJitInterfaceCreateInstance(
-    PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
-    PIUNKNOWN UnknownOuter,
-    REFIID InterfaceId,
-    PVOID *Interface
-    )
-{
-    if (!ARGUMENT_PRESENT(Jit) || !ARGUMENT_PRESENT(Jit->Table)) {
-        return E_POINTER;
-    }
-
-    return Jit->Table->Vtbl->CreateInstance(Jit->Table,
-                                            UnknownOuter,
-                                            InterfaceId,
-                                            Interface);
-}
-
-_Use_decl_annotations_
-HRESULT
-PerfectHashTableJitInterfaceLockServer(
-    PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
-    BOOL Lock
-    )
-{
-    if (!ARGUMENT_PRESENT(Jit) || !ARGUMENT_PRESENT(Jit->Table)) {
-        return E_POINTER;
-    }
-
-    return Jit->Table->Vtbl->LockServer(Jit->Table, Lock);
-}
-
-_Use_decl_annotations_
-HRESULT
-PerfectHashTableJitInterfaceIndex32(
-    PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
-    ULONG Key,
-    PULONG Index
-    )
-{
-    PPERFECT_HASH_TABLE Table;
-    PPERFECT_HASH_TABLE_JIT JitState;
-    PPH_JIT_INDEX32_FUNCTION IndexFunction;
-
-    if (!ARGUMENT_PRESENT(Jit) || !ARGUMENT_PRESENT(Index)) {
-        return E_POINTER;
-    }
-
-    Table = Jit->Table;
-    if (!ARGUMENT_PRESENT(Table)) {
-        return E_POINTER;
-    }
-
-    JitState = Table->Jit;
-    if (!ARGUMENT_PRESENT(JitState) ||
-        !JitState->Flags.Valid ||
-        !JitState->Flags.Index32Compiled) {
-        return PH_E_NOT_IMPLEMENTED;
-    }
-
-    IndexFunction = (PPH_JIT_INDEX32_FUNCTION)JitState->Index32Function;
-    if (!ARGUMENT_PRESENT(IndexFunction)) {
-        return PH_E_NOT_IMPLEMENTED;
-    }
-
-    *Index = IndexFunction(Key);
-    return S_OK;
-}
-
-_Use_decl_annotations_
-HRESULT
-PerfectHashTableJitInterfaceIndex64(
-    PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
-    ULONGLONG Key,
-    PULONG Index
-    )
-{
-    PPERFECT_HASH_TABLE Table;
-    PPERFECT_HASH_TABLE_JIT JitState;
-    PPH_JIT_INDEX64_FUNCTION IndexFunction;
-
-    if (!ARGUMENT_PRESENT(Jit) || !ARGUMENT_PRESENT(Index)) {
-        return E_POINTER;
-    }
-
-    Table = Jit->Table;
-    if (!ARGUMENT_PRESENT(Table)) {
-        return E_POINTER;
-    }
-
-    JitState = Table->Jit;
-    if (!ARGUMENT_PRESENT(JitState) ||
-        !JitState->Flags.Valid ||
-        !JitState->Flags.Index64Compiled) {
-        return PH_E_NOT_IMPLEMENTED;
-    }
-
-    IndexFunction = (PPH_JIT_INDEX64_FUNCTION)JitState->Index64Function;
-    if (!ARGUMENT_PRESENT(IndexFunction)) {
-        return PH_E_NOT_IMPLEMENTED;
-    }
-
-    *Index = IndexFunction(Key);
-    return S_OK;
-}
-
-_Use_decl_annotations_
-HRESULT
-PerfectHashTableJitInterfaceIndex32x2(
-    PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
-    ULONG Key1,
-    ULONG Key2,
-    PULONG Index1,
-    PULONG Index2
-    )
-{
-    PPERFECT_HASH_TABLE Table;
-    PPERFECT_HASH_TABLE_JIT JitState;
-    PPH_JIT_INDEX32X2_FUNCTION IndexFunction;
-
-    if (!ARGUMENT_PRESENT(Jit) ||
-        !ARGUMENT_PRESENT(Index1) ||
-        !ARGUMENT_PRESENT(Index2)) {
-        return E_POINTER;
-    }
-
-    Table = Jit->Table;
-    if (!ARGUMENT_PRESENT(Table)) {
-        return E_POINTER;
-    }
-
-    JitState = Table->Jit;
-    if (!ARGUMENT_PRESENT(JitState) ||
-        !JitState->Flags.Valid ||
-        !JitState->Flags.Index32x2Compiled) {
-        return PH_E_NOT_IMPLEMENTED;
-    }
-
-    IndexFunction = (PPH_JIT_INDEX32X2_FUNCTION)JitState->Index32x2Function;
-    if (!ARGUMENT_PRESENT(IndexFunction)) {
-        return PH_E_NOT_IMPLEMENTED;
-    }
-
-    IndexFunction(Key1, Key2, Index1, Index2);
-    return S_OK;
-}
-
-_Use_decl_annotations_
-HRESULT
-PerfectHashTableJitInterfaceIndex32x4(
-    PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
-    ULONG Key1,
-    ULONG Key2,
-    ULONG Key3,
-    ULONG Key4,
-    PULONG Index1,
-    PULONG Index2,
-    PULONG Index3,
-    PULONG Index4
-    )
-{
-    PPERFECT_HASH_TABLE Table;
-    PPERFECT_HASH_TABLE_JIT JitState;
-    PPH_JIT_INDEX32X4_FUNCTION IndexFunction;
-
-    if (!ARGUMENT_PRESENT(Jit) ||
-        !ARGUMENT_PRESENT(Index1) ||
-        !ARGUMENT_PRESENT(Index2) ||
-        !ARGUMENT_PRESENT(Index3) ||
-        !ARGUMENT_PRESENT(Index4)) {
-        return E_POINTER;
-    }
-
-    Table = Jit->Table;
-    if (!ARGUMENT_PRESENT(Table)) {
-        return E_POINTER;
-    }
-
-    JitState = Table->Jit;
-    if (!ARGUMENT_PRESENT(JitState) ||
-        !JitState->Flags.Valid ||
-        !JitState->Flags.Index32x4Compiled) {
-        return PH_E_NOT_IMPLEMENTED;
-    }
-
-    IndexFunction = (PPH_JIT_INDEX32X4_FUNCTION)JitState->Index32x4Function;
-    if (!ARGUMENT_PRESENT(IndexFunction)) {
-        return PH_E_NOT_IMPLEMENTED;
-    }
-
-    IndexFunction(Key1,
-                  Key2,
-                  Key3,
-                  Key4,
-                  Index1,
-                  Index2,
-                  Index3,
-                  Index4);
-    return S_OK;
-}
-
-_Use_decl_annotations_
-HRESULT
-PerfectHashTableJitInterfaceIndex32x8(
-    PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
-    ULONG Key1,
-    ULONG Key2,
-    ULONG Key3,
-    ULONG Key4,
-    ULONG Key5,
-    ULONG Key6,
-    ULONG Key7,
-    ULONG Key8,
-    PULONG Index1,
-    PULONG Index2,
-    PULONG Index3,
-    PULONG Index4,
-    PULONG Index5,
-    PULONG Index6,
-    PULONG Index7,
-    PULONG Index8
-    )
-{
-    PPERFECT_HASH_TABLE Table;
-    PPERFECT_HASH_TABLE_JIT JitState;
-    PPH_JIT_INDEX32X8_FUNCTION IndexFunction;
-
-    if (!ARGUMENT_PRESENT(Jit) ||
-        !ARGUMENT_PRESENT(Index1) ||
-        !ARGUMENT_PRESENT(Index2) ||
-        !ARGUMENT_PRESENT(Index3) ||
-        !ARGUMENT_PRESENT(Index4) ||
-        !ARGUMENT_PRESENT(Index5) ||
-        !ARGUMENT_PRESENT(Index6) ||
-        !ARGUMENT_PRESENT(Index7) ||
-        !ARGUMENT_PRESENT(Index8)) {
-        return E_POINTER;
-    }
-
-    Table = Jit->Table;
-    if (!ARGUMENT_PRESENT(Table)) {
-        return E_POINTER;
-    }
-
-    JitState = Table->Jit;
-    if (!ARGUMENT_PRESENT(JitState) ||
-        !JitState->Flags.Valid ||
-        !JitState->Flags.Index32x8Compiled) {
-        return PH_E_NOT_IMPLEMENTED;
-    }
-
-    IndexFunction = (PPH_JIT_INDEX32X8_FUNCTION)JitState->Index32x8Function;
-    if (!ARGUMENT_PRESENT(IndexFunction)) {
-        return PH_E_NOT_IMPLEMENTED;
-    }
-
-    IndexFunction(Key1,
-                  Key2,
-                  Key3,
-                  Key4,
-                  Key5,
-                  Key6,
-                  Key7,
-                  Key8,
-                  Index1,
-                  Index2,
-                  Index3,
-                  Index4,
-                  Index5,
-                  Index6,
-                  Index7,
-                  Index8);
-    return S_OK;
-}
-
-_Use_decl_annotations_
-HRESULT
-PerfectHashTableJitInterfaceIndex32x16(
-    PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
-    ULONG Key1,
-    ULONG Key2,
-    ULONG Key3,
-    ULONG Key4,
-    ULONG Key5,
-    ULONG Key6,
-    ULONG Key7,
-    ULONG Key8,
-    ULONG Key9,
-    ULONG Key10,
-    ULONG Key11,
-    ULONG Key12,
-    ULONG Key13,
-    ULONG Key14,
-    ULONG Key15,
-    ULONG Key16,
-    PULONG Index1,
-    PULONG Index2,
-    PULONG Index3,
-    PULONG Index4,
-    PULONG Index5,
-    PULONG Index6,
-    PULONG Index7,
-    PULONG Index8,
-    PULONG Index9,
-    PULONG Index10,
-    PULONG Index11,
-    PULONG Index12,
-    PULONG Index13,
-    PULONG Index14,
-    PULONG Index15,
-    PULONG Index16
-    )
-{
-    PPERFECT_HASH_TABLE Table;
-    PPERFECT_HASH_TABLE_JIT JitState;
-    PPH_JIT_INDEX32X16_FUNCTION IndexFunction;
-
-    if (!ARGUMENT_PRESENT(Jit) ||
-        !ARGUMENT_PRESENT(Index1) ||
-        !ARGUMENT_PRESENT(Index2) ||
-        !ARGUMENT_PRESENT(Index3) ||
-        !ARGUMENT_PRESENT(Index4) ||
-        !ARGUMENT_PRESENT(Index5) ||
-        !ARGUMENT_PRESENT(Index6) ||
-        !ARGUMENT_PRESENT(Index7) ||
-        !ARGUMENT_PRESENT(Index8) ||
-        !ARGUMENT_PRESENT(Index9) ||
-        !ARGUMENT_PRESENT(Index10) ||
-        !ARGUMENT_PRESENT(Index11) ||
-        !ARGUMENT_PRESENT(Index12) ||
-        !ARGUMENT_PRESENT(Index13) ||
-        !ARGUMENT_PRESENT(Index14) ||
-        !ARGUMENT_PRESENT(Index15) ||
-        !ARGUMENT_PRESENT(Index16)) {
-        return E_POINTER;
-    }
-
-    Table = Jit->Table;
-    if (!ARGUMENT_PRESENT(Table)) {
-        return E_POINTER;
-    }
-
-    JitState = Table->Jit;
-    if (!ARGUMENT_PRESENT(JitState) ||
-        !JitState->Flags.Valid ||
-        !JitState->Flags.Index32x16Compiled) {
-        return PH_E_NOT_IMPLEMENTED;
-    }
-
-    IndexFunction = (PPH_JIT_INDEX32X16_FUNCTION)JitState->Index32x16Function;
-    if (!ARGUMENT_PRESENT(IndexFunction)) {
-        return PH_E_NOT_IMPLEMENTED;
-    }
-
-    IndexFunction(Key1,
-                  Key2,
-                  Key3,
-                  Key4,
-                  Key5,
-                  Key6,
-                  Key7,
-                  Key8,
-                  Key9,
-                  Key10,
-                  Key11,
-                  Key12,
-                  Key13,
-                  Key14,
-                  Key15,
-                  Key16,
-                  Index1,
-                  Index2,
-                  Index3,
-                  Index4,
-                  Index5,
-                  Index6,
-                  Index7,
-                  Index8,
-                  Index9,
-                  Index10,
-                  Index11,
-                  Index12,
-                  Index13,
-                  Index14,
-                  Index15,
-                  Index16);
-    return S_OK;
-}
-
-_Use_decl_annotations_
-HRESULT
-PerfectHashTableJitInterfaceIndex64x2(
-    PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
-    ULONGLONG Key1,
-    ULONGLONG Key2,
-    PULONG Index1,
-    PULONG Index2
-    )
-{
-    PPERFECT_HASH_TABLE Table;
-    PPERFECT_HASH_TABLE_JIT JitState;
-    PPH_JIT_INDEX64X2_FUNCTION IndexFunction;
-
-    if (!ARGUMENT_PRESENT(Jit) ||
-        !ARGUMENT_PRESENT(Index1) ||
-        !ARGUMENT_PRESENT(Index2)) {
-        return E_POINTER;
-    }
-
-    Table = Jit->Table;
-    if (!ARGUMENT_PRESENT(Table)) {
-        return E_POINTER;
-    }
-
-    JitState = Table->Jit;
-    if (!ARGUMENT_PRESENT(JitState) ||
-        !JitState->Flags.Valid ||
-        !JitState->Flags.Index64x2Compiled) {
-        return PH_E_NOT_IMPLEMENTED;
-    }
-
-    IndexFunction = (PPH_JIT_INDEX64X2_FUNCTION)JitState->Index64x2Function;
-    if (!ARGUMENT_PRESENT(IndexFunction)) {
-        return PH_E_NOT_IMPLEMENTED;
-    }
-
-    IndexFunction(Key1, Key2, Index1, Index2);
-    return S_OK;
-}
-
-_Use_decl_annotations_
-HRESULT
-PerfectHashTableJitInterfaceIndex64x4(
-    PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
-    ULONGLONG Key1,
-    ULONGLONG Key2,
-    ULONGLONG Key3,
-    ULONGLONG Key4,
-    PULONG Index1,
-    PULONG Index2,
-    PULONG Index3,
-    PULONG Index4
-    )
-{
-    PPERFECT_HASH_TABLE Table;
-    PPERFECT_HASH_TABLE_JIT JitState;
-    PPH_JIT_INDEX64X4_FUNCTION IndexFunction;
-
-    if (!ARGUMENT_PRESENT(Jit) ||
-        !ARGUMENT_PRESENT(Index1) ||
-        !ARGUMENT_PRESENT(Index2) ||
-        !ARGUMENT_PRESENT(Index3) ||
-        !ARGUMENT_PRESENT(Index4)) {
-        return E_POINTER;
-    }
-
-    Table = Jit->Table;
-    if (!ARGUMENT_PRESENT(Table)) {
-        return E_POINTER;
-    }
-
-    JitState = Table->Jit;
-    if (!ARGUMENT_PRESENT(JitState) ||
-        !JitState->Flags.Valid ||
-        !JitState->Flags.Index64x4Compiled) {
-        return PH_E_NOT_IMPLEMENTED;
-    }
-
-    IndexFunction = (PPH_JIT_INDEX64X4_FUNCTION)JitState->Index64x4Function;
-    if (!ARGUMENT_PRESENT(IndexFunction)) {
-        return PH_E_NOT_IMPLEMENTED;
-    }
-
-    IndexFunction(Key1,
-                  Key2,
-                  Key3,
-                  Key4,
-                  Index1,
-                  Index2,
-                  Index3,
-                  Index4);
-    return S_OK;
-}
-
-_Use_decl_annotations_
-HRESULT
-PerfectHashTableJitInterfaceIndex64x8(
-    PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
-    ULONGLONG Key1,
-    ULONGLONG Key2,
-    ULONGLONG Key3,
-    ULONGLONG Key4,
-    ULONGLONG Key5,
-    ULONGLONG Key6,
-    ULONGLONG Key7,
-    ULONGLONG Key8,
-    PULONG Index1,
-    PULONG Index2,
-    PULONG Index3,
-    PULONG Index4,
-    PULONG Index5,
-    PULONG Index6,
-    PULONG Index7,
-    PULONG Index8
-    )
-{
-    PPERFECT_HASH_TABLE Table;
-    PPERFECT_HASH_TABLE_JIT JitState;
-    PPH_JIT_INDEX64X8_FUNCTION IndexFunction;
-
-    if (!ARGUMENT_PRESENT(Jit) ||
-        !ARGUMENT_PRESENT(Index1) ||
-        !ARGUMENT_PRESENT(Index2) ||
-        !ARGUMENT_PRESENT(Index3) ||
-        !ARGUMENT_PRESENT(Index4) ||
-        !ARGUMENT_PRESENT(Index5) ||
-        !ARGUMENT_PRESENT(Index6) ||
-        !ARGUMENT_PRESENT(Index7) ||
-        !ARGUMENT_PRESENT(Index8)) {
-        return E_POINTER;
-    }
-
-    Table = Jit->Table;
-    if (!ARGUMENT_PRESENT(Table)) {
-        return E_POINTER;
-    }
-
-    JitState = Table->Jit;
-    if (!ARGUMENT_PRESENT(JitState) ||
-        !JitState->Flags.Valid ||
-        !JitState->Flags.Index64x8Compiled) {
-        return PH_E_NOT_IMPLEMENTED;
-    }
-
-    IndexFunction = (PPH_JIT_INDEX64X8_FUNCTION)JitState->Index64x8Function;
-    if (!ARGUMENT_PRESENT(IndexFunction)) {
-        return PH_E_NOT_IMPLEMENTED;
-    }
-
-    IndexFunction(Key1,
-                  Key2,
-                  Key3,
-                  Key4,
-                  Key5,
-                  Key6,
-                  Key7,
-                  Key8,
-                  Index1,
-                  Index2,
-                  Index3,
-                  Index4,
-                  Index5,
-                  Index6,
-                  Index7,
-                  Index8);
-    return S_OK;
-}
-
-_Use_decl_annotations_
-HRESULT
-PerfectHashTableJitInterfaceIndex64x16(
-    PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
-    ULONGLONG Key1,
-    ULONGLONG Key2,
-    ULONGLONG Key3,
-    ULONGLONG Key4,
-    ULONGLONG Key5,
-    ULONGLONG Key6,
-    ULONGLONG Key7,
-    ULONGLONG Key8,
-    ULONGLONG Key9,
-    ULONGLONG Key10,
-    ULONGLONG Key11,
-    ULONGLONG Key12,
-    ULONGLONG Key13,
-    ULONGLONG Key14,
-    ULONGLONG Key15,
-    ULONGLONG Key16,
-    PULONG Index1,
-    PULONG Index2,
-    PULONG Index3,
-    PULONG Index4,
-    PULONG Index5,
-    PULONG Index6,
-    PULONG Index7,
-    PULONG Index8,
-    PULONG Index9,
-    PULONG Index10,
-    PULONG Index11,
-    PULONG Index12,
-    PULONG Index13,
-    PULONG Index14,
-    PULONG Index15,
-    PULONG Index16
-    )
-{
-    PPERFECT_HASH_TABLE Table;
-    PPERFECT_HASH_TABLE_JIT JitState;
-    PPH_JIT_INDEX64X16_FUNCTION IndexFunction;
-
-    if (!ARGUMENT_PRESENT(Jit) ||
-        !ARGUMENT_PRESENT(Index1) ||
-        !ARGUMENT_PRESENT(Index2) ||
-        !ARGUMENT_PRESENT(Index3) ||
-        !ARGUMENT_PRESENT(Index4) ||
-        !ARGUMENT_PRESENT(Index5) ||
-        !ARGUMENT_PRESENT(Index6) ||
-        !ARGUMENT_PRESENT(Index7) ||
-        !ARGUMENT_PRESENT(Index8) ||
-        !ARGUMENT_PRESENT(Index9) ||
-        !ARGUMENT_PRESENT(Index10) ||
-        !ARGUMENT_PRESENT(Index11) ||
-        !ARGUMENT_PRESENT(Index12) ||
-        !ARGUMENT_PRESENT(Index13) ||
-        !ARGUMENT_PRESENT(Index14) ||
-        !ARGUMENT_PRESENT(Index15) ||
-        !ARGUMENT_PRESENT(Index16)) {
-        return E_POINTER;
-    }
-
-    Table = Jit->Table;
-    if (!ARGUMENT_PRESENT(Table)) {
-        return E_POINTER;
-    }
-
-    JitState = Table->Jit;
-    if (!ARGUMENT_PRESENT(JitState) ||
-        !JitState->Flags.Valid ||
-        !JitState->Flags.Index64x16Compiled) {
-        return PH_E_NOT_IMPLEMENTED;
-    }
-
-    IndexFunction = (PPH_JIT_INDEX64X16_FUNCTION)JitState->Index64x16Function;
-    if (!ARGUMENT_PRESENT(IndexFunction)) {
-        return PH_E_NOT_IMPLEMENTED;
-    }
-
-    IndexFunction(Key1,
-                  Key2,
-                  Key3,
-                  Key4,
-                  Key5,
-                  Key6,
-                  Key7,
-                  Key8,
-                  Key9,
-                  Key10,
-                  Key11,
-                  Key12,
-                  Key13,
-                  Key14,
-                  Key15,
-                  Key16,
-                  Index1,
-                  Index2,
-                  Index3,
-                  Index4,
-                  Index5,
-                  Index6,
-                  Index7,
-                  Index8,
-                  Index9,
-                  Index10,
-                  Index11,
-                  Index12,
-                  Index13,
-                  Index14,
-                  Index15,
-                  Index16);
-    return S_OK;
-}
-
-_Use_decl_annotations_
-HRESULT
-PerfectHashTableJitInterfaceGetInfo(
-    PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
-    PPERFECT_HASH_TABLE_JIT_INFO Info
-    )
-{
-    PPERFECT_HASH_TABLE Table;
-    PPERFECT_HASH_TABLE_JIT JitState;
-
-    if (!ARGUMENT_PRESENT(Jit) || !ARGUMENT_PRESENT(Info)) {
-        return E_POINTER;
-    }
-
-    Table = Jit->Table;
-    if (!ARGUMENT_PRESENT(Table)) {
-        return E_POINTER;
-    }
-
-    JitState = Table->Jit;
-    if (!ARGUMENT_PRESENT(JitState) || !JitState->Flags.Valid) {
-        return PH_E_NOT_IMPLEMENTED;
-    }
-
-    ZeroStructPointerInline(Info);
-    Info->SizeOfStruct = sizeof(*Info);
-    Info->Flags.AsULong = JitState->Flags.AsULong;
-    Info->JitMaxIsa = JitState->JitMaxIsa;
-    if (JitState->TargetCpu[0] != '\0') {
-        strncpy(Info->TargetCpu,
-                JitState->TargetCpu,
-                sizeof(Info->TargetCpu) - 1);
-        Info->TargetCpu[sizeof(Info->TargetCpu) - 1] = '\0';
-    }
-    if (JitState->TargetFeatures[0] != '\0') {
-        strncpy(Info->TargetFeatures,
-                JitState->TargetFeatures,
-                sizeof(Info->TargetFeatures) - 1);
-        Info->TargetFeatures[sizeof(Info->TargetFeatures) - 1] = '\0';
-    }
-
-    return S_OK;
-}
-
 static
 HRESULT
 UpdateHashJitSeedsAndMask(
@@ -6357,43 +5658,13 @@ UpdateHashJitSeedsAndMask(
     _In_ ULONG Mask
     )
 {
-    ULONG Seed3;
-
-    if (!ARGUMENT_PRESENT(HashJit) || !ARGUMENT_PRESENT(Seeds)) {
+    if (!ARGUMENT_PRESENT(HashJit) ||
+        !ARGUMENT_PRESENT(HashJit->BoundSeeds) ||
+        !ARGUMENT_PRESENT(Seeds)) {
         return E_POINTER;
     }
 
-    if (HashJit->Seed1) {
-        *HashJit->Seed1 = Seeds[0];
-    }
-    if (HashJit->Seed2) {
-        *HashJit->Seed2 = Seeds[1];
-    }
-    Seed3 = Seeds[2];
-    if (HashJit->Seed3) {
-        *HashJit->Seed3 = Seed3;
-    }
-    if (HashJit->Seed3Byte1) {
-        *HashJit->Seed3Byte1 = (Seed3 & 0xff);
-    }
-    if (HashJit->Seed3Byte2) {
-        *HashJit->Seed3Byte2 = ((Seed3 >> 8) & 0xff);
-    }
-    if (HashJit->Seed3Byte3) {
-        *HashJit->Seed3Byte3 = ((Seed3 >> 16) & 0xff);
-    }
-    if (HashJit->Seed3Byte4) {
-        *HashJit->Seed3Byte4 = ((Seed3 >> 24) & 0xff);
-    }
-    if (HashJit->Seed4) {
-        *HashJit->Seed4 = Seeds[3];
-    }
-    if (HashJit->Seed5) {
-        *HashJit->Seed5 = Seeds[4];
-    }
-    if (HashJit->HashMask) {
-        *HashJit->HashMask = Mask;
-    }
+    InitializeHashJitSeeds(HashJit->BoundSeeds, Seeds, Mask);
 
     return S_OK;
 }
@@ -6512,7 +5783,9 @@ PerfectHashTableHashJitInterfaceBindHashEx(
         return Result;
     }
 
-    *HashEx = (PPERFECT_HASH_SEEDED_HASH_EX_BOUND)HashJit->HashExFunction;
+    *HashEx = (PPERFECT_HASH_SEEDED_HASH_EX_BOUND)(
+        HashJit->BoundHashExFunction
+    );
     return S_OK;
 }
 
@@ -6553,7 +5826,9 @@ PerfectHashTableHashJitInterfaceBindHashEx32x4(
     }
 
     *HashEx32x4 =
-        (PPERFECT_HASH_SEEDED_HASH_EX_BOUND32X4)HashJit->HashEx32x4Function;
+        (PPERFECT_HASH_SEEDED_HASH_EX_BOUND32X4)(
+            HashJit->BoundHashEx32x4Function
+        );
     return S_OK;
 }
 
@@ -6594,7 +5869,9 @@ PerfectHashTableHashJitInterfaceBindHashEx32x8(
     }
 
     *HashEx32x8 =
-        (PPERFECT_HASH_SEEDED_HASH_EX_BOUND32X8)HashJit->HashEx32x8Function;
+        (PPERFECT_HASH_SEEDED_HASH_EX_BOUND32X8)(
+            HashJit->BoundHashEx32x8Function
+        );
     return S_OK;
 }
 
@@ -6635,7 +5912,9 @@ PerfectHashTableHashJitInterfaceBindHashEx32x16(
     }
 
     *HashEx32x16 =
-        (PPERFECT_HASH_SEEDED_HASH_EX_BOUND32X16)HashJit->HashEx32x16Function;
+        (PPERFECT_HASH_SEEDED_HASH_EX_BOUND32X16)(
+            HashJit->BoundHashEx32x16Function
+        );
     return S_OK;
 }
 
@@ -6676,7 +5955,9 @@ PerfectHashTableHashJitInterfaceBindHash16Ex(
     }
 
     *Hash16Ex =
-        (PPERFECT_HASH_SEEDED_HASH16_EX_BOUND)HashJit->Hash16ExFunction;
+        (PPERFECT_HASH_SEEDED_HASH16_EX_BOUND)(
+            HashJit->BoundHash16ExFunction
+        );
     return S_OK;
 }
 
@@ -6717,7 +5998,7 @@ PerfectHashTableHashJitInterfaceBindHash16Ex32x4(
     }
 
     *Hash16Ex32x4 = (PPERFECT_HASH_SEEDED_HASH16_EX_BOUND32X4)
-        HashJit->Hash16Ex32x4Function;
+        HashJit->BoundHash16Ex32x4Function;
     return S_OK;
 }
 
@@ -6758,7 +6039,7 @@ PerfectHashTableHashJitInterfaceBindHash16Ex32x8(
     }
 
     *Hash16Ex32x8 = (PPERFECT_HASH_SEEDED_HASH16_EX_BOUND32X8)
-        HashJit->Hash16Ex32x8Function;
+        HashJit->BoundHash16Ex32x8Function;
     return S_OK;
 }
 
@@ -6799,7 +6080,7 @@ PerfectHashTableHashJitInterfaceBindHash16Ex32x16(
     }
 
     *Hash16Ex32x16 = (PPERFECT_HASH_SEEDED_HASH16_EX_BOUND32X16)
-        HashJit->Hash16Ex32x16Function;
+        HashJit->BoundHash16Ex32x16Function;
     return S_OK;
 }
 

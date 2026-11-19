@@ -3287,10 +3287,11 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         ULONGLONG CompareGpuAndCpuGraphs:1;
 
         //
-        // Unused bits.
+        // Disable ARM64 NEON for the HashAllKeysFirst solver.
         //
 
-        ULONGLONG Unused:22;
+        ULONGLONG DoNotTryUseNeonHashFunction:1;
+        ULONGLONG Unused:21;
     };
 
     LONGLONG AsLongLong;
@@ -3361,7 +3362,7 @@ IsValidTableCreateFlags(
             return PH_E_TRY_USE_AVX2_HASH_FUNC_FLAG_REQUIRE_HASH_ALL_KEYS_FIRST;
         }
 
-        if (TableCreateFlags->TryUseAvx2HashFunction) {
+        if (TableCreateFlags->TryUseAvx512HashFunction) {
             return PH_E_TRY_USE_AVX512_HASH_FUNC_FLAG_REQUIRE_HASH_ALL_KEYS_FIRST;
         }
 
@@ -3710,10 +3711,17 @@ typedef union _PERFECT_HASH_TABLE_COMPILE_FLAGS {
         ULONG JitMaxIsa:3;
 
         //
+        // Install the new index JIT only if every requested 32-bit batch
+        // width is available. A failed compile preserves the previous index.
+        //
+
+        ULONG JitRequireRequestedWidth:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:3;
+        ULONG Unused:2;
     };
 
     LONG AsLong;
@@ -4642,10 +4650,17 @@ typedef union _PERFECT_HASH_TABLE_FLAGS {
         ULONG AssignedElementSizeInBits:4;
 
         //
-        // Unused bits.
+        // The winning graph hashed its keys using ARM64 NEON.
         //
 
-        ULONG Unused:19;
+        ULONG UsedNeonHashFunction:1;
+
+        //
+        // The winning graph hashed its keys using JIT-compiled routines.
+        //
+
+        ULONG UsedJitHashFunction:1;
+        ULONG Unused:17;
     };
 
     LONG AsLong;
@@ -5154,6 +5169,11 @@ typedef PERFECT_HASH_TABLE_JIT_INTERFACE
 
 //
 // Define the PERFECT_HASH_TABLE_HASH_JIT_INTERFACE.
+//
+// A table keeps one set of bound seeds.  Every Bind call replaces it, and
+// every routine a Bind call returned then hashes with the new seeds, so the
+// bound routines serve one caller at a time.  The solver does not use them;
+// each of its graphs passes its own seeds to the compiled routines.
 //
 
 DECLARE_COMPONENT(TableHashJitInterface, PERFECT_HASH_TABLE_HASH_JIT_INTERFACE);

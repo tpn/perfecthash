@@ -1552,7 +1552,7 @@ WriteFile(
 
 typedef struct _PH_FIND_HANDLE {
     PCSTR Extension;
-    PCSTR DirectoryName;
+    PSTR DirectoryName;
     DIR *Directory;
     struct dirent Entry;
     struct dirent *Result;
@@ -1607,9 +1607,13 @@ FindNextFileW(
                            &Handle->Result);
 
         if (Result != 0) {
-            SetLastError(Result);
+            // errno values can overlap Win32's no-match and no-more-files
+            // codes. Keep directory read errors distinct from exhaustion.
+            PH_ERROR(readdir_r, Result);
+            SetLastError(PH_E_SYSTEM_CALL_FAILED);
             return FALSE;
         } else if (!Handle->Result) {
+            SetLastError(ERROR_NO_MORE_FILES);
             return FALSE;
         }
 
@@ -1657,13 +1661,12 @@ FindFirstFileW(
     Handle = (PPH_FIND_HANDLE)calloc(1, sizeof(*Handle));
     if (!Handle) {
         SetLastError(ENOMEM);
-        FREE_PTR(&Path);
-        goto End;
+        return NULL;
     }
 
     Path = CreateStringFromWide(WildcardPath);
     if (!Path) {
-        goto End;
+        goto Error;
     }
 
     //
@@ -1699,17 +1702,16 @@ FindFirstFileW(
 
     Handle->Directory = opendir(Handle->DirectoryName);
     if (!Handle->Directory) {
-        if (errno == ENOENT) {
-            SetLastError(ERROR_FILE_NOT_FOUND);
+        if (errno == ENOENT || errno == ENOTDIR) {
+            SetLastError(ERROR_PATH_NOT_FOUND);
         } else {
             SetLastError(errno);
         }
         goto Error;
     }
 
-    SetLastError(ERROR_SUCCESS);
     if (!FindNextFileW((HANDLE)Handle, FindFileData)) {
-        if (GetLastError() == ERROR_SUCCESS) {
+        if (GetLastError() == ERROR_NO_MORE_FILES) {
             SetLastError(ERROR_FILE_NOT_FOUND);
         }
         goto Error;
@@ -1750,6 +1752,7 @@ FindClose(
         closedir(Handle->Directory);
     }
 
+    free(Handle->DirectoryName);
     free(Handle);
     Handle = NULL;
     return TRUE;

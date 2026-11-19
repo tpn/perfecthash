@@ -56,6 +56,19 @@ jobs:
         run: |
           micromamba run -n "${{ matrix.env_name }}" ctest --test-dir "${{ matrix.build_dir }}" --output-on-failure -C Release
 
+      - name: Exercise installed ARM64 shared and static JIT clients
+        if: matrix.name == 'macos-arm64'
+        shell: bash -l {0}
+        run: |
+          prefix="$RUNNER_TEMP/perfecthash-installed"
+          client="$RUNNER_TEMP/perfecthash-client"
+          micromamba run -n "${{ matrix.env_name }}" cmake --install "${{ matrix.build_dir }}" --config Release --prefix "$prefix"
+          micromamba run -n "${{ matrix.env_name }}" cmake -S tests/installed-online-jit -B "$client" \
+            -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$prefix"
+          micromamba run -n "${{ matrix.env_name }}" cmake --build "$client"
+          micromamba run -n "${{ matrix.env_name }}" env -u DYLD_LIBRARY_PATH -u DYLD_FALLBACK_LIBRARY_PATH \
+            ctest --test-dir "$client" --no-tests=error --output-on-failure
+
       - name: Examples (RawDog JIT + LLVM JIT + sqlite-online-jit)
         shell: bash -l {0}
         run: |

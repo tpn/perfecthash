@@ -704,6 +704,27 @@ Abstract:
 // 
 //         N.B. Only applies when HashAllKeysFirst is set.
 // 
+//     --TryUseJitHashFunction
+// 
+//         When set, tries to hash keys with routines compiled for the table by
+//         the LLVM JIT.  Applies to Chm01 with 32-bit keys, the And mask function,
+//         and the MultiplyShiftR, MultiplyShiftLR, MultiplyShiftRMultiply,
+//         MultiplyShiftR2, MultiplyShiftRX and Mulshrolate1RX through
+//         Mulshrolate4RX hash functions.  When the JIT routines are available,
+//         they take precedence over the AVX2, AVX512 and NEON routines; when
+//         they are not (for example, if LLVM support is absent), solving
+//         continues with those routines.  The UsedJitHashFunction column of the
+//         .csv output file reports whether the JIT routines were used.
+// 
+//         N.B. Only applies when HashAllKeysFirst is set.
+// 
+//     --DoNotTryUseNeonHashFunction
+// 
+//         Disables ARM64 NEON key hashing for MultiplyShiftR, MultiplyShiftRX, and
+//         Mulshrolate1RX through Mulshrolate4RX when HashAllKeysFirst is set.
+//         Both 16-bit and 32-bit vertices support NEON. A selected hash JIT
+//         takes precedence.
+// 
 //     --DoNotTryUseAvx2MemoryCoverageFunction
 // 
 //         When set, disables automatically using the AVX2 memory coverage
@@ -775,7 +796,8 @@ Abstract:
 //     --JitIndex32x16
 // 
 //         Compiles the 2-wide, 4-wide, 8-wide, or 16-wide Index32() routines.
-//         The x16 variant requires AVX-512 support from the JIT backend.
+//         On x86-64 the x16 variant requires AVX-512 support from the JIT
+//         backend; on ARM64 it requires only NEON.
 // 
 //     --JitVectorIndex32x2
 //     --JitVectorIndex32x4

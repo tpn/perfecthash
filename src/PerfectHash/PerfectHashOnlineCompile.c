@@ -76,28 +76,14 @@ Return Value:
 
     CompileFlags.Jit = TRUE;
 
-#ifdef PH_ONLINE_CORE_ONLY
-#ifndef PH_HAS_RAWDOG_JIT
-    UNREFERENCED_PARAMETER(Online);
-    UNREFERENCED_PARAMETER(Table);
-    UNREFERENCED_PARAMETER(CompileFlagsPointer);
-    return PH_E_NOT_IMPLEMENTED;
-#else
-    //
-    // Core-only builds do not include LLVM support; restrict to RawDog.
-    //
-
-    if (CompileFlags.JitBackendLlvm) {
-        return PH_E_NOT_IMPLEMENTED;
-    }
-
-    if (!CompileFlags.JitBackendRawDog) {
+#if defined(PH_ONLINE_CORE_ONLY) && defined(PH_HAS_RAWDOG_JIT)
+    // Keep RawDog as the default for core clients. An explicit LLVM request
+    // is handled by the optional PerfectHashLLVM runtime.
+    if (!CompileFlags.JitBackendLlvm) {
         CompileFlags.JitBackendRawDog = TRUE;
     }
 #endif
-#endif
 
-#if !defined(PH_ONLINE_CORE_ONLY) || defined(PH_HAS_RAWDOG_JIT)
     //
     // Dispatch to the table's Compile() routine.
     //
@@ -105,7 +91,6 @@ Return Value:
     return Table->Vtbl->Compile(Table,
                                 &CompileFlags,
                                 PerfectHashGetCurrentCpuArch());
-#endif
 }
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

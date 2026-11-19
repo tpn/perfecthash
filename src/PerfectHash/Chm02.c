@@ -689,6 +689,8 @@ Return Value:
     Table->Flags.VertexPairsArrayUsesLargePages = (
         Graph->Flags.VertexPairsArrayUsesLargePages
     );
+    Table->Flags.UsedNeonHashFunction = Graph->Flags.UsedNeonHashFunction;
+    Table->Flags.UsedJitHashFunction = Graph->Flags.UsedJitHashFunction;
 
     //
     // Copy the cycle counters and elapsed microseconds from the winning graph.

@@ -59,3 +59,108 @@ jobs:
           & "$root/build/examples/sqlite-online-jit/Release/sqlite-online-jit.exe" --backend rawdog-jit --dim-size 2000 --fact-size 20000 --iterations 2 --vector-width 16
           & "$root/build/examples/sqlite-online-jit/Release/sqlite-online-jit.exe" --backend llvm-jit --dim-size 2000 --fact-size 20000 --iterations 2 --vector-width 1
           & "$root/build/examples/sqlite-online-jit/Release/sqlite-online-jit.exe" --matrix --dim-size 512 --fact-size 4096 --iterations 1
+
+      - name: Run Debug and Release standalone examples against a static-only SDK
+        shell: pwsh
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          $scratch = "$env:RUNNER_TEMP/perfecthash-static-examples"
+          $sdk = "$scratch/sdk"
+          $configs = 'Release', 'Debug'
+          cmake --build build --config Debug --target PerfectHashOnlineCoreStatic --parallel
+          foreach ($config in $configs) {
+            $archives = "$sdk/lib/static/$config"
+            New-Item -ItemType Directory -Path $archives -Force | Out-Null
+            Copy-Item "build/lib/$config/static/PerfectHashOnlineCore.lib" $archives
+          }
+          Copy-Item include $sdk -Recurse
+          $examples = 'cpp-console-online-jit', 'sqlite-online-jit'
+          $sharedLib = "$sdk/lib/Release/PerfectHashOnlineCore.lib"
+          $sharedDll = "$sdk/bin/PerfectHashOnlineCore.dll"
+          New-Item -ItemType Directory -Path "$sdk/lib/Release", "$sdk/lib/Debug", "$sdk/bin" -Force | Out-Null
+          Copy-Item build/lib/Release/PerfectHashOnlineCore.lib $sharedLib
+          Copy-Item build/bin/Release/PerfectHashOnlineCore.dll $sharedDll
+          foreach ($example in $examples) {
+            $probe = "$scratch/$example-missing-asm"
+            $options = @('-S', "examples/$example", '-B', $probe, '-G', 'Ninja Multi-Config', "-DPERFECTHASH_ROOT=$sdk", '-DPH_ONLINE_JIT_PREFER_SHARED=OFF')
+            & {
+              $PSNativeCommandUseErrorActionPreference = $false
+              $diagnostic = cmake @options "-DPERFECTHASH_ONLINE_JIT_LIBRARY=$sdk/lib/static/Release/PerfectHashOnlineCore.lib" 2>&1 | Out-String
+              if (!$LASTEXITCODE -or $diagnostic -notmatch 'requires\s+PerfectHashAsm\.lib') { throw "Expected the missing ASM dependency diagnostic. $diagnostic" }
+            }
+            cmake @options -U PERFECTHASH_ONLINE_JIT_LIBRARY
+            cmake --build $probe --config Release --target "$example-runtime"
+            if (!(Test-Path -LiteralPath "$probe/Release/PerfectHashOnlineCore.dll")) { throw "$example did not select the complete shared SDK." }
+          }
+          # A flat Release DLL can accompany lib/Release, but cannot complete a Debug import.
+          $debugLib = "$sdk/lib/Debug/PerfectHashOnlineCore.lib"
+          Move-Item -LiteralPath $sharedLib -Destination $debugLib
+          foreach ($example in $examples) {
+            & {
+              $PSNativeCommandUseErrorActionPreference = $false
+              $diagnostic = cmake -S "examples/$example" -B "$scratch/$example-mismatch" -G "Ninja Multi-Config" `
+                "-DPERFECTHASH_ROOT=$sdk" -DPH_ONLINE_JIT_PREFER_SHARED=ON 2>&1 | Out-String
+              if (!$LASTEXITCODE -or $diagnostic -notmatch 'requires\s+PerfectHashOnlineCore\.dll') { throw "Expected the missing Debug runtime diagnostic. $diagnostic" }
+            }
+          }
+          Remove-Item -LiteralPath $debugLib, $sharedDll
+          Copy-Item build/lib/Release/PerfectHashAsm.lib "$sdk/lib"
+          foreach ($example in $examples) {
+            cmake -S "examples/$example" -B "$scratch/$example" -G "Ninja Multi-Config" "-DPERFECTHASH_ROOT=$sdk"
+          }
+          foreach ($config in $configs) {
+            cmake --build "$scratch/cpp-console-online-jit" --config $config --parallel
+            $console = & "$scratch/cpp-console-online-jit/$config/cpp-console-online-jit.exe" --backend rawdog-jit --vector-width 1
+            if (!($console -match 'mode=jit\.')) { throw "Console example did not use the JIT. $console" }
+            cmake --build "$scratch/sqlite-online-jit" --config $config --parallel
+            $sqlite = & "$scratch/sqlite-online-jit/$config/sqlite-online-jit.exe" --backend rawdog-jit --vector-width 1 --dim-size 512 --fact-size 4096 --iterations 1
+            if (!($sqlite -match 'jit enabled:\s+1$')) { throw "SQLite example did not use the JIT. $sqlite" }
+          }
+
+  arm64-jit:
+    runs-on: windows-11-arm
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Install native LLVM development package
+        shell: pwsh
+        run: |
+          $package = 'clang+llvm-23.1.6-aarch64-pc-windows-msvc'
+          $archive = "$env:RUNNER_TEMP/$package.tar.xz"
+          curl.exe -fL --retry 3 -o $archive "https://github.com/llvm/llvm-project/releases/download/llvmorg-23.1.6/$package.tar.xz"
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          if ((Get-FileHash $archive -Algorithm SHA256).Hash -ne 'fa5a25df6a1405fdfb9942f4d5cc73bfc3b8b31cfd43ee2fbd43bd2e3168be01') {
+            throw 'Unexpected LLVM archive checksum'
+          }
+          tar.exe -xf $archive -C $env:RUNNER_TEMP
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          "$env:RUNNER_TEMP/$package/bin" >> $env:GITHUB_PATH
+          "LLVM_DIR=$env:RUNNER_TEMP/$package/lib/cmake/llvm" >> $env:GITHUB_ENV
+      - name: Build native ARM64 tests and JIT backends
+        shell: pwsh
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}/Microsoft Visual Studio/Installer/vswhere.exe"
+          $vs = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.ARM64 -property installationPath
+          & "$vs/Common7/Tools/Launch-VsDevShell.ps1" -Arch arm64 -HostArch arm64 -SkipAutomaticLocation
+          cmake --preset ninja-multi -DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl "-DLLVM_DIR=$env:LLVM_DIR" -DPERFECTHASH_STATIC_LLVM=OFF
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          cmake --build build --config Release --parallel
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          $prefix = "$env:RUNNER_TEMP/perfecthash-installed"
+          $client = "$env:RUNNER_TEMP/perfecthash-client"
+          cmake --install build --config Release --prefix $prefix
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          cmake -S tests/installed-online-jit -B $client -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl "-DCMAKE_PREFIX_PATH=$prefix"
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          cmake --build $client
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          $env:PATH = "$prefix/bin;$env:PATH"
+          ctest --test-dir $client --no-tests=error --output-on-failure
+      - name: Run ARM64 unit tests and exercise both JITs
+        shell: pwsh
+        env:
+          PERFECT_HASH_ONLINE_MAX_CONCURRENCY: 1
+        run: |
+          # The x64 job has no LLVM plugin, so the tests that need one run here.
+          ctest --test-dir build -C Release -R '^perfecthash_unit_tests\.|^perfecthash\.llvm\.|^perfecthash\.cli\.hash_jit$' --no-tests=error --output-on-failure --timeout 180

@@ -145,15 +145,15 @@ Return Value:
     USHORT Length;
     USHORT BaseLength;
     USHORT NumberOfPages;
-    ULONG Count = 0;
     ULONG ReferenceCount;
     ULONG NumberOfKeysFiles = 0;
     BOOLEAN Silent;
-    BOOLEAN Failed;
     BOOLEAN Terminate;
     BOOLEAN FindBestGraph;
     BOOLEAN MonitorLowMemory;
     HRESULT Result;
+    HRESULT CleanupResult;
+    HRESULT BatchResult = S_OK;
     HRESULT TableCreateResult;
     PCHAR Buffer;
     PCHAR BaseBuffer = NULL;
@@ -164,7 +164,6 @@ Return Value:
     HANDLE FindHandle = NULL;
     HANDLE OutputHandle = NULL;
     HANDLE ProcessHandle = NULL;
-    ULONG Failures;
     ULONG KeySizeInBytes;
     ULONGLONG BufferSize = 0;
     ULONGLONG RowBufferSize = 0;
@@ -173,7 +172,7 @@ Return Value:
     WIN32_FIND_DATAW FindData;
     UNICODE_STRING WildcardPath;
     UNICODE_STRING KeysPathString;
-    LARGE_INTEGER EmptyEndOfFile = { 0 };
+    LARGE_INTEGER CompletedCsvEndOfFile = { 0 };
     PLARGE_INTEGER EndOfFile;
     PPERFECT_HASH_KEYS Keys = NULL;
     PPERFECT_HASH_TABLE Table = NULL;
@@ -466,6 +465,12 @@ Return Value:
         NumberOfKeysFiles++;
     } while (FindNextFileW(FindHandle, &FindData));
 
+    if (GetLastError() != ERROR_NO_MORE_FILES) {
+        SYS_ERROR(FindNextFileW);
+        Result = PH_E_SYSTEM_CALL_FAILED;
+        goto Error;
+    }
+
     //
     // Sanity check we saw at least one *.keys file.
     //
@@ -485,6 +490,7 @@ Return Value:
         Result = PH_E_SYSTEM_CALL_FAILED;
         goto Error;
     }
+    FindHandle = NULL;
 
     //
     // Now that we know how many *.keys files to expect in the target directory,
@@ -571,7 +577,6 @@ Return Value:
     // Initialize local variables and then begin the main loop.
     //
 
-    Failures = 0;
     Terminate = FALSE;
     ZeroStruct(KeysBitmap);
 
@@ -598,19 +603,10 @@ Return Value:
 
 #define CHECK_CTRL_C()                \
     if (CtrlCPressed) {               \
-        Failures++;                   \
         Terminate = TRUE;             \
         Result = PH_E_CTRL_C_PRESSED; \
         goto ReleaseTable;            \
     }
-
-        Count++;
-
-        //
-        // Clear the failure flag at the top of every loop invocation.
-        //
-
-        Failed = FALSE;
 
         //
         // Copy the filename over to the fully-qualified keys path.
@@ -637,8 +633,8 @@ Return Value:
 
         if (FAILED(Result)) {
             PH_ERROR(PerfectHashKeysCreateInstance, Result);
-            Failures++;
-            break;
+            Terminate = TRUE;
+            goto ReleaseKeys;
         }
 
         Result = Keys->Vtbl->Load(Keys,
@@ -649,7 +645,6 @@ Return Value:
         if (FAILED(Result)) {
             PH_KEYS_ERROR(PerfectHashKeysLoad, Result);
             PRINT_WSTR(KeysPathString.Buffer);
-            Failures++;
             Terminate = TRUE;
             goto ReleaseKeys;
         }
@@ -660,7 +655,6 @@ Return Value:
 
         if (FAILED(Result)) {
             PH_KEYS_ERROR(PerfectHashKeysGetFlags, Result);
-            Failures++;
             Terminate = TRUE;
             goto ReleaseKeys;
         }
@@ -671,7 +665,6 @@ Return Value:
 
         if (FAILED(Result)) {
             PH_KEYS_ERROR(PerfectHashKeysGetAddress, Result);
-            Failures++;
             Terminate = TRUE;
             goto ReleaseKeys;
         }
@@ -689,7 +682,6 @@ Return Value:
 
         if (FAILED(Result)) {
             PH_ERROR(PerfectHashTableCreateInstance, Result);
-            Failures++;
             Terminate = TRUE;
             goto ReleaseKeys;
         }
@@ -705,12 +697,8 @@ Return Value:
 
         TableCreateResult = Result;
 
-        CHECK_CTRL_C();
-
         if (FAILED(Result)) {
             PH_KEYS_ERROR(PerfectHashTableCreate, Result);
-            Failed = TRUE;
-            Failures++;
             goto ReleaseTable;
         }
 
@@ -719,9 +707,14 @@ Return Value:
         if (Result != S_OK) {
 
             Coverage = &EmptyCoverage;
+            if (Result == PH_I_CREATE_TABLE_ROUTINE_FAILED_TO_FIND_SOLUTION &&
+                Context->State.FixedAttemptsReached) {
+                Result = S_OK;
+            }
 
         } else {
 
+            CHECK_CTRL_C();
             Coverage = Table->Coverage;
 
             //
@@ -734,8 +727,6 @@ Return Value:
 
                 if (FAILED(Result)) {
                     PH_TABLE_ERROR(PerfectHashTableTest, Result);
-                    Failed = TRUE;
-                    Failures++;
                     goto ReleaseTable;
                 }
             }
@@ -754,8 +745,6 @@ Return Value:
 
                 if (FAILED(Result)) {
                     PH_TABLE_ERROR(PerfectHashTableCompile, Result);
-                    Failures++;
-                    Failed = TRUE;
                     goto ReleaseTable;
                 }
             }
@@ -792,6 +781,7 @@ Return Value:
             WRITE_BULK_CREATE_CSV_ROW();
         }
         _No_competing_thread_end_
+        CompletedCsvEndOfFile = CsvFile->NumberOfBytesWritten;
 
     ReleaseTable:
 
@@ -820,12 +810,27 @@ Return Value:
     ReleaseKeys:
 
         RELEASE(Keys);
+        // Keep the first hard failure, or the first informational outcome if
+        // every input completed without a hard failure.
+        if (BatchResult == S_OK || (SUCCEEDED(BatchResult) && FAILED(Result))) {
+            BatchResult = Result;
+        }
 
         if (Terminate || CtrlCPressed) {
             break;
         }
 
-    } while (FindNextFileW(FindHandle, &FindData));
+        if (!FindNextFileW(FindHandle, &FindData)) {
+            if (GetLastError() != ERROR_NO_MORE_FILES) {
+                SYS_ERROR(FindNextFileW);
+                if (SUCCEEDED(BatchResult)) {
+                    BatchResult = PH_E_SYSTEM_CALL_FAILED;
+                }
+            }
+            break;
+        }
+
+    } while (TRUE);
 
     //
     // Bulk create complete!
@@ -833,14 +838,14 @@ Return Value:
 
     NEWLINE();
 
-    if ((!Failures && !Terminate) || CtrlCPressed) {
-        Result = S_OK;
-        goto End;
+    // A signal can stop the batch after Create returned a timeout. Keep
+    // the completed input's outcome, just as single-table creation does.
+    if (Result == S_OK && SUCCEEDED(BatchResult) && CtrlCPressed) {
+        Result = PH_E_CTRL_C_PRESSED;
+    } else {
+        Result = BatchResult;
     }
-
-    //
-    // Intentional follow-on to Error.
-    //
+    goto End;
 
 Error:
 
@@ -866,26 +871,30 @@ End:
 
     if (RowBuffer) {
         ASSERT(Context->RowBuffer);
-        Result = Rtl->Vtbl->DestroyBuffer(Rtl,
-                                          ProcessHandle,
-                                          &RowBuffer,
-                                          RowBufferSize);
-        if (FAILED(Result)) {
+        CleanupResult = Rtl->Vtbl->DestroyBuffer(Rtl,
+                                                 ProcessHandle,
+                                                 &RowBuffer,
+                                                 RowBufferSize);
+        if (FAILED(CleanupResult)) {
             SYS_ERROR(VirtualFree);
-            Result = PH_E_SYSTEM_CALL_FAILED;
+            if (Result == S_OK) {
+                Result = PH_E_SYSTEM_CALL_FAILED;
+            }
         }
         Context->RowBuffer = RowBuffer = NULL;
     }
 
     if (BaseBuffer) {
         ASSERT(BufferSize != 0);
-        Result = Rtl->Vtbl->DestroyBuffer(Rtl,
-                                          ProcessHandle,
-                                          &BaseBuffer,
-                                          BufferSize);
-        if (FAILED(Result)) {
+        CleanupResult = Rtl->Vtbl->DestroyBuffer(Rtl,
+                                                 ProcessHandle,
+                                                 &BaseBuffer,
+                                                 BufferSize);
+        if (FAILED(CleanupResult)) {
             SYS_ERROR(VirtualFree);
-            Result = PH_E_SYSTEM_CALL_FAILED;
+            if (Result == S_OK) {
+                Result = PH_E_SYSTEM_CALL_FAILED;
+            }
         }
         BaseBuffer = NULL;
     }
@@ -893,7 +902,9 @@ End:
     if (FindHandle) {
         if (!FindClose(FindHandle)) {
             SYS_ERROR(FindClose);
-            Result = PH_E_SYSTEM_CALL_FAILED;
+            if (Result == S_OK) {
+                Result = PH_E_SYSTEM_CALL_FAILED;
+            }
         }
         FindHandle = NULL;
     }
@@ -901,21 +912,23 @@ End:
     ClearContextBulkCreate(Context);
 
     //
-    // Close the .csv file.  If we encountered an error, use 0 as end-of-file,
-    // which will cause the Close() call to restore it to its original state
-    // (including potentially deleting it if it didn't exist when we opened it).
+    // On interruption or failure, retain rows through the last complete one.
+    // Zero restores the original file if this batch completed no rows.
     //
 
-    if (Result != S_OK && !CtrlCPressed) {
-        EndOfFile = &EmptyEndOfFile;
+    if (Result != S_OK) {
+        EndOfFile = &CompletedCsvEndOfFile;
     } else {
         EndOfFile = NULL;
     }
 
     if (CsvFile) {
-        Result = CsvFile->Vtbl->Close(CsvFile, EndOfFile);
-        if (FAILED(Result)) {
-            PH_ERROR(PerfectHashBulkCreate_CloseCsvFile, Result);
+        CleanupResult = CsvFile->Vtbl->Close(CsvFile, EndOfFile);
+        if (FAILED(CleanupResult)) {
+            PH_ERROR(PerfectHashBulkCreate_CloseCsvFile, CleanupResult);
+            if (Result == S_OK) {
+                Result = CleanupResult;
+            }
         }
     }
 

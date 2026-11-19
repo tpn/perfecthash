@@ -1816,7 +1816,7 @@ Crc32HashUnicodeString(
 }
 
 #ifdef PH_WINDOWS
-size_t __cdecl __imp_wcslen(_In_z_ wchar_t const *s)
+size_t __cdecl PerfectHashWcslen(_In_z_ wchar_t const *s)
 {
     const wchar_t *p = s;
     while (*p)

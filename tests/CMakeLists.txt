@@ -44,6 +44,9 @@ set_target_properties(perfecthash_unit_tests PROPERTIES
 if(PERFECTHASH_HAS_RAWDOG_JIT)
     target_compile_definitions(perfecthash_unit_tests PRIVATE PH_HAS_RAWDOG_JIT)
 endif()
+if(TARGET PerfectHashLLVM)
+    add_dependencies(perfecthash_unit_tests PerfectHashLLVM)
+endif()
 
 add_executable(perfecthash_online_jit_invalid_env
     PerfectHashOnlineJitInvalidEnv.cpp
@@ -82,6 +85,78 @@ if(PERFECTHASH_HAS_RAWDOG_JIT)
 endif()
 
 include(GoogleTest)
+if(PERFECTHASH_ARCH_ARM64)
+    add_executable(perfecthash_neon_collision_test GraphNeonCollisionTest.c)
+    target_link_libraries(perfecthash_neon_collision_test PRIVATE PerfectHashOnlineCoreStatic)
+    target_compile_definitions(perfecthash_neon_collision_test PRIVATE _PERFECT_HASH_INTERNAL_BUILD)
+    target_include_directories(perfecthash_neon_collision_test PRIVATE "${PERFECTHASH_SRC_DIR}/PerfectHash")
+    add_test(NAME perfecthash_unit_tests.Arm64NeonCollisionPrefix COMMAND perfecthash_neon_collision_test)
+    set_tests_properties(perfecthash_unit_tests.Arm64NeonCollisionPrefix PROPERTIES SKIP_RETURN_CODE 77)
+endif()
+
+if((WIN32 OR PERFECTHASH_IS_LINUX) AND PERFECTHASH_ARCH_ARM64 AND PERFECTHASH_HAS_RAWDOG_JIT AND TARGET PerfectHashLLVM)
+    # Exercise the slim API through the shared library used by installed Core clients.
+    add_executable(perfecthash_arm64_online_core_tests PerfectHashOnlineJitTests.cpp)
+    target_link_libraries(perfecthash_arm64_online_core_tests PRIVATE PerfectHashOnlineCore GTest::gtest_main)
+    target_compile_features(perfecthash_arm64_online_core_tests PRIVATE cxx_std_17)
+    perfecthash_apply_common_definitions(perfecthash_arm64_online_core_tests)
+    target_compile_definitions(perfecthash_arm64_online_core_tests PRIVATE PH_HAS_RAWDOG_JIT)
+    add_dependencies(perfecthash_arm64_online_core_tests PerfectHashLLVM)
+    add_test(NAME perfecthash_unit_tests.Arm64OnlineCoreJit COMMAND perfecthash_arm64_online_core_tests)
+endif()
+
+if(TARGET PerfectHashLLVM)
+    # A static client loads PerfectHashLLVM from its own directory on Windows
+    # and through its rpath elsewhere. Give this one a plugin that lacks the
+    # hash JIT entry points, in a directory of its own.
+    add_library(perfecthash_stale_llvm_plugin SHARED StaleLlvmPlugin.c)
+    add_executable(perfecthash_stale_llvm_plugin_client StaleLlvmPluginClient.cpp)
+    set(ph_stale_dir "${CMAKE_CURRENT_BINARY_DIR}/stale-llvm-plugin")
+    set(ph_stale_dirs)
+    foreach(ph_kind RUNTIME LIBRARY ARCHIVE)
+        list(APPEND ph_stale_dirs ${ph_kind}_OUTPUT_DIRECTORY "${ph_stale_dir}")
+        foreach(config ${CMAKE_CONFIGURATION_TYPES})
+            string(TOUPPER "${config}" config_upper)
+            list(APPEND ph_stale_dirs
+                ${ph_kind}_OUTPUT_DIRECTORY_${config_upper} "${ph_stale_dir}/${config}")
+        endforeach()
+    endforeach()
+    set_target_properties(
+        perfecthash_stale_llvm_plugin perfecthash_stale_llvm_plugin_client
+        PROPERTIES ${ph_stale_dirs}
+    )
+    set_target_properties(perfecthash_stale_llvm_plugin PROPERTIES OUTPUT_NAME PerfectHashLLVM)
+    target_link_libraries(perfecthash_stale_llvm_plugin_client PRIVATE PerfectHashOnlineCoreStatic)
+    target_compile_features(perfecthash_stale_llvm_plugin_client PRIVATE cxx_std_17)
+    add_dependencies(perfecthash_stale_llvm_plugin_client perfecthash_stale_llvm_plugin)
+    if(NOT WIN32)
+        # A target's own link options precede the archive's rpath to the real plugin.
+        target_link_options(perfecthash_stale_llvm_plugin_client PRIVATE
+            "LINKER:-rpath,$<TARGET_FILE_DIR:perfecthash_stale_llvm_plugin>")
+    endif()
+    add_test(
+        NAME perfecthash.llvm.stale_plugin
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/check_stale_llvm_plugin.py
+            $<TARGET_FILE:perfecthash_stale_llvm_plugin_client>
+    )
+    if(WIN32)
+        # Windows also says why a plugin could not be loaded. Run the same
+        # client with no plugin, then with the real one and no LLVM-C.dll.
+        get_target_property(ph_llvm_plugin_libraries PerfectHashLLVM LINK_LIBRARIES)
+        set(ph_llvm_plugin_imports_llvm_c 0)
+        if("LLVM-C" IN_LIST ph_llvm_plugin_libraries)
+            set(ph_llvm_plugin_imports_llvm_c 1)
+        endif()
+        add_test(
+            NAME perfecthash.llvm.plugin_load_failures
+            COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/check_llvm_plugin_load_failures.py
+                $<TARGET_FILE:perfecthash_stale_llvm_plugin_client>
+                $<TARGET_FILE:PerfectHashLLVM>
+                ${ph_llvm_plugin_imports_llvm_c}
+        )
+    endif()
+endif()
+
 gtest_discover_tests(perfecthash_unit_tests
     TEST_PREFIX "perfecthash_unit_tests."
 )
@@ -139,6 +214,29 @@ set(TEST_KEYS_DIR "${PERFECTHASH_ROOT_DIR}/keys")
 set(TEST_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/cli-out")
 
 if(TARGET PerfectHashCreateExe AND TARGET PerfectHashBulkCreateExe)
+    add_test(
+        NAME perfecthash.cli.exit_codes
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/check_cli_exit_codes.py
+            $<TARGET_FILE:PerfectHashCreateExe> $<TARGET_FILE:PerfectHashBulkCreateExe>
+    )
+
+    add_test(
+        NAME perfecthash.cli.usage-in-sync
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/check_usage_in_sync.py
+            $<TARGET_FILE:PerfectHashCreateExe> ${PERFECTHASH_ROOT_DIR}/USAGE.txt
+    )
+
+    if(TARGET PerfectHashLLVM)
+        # Parallel solves hash through the LLVM hash JIT, one set of seeds per graph.
+        add_test(
+            NAME perfecthash.cli.hash_jit
+            COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/check_cli_hash_jit.py
+                $<TARGET_FILE:PerfectHashCreateExe> ${TEST_KEYS_FILE}
+        )
+        # Ten solves in one test. A shorter ctest --timeout must not cut it off.
+        set_tests_properties(perfecthash.cli.hash_jit PROPERTIES TIMEOUT 600)
+    endif()
+
     add_test(
         NAME perfecthash.cli.create
         COMMAND ${CMAKE_COMMAND}
@@ -368,4 +466,19 @@ if(TARGET PerfectHashCreateExe AND TARGET PerfectHashBulkCreateExe)
     endif()
 else()
     message(STATUS "Skipping PerfectHash CLI tests for profile '${PERFECTHASH_BUILD_PROFILE_NORMALIZED}' (CLI executable targets are not available).")
+endif()
+
+# Each online JIT example carries its own copy of these modules so that it can
+# be copied out of the tree. Fail when the two copies drift apart.
+set(ph_console_cmake "${PERFECTHASH_ROOT_DIR}/examples/cpp-console-online-jit/cmake")
+set(ph_sqlite_cmake "${PERFECTHASH_ROOT_DIR}/examples/sqlite-online-jit/cmake")
+if(IS_DIRECTORY "${ph_console_cmake}" AND IS_DIRECTORY "${ph_sqlite_cmake}")
+    foreach(ph_module FindPerfectHashOnlineJit PerfectHashOnlineJitRoots StagePerfectHashRuntime)
+        add_test(
+            NAME perfecthash.examples.online-jit-cmake-in-sync.${ph_module}
+            COMMAND ${CMAKE_COMMAND} -E compare_files
+                "${ph_console_cmake}/${ph_module}.cmake"
+                "${ph_sqlite_cmake}/${ph_module}.cmake"
+        )
+    endforeach()
 endif()

@@ -54,7 +54,7 @@ Abstract:
     Table->Name##ElapsedCycles.QuadPart =       \
         Graph->Name##ElapsedCycles.QuadPart;    \
     Table->Name##ElapsedMicroseconds.QuadPart = \
-        Graph->Name##ElapsedCycles.QuadPart
+        Graph->Name##ElapsedMicroseconds.QuadPart
 
 #define DECL_GRAPH_COUNTERS_WITHIN_STRUCT()            \
     DECL_GRAPH_COUNTER_STRUCT_FIELDS(AddKeys);         \

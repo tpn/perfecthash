@@ -270,80 +270,6 @@ RawDogHostHasAvx512(
 }
 #endif
 
-typedef
-VOID
-(PH_JIT_INDEX32X4_FUNCTION)(
-    _In_ ULONG Key1,
-    _In_ ULONG Key2,
-    _In_ ULONG Key3,
-    _In_ ULONG Key4,
-    _Out_ PULONG Index1,
-    _Out_ PULONG Index2,
-    _Out_ PULONG Index3,
-    _Out_ PULONG Index4
-    );
-typedef PH_JIT_INDEX32X4_FUNCTION *PPH_JIT_INDEX32X4_FUNCTION;
-
-typedef
-VOID
-(PH_JIT_INDEX32X8_FUNCTION)(
-    _In_ ULONG Key1,
-    _In_ ULONG Key2,
-    _In_ ULONG Key3,
-    _In_ ULONG Key4,
-    _In_ ULONG Key5,
-    _In_ ULONG Key6,
-    _In_ ULONG Key7,
-    _In_ ULONG Key8,
-    _Out_ PULONG Index1,
-    _Out_ PULONG Index2,
-    _Out_ PULONG Index3,
-    _Out_ PULONG Index4,
-    _Out_ PULONG Index5,
-    _Out_ PULONG Index6,
-    _Out_ PULONG Index7,
-    _Out_ PULONG Index8
-    );
-typedef PH_JIT_INDEX32X8_FUNCTION *PPH_JIT_INDEX32X8_FUNCTION;
-
-typedef
-VOID
-(PH_JIT_INDEX32X16_FUNCTION)(
-    _In_ ULONG Key1,
-    _In_ ULONG Key2,
-    _In_ ULONG Key3,
-    _In_ ULONG Key4,
-    _In_ ULONG Key5,
-    _In_ ULONG Key6,
-    _In_ ULONG Key7,
-    _In_ ULONG Key8,
-    _In_ ULONG Key9,
-    _In_ ULONG Key10,
-    _In_ ULONG Key11,
-    _In_ ULONG Key12,
-    _In_ ULONG Key13,
-    _In_ ULONG Key14,
-    _In_ ULONG Key15,
-    _In_ ULONG Key16,
-    _Out_ PULONG Index1,
-    _Out_ PULONG Index2,
-    _Out_ PULONG Index3,
-    _Out_ PULONG Index4,
-    _Out_ PULONG Index5,
-    _Out_ PULONG Index6,
-    _Out_ PULONG Index7,
-    _Out_ PULONG Index8,
-    _Out_ PULONG Index9,
-    _Out_ PULONG Index10,
-    _Out_ PULONG Index11,
-    _Out_ PULONG Index12,
-    _Out_ PULONG Index13,
-    _Out_ PULONG Index14,
-    _Out_ PULONG Index15,
-    _Out_ PULONG Index16
-    );
-typedef PH_JIT_INDEX32X16_FUNCTION *PPH_JIT_INDEX32X16_FUNCTION;
-
 typedef struct _RAW_DOG_PATCH_ENTRY {
     ULONGLONG Sentinel;
     ULONGLONG Value;
@@ -751,10 +677,6 @@ CreateRawDogCode(
         return Result;
     }
 
-#if defined(__GNUC__)
-    __builtin___clear_cache((char *)Code, (char *)Code + CodeSize);
-#endif
-
     Success = VirtualProtect(Code,
                              AllocSize,
                              PAGE_EXECUTE_READ,
@@ -764,6 +686,16 @@ CreateRawDogCode(
         VirtualFree(Code, 0, MEM_RELEASE);
         return PH_E_SYSTEM_CALL_FAILED;
     }
+
+#if defined(PH_WINDOWS)
+    if (!FlushInstructionCache(GetCurrentProcess(), Code, CodeSize)) {
+        SYS_ERROR(FlushInstructionCache);
+        VirtualFree(Code, 0, MEM_RELEASE);
+        return PH_E_SYSTEM_CALL_FAILED;
+    }
+#elif defined(__GNUC__)
+    __builtin___clear_cache((char *)Code, (char *)Code + CodeSize);
+#endif
 
     *CodeOut = Code;
     return S_OK;
@@ -780,6 +712,51 @@ FreeRawDogCode(
         *CodePointer = NULL;
     }
 }
+
+#if defined(PH_WINDOWS) && defined(PH_RAWDOG_ARM64)
+static
+HRESULT
+RegisterRawDogBatchUnwind(
+    PBYTE Code,
+    SIZE_T CodeSize,
+    ULONG FrameBytes,
+    PRUNTIME_FUNCTION Entry
+    )
+{
+    const ULONG *Words = (const ULONG *)Code;
+    SIZE_T Count = CodeSize / sizeof(*Words);
+    ULONG SaveFpLr, RestoreFpLr;
+    SIZE_T End;
+
+    // The packed Windows ARM64 unwind format describes the canonical pair:
+    // stp fp,lr,[sp,#-FrameBytes]!; mov fp,sp ... ldp fp,lr,[sp],#FrameBytes; ret.
+    // Check the frame instructions before registering them. The literal pool
+    // after RET is data and must be outside the unwind range.
+    SaveFpLr = 0xa9807bfdu | (((0u - FrameBytes / 8) & 0x7f) << 15);
+    RestoreFpLr = 0xa8c07bfdu | ((FrameBytes / 8) << 15);
+    if (Count < 4 || Words[0] != SaveFpLr || Words[1] != 0x910003fdu) {
+        return PH_E_INVARIANT_CHECK_FAILED;
+    }
+    for (End = 3; End < Count; End++) {
+        if (Words[End] == 0xd65f03c0u) {
+            break;
+        }
+    }
+    if (End == Count || End + 1 > 0x7ff || Words[End-1] != RestoreFpLr) {
+        return PH_E_INVARIANT_CHECK_FAILED;
+    }
+
+    Entry->Flag = 1;
+    Entry->CR = 3;
+    Entry->FrameSize = FrameBytes / 16;
+    Entry->FunctionLength = (ULONG)(End + 1);
+    if (!RtlAddFunctionTable(Entry, 1, (ULONG_PTR)Code)) {
+        Entry->UnwindData = 0;
+        return PH_E_SYSTEM_CALL_FAILED;
+    }
+    return S_OK;
+}
+#endif
 
 static
 HRESULT
@@ -2222,7 +2199,6 @@ CompileChm01IndexVectorJitRawDog(
     RAW_DOG_PATCH_ENTRY Entries[10];
     ULONG EntryCount = 0;
     BOOLEAN UseAssigned16;
-    PERFECT_HASH_JIT_MAX_ISA_ID MaxIsa = PerfectHashJitMaxIsaAuto;
     PBYTE SourceCode = NULL;
     SIZE_T CodeSize = 0;
     PBYTE Code;
@@ -2230,17 +2206,13 @@ CompileChm01IndexVectorJitRawDog(
 
     if (!CompileIndex32x4 && !CompileIndex32x8 && !CompileIndex32x16) {
         if (ARGUMENT_PRESENT(UsedIsa)) {
-            *UsedIsa = MaxIsa;
+            *UsedIsa = PerfectHashJitMaxIsaAuto;
         }
         return S_OK;
     }
 
-    //
-    // Arm64 Index32x16 RawDog code paths are not stable yet; fail fast so
-    // callers can skip unsupported configurations instead of crashing.
-    //
-
-    if (CompileIndex32x16) {
+    // These multi-key blobs use scalar instructions.
+    if (CompileFlags->JitVectorIndex32x4 || CompileFlags->JitVectorIndex32x8) {
         return PH_E_NOT_IMPLEMENTED;
     }
 
@@ -2545,11 +2517,14 @@ CompileChm01IndexVectorJitRawDog(
         }
 
         Jit->Index32x4Function = Code;
-        Jit->Flags.Index32x4Compiled = TRUE;
-        Jit->Flags.Index32x4Vector = TRUE;
-        if (MaxIsa == PerfectHashJitMaxIsaAuto) {
-            MaxIsa = PerfectHashJitMaxIsaNeon;
+#if defined(PH_WINDOWS)
+        Result = RegisterRawDogBatchUnwind(Code, CodeSize, 64,
+                                           &Jit->RawDogBatchUnwind[0]);
+        if (FAILED(Result)) {
+            return Result;
         }
+#endif
+        Jit->Flags.Index32x4Compiled = TRUE;
     }
 
     if (CompileIndex32x16) {
@@ -2639,9 +2614,14 @@ CompileChm01IndexVectorJitRawDog(
         }
 
         Jit->Index32x16Function = Code;
+#if defined(PH_WINDOWS)
+        Result = RegisterRawDogBatchUnwind(Code, CodeSize, 80,
+                                           &Jit->RawDogBatchUnwind[2]);
+        if (FAILED(Result)) {
+            return Result;
+        }
+#endif
         Jit->Flags.Index32x16Compiled = TRUE;
-        Jit->Flags.Index32x16Vector = TRUE;
-        MaxIsa = PerfectHashJitMaxIsaNeon;
     }
 
     if (CompileIndex32x8) {
@@ -2731,15 +2711,18 @@ CompileChm01IndexVectorJitRawDog(
         }
 
         Jit->Index32x8Function = Code;
-        Jit->Flags.Index32x8Compiled = TRUE;
-        Jit->Flags.Index32x8Vector = TRUE;
-        if (MaxIsa == PerfectHashJitMaxIsaAuto) {
-            MaxIsa = PerfectHashJitMaxIsaNeon;
+#if defined(PH_WINDOWS)
+        Result = RegisterRawDogBatchUnwind(Code, CodeSize, 48,
+                                           &Jit->RawDogBatchUnwind[1]);
+        if (FAILED(Result)) {
+            return Result;
         }
+#endif
+        Jit->Flags.Index32x8Compiled = TRUE;
     }
 
     if (ARGUMENT_PRESENT(UsedIsa)) {
-        *UsedIsa = MaxIsa;
+        *UsedIsa = PerfectHashJitMaxIsaAuto;
     }
 
     return S_OK;
@@ -3741,7 +3724,7 @@ RawDogTableQueryInterfaceJit(
             return E_NOINTERFACE;
         }
 
-        *Interface = &Jit->Interface;
+        *Interface = &Table->JitInterface;
         Table->Vtbl->AddRef(Table);
         return S_OK;
     }
@@ -3764,7 +3747,7 @@ RawDogTableQueryInterfaceJit(
             return E_NOINTERFACE;
         }
 
-        *Interface = &HashJit->Interface;
+        *Interface = &Table->HashJitInterface;
         Table->Vtbl->AddRef(Table);
         return S_OK;
     }
@@ -3814,612 +3797,6 @@ RawDogTableIndexJit(
     *Index = IndexFunction(Key);
     return S_OK;
 }
-
-static
-HRESULT
-RawDogJitInterfaceQueryInterface(
-    _In_ PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
-    _In_ REFIID InterfaceId,
-    _Out_ PVOID *Interface
-    )
-{
-    if (!ARGUMENT_PRESENT(Jit) ||
-        !ARGUMENT_PRESENT(Jit->Table) ||
-        !ARGUMENT_PRESENT(Interface)) {
-        return E_POINTER;
-    }
-
-    return Jit->Table->Vtbl->QueryInterface(Jit->Table,
-                                            InterfaceId,
-                                            Interface);
-}
-
-static
-ULONG
-RawDogJitInterfaceAddRef(
-    _In_ PPERFECT_HASH_TABLE_JIT_INTERFACE Jit
-    )
-{
-    if (!ARGUMENT_PRESENT(Jit) || !ARGUMENT_PRESENT(Jit->Table)) {
-        return 0;
-    }
-
-    return Jit->Table->Vtbl->AddRef(Jit->Table);
-}
-
-static
-ULONG
-RawDogJitInterfaceRelease(
-    _In_ PPERFECT_HASH_TABLE_JIT_INTERFACE Jit
-    )
-{
-    if (!ARGUMENT_PRESENT(Jit) || !ARGUMENT_PRESENT(Jit->Table)) {
-        return 0;
-    }
-
-    return Jit->Table->Vtbl->Release(Jit->Table);
-}
-
-static
-HRESULT
-RawDogJitInterfaceCreateInstance(
-    _In_ PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
-    _In_ PIUNKNOWN UnknownOuter,
-    _In_ REFIID InterfaceId,
-    _Out_ PVOID *Interface
-    )
-{
-    if (!ARGUMENT_PRESENT(Jit) || !ARGUMENT_PRESENT(Jit->Table)) {
-        return E_POINTER;
-    }
-
-    return Jit->Table->Vtbl->CreateInstance(Jit->Table,
-                                            UnknownOuter,
-                                            InterfaceId,
-                                            Interface);
-}
-
-static
-HRESULT
-RawDogJitInterfaceLockServer(
-    _In_ PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
-    _In_ BOOL Lock
-    )
-{
-    if (!ARGUMENT_PRESENT(Jit) || !ARGUMENT_PRESENT(Jit->Table)) {
-        return E_POINTER;
-    }
-
-    return Jit->Table->Vtbl->LockServer(Jit->Table, Lock);
-}
-
-static
-HRESULT
-RawDogJitInterfaceIndex32(
-    _In_ PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
-    _In_ ULONG Key,
-    _Out_ PULONG Index
-    )
-{
-    PPERFECT_HASH_TABLE Table;
-    PPERFECT_HASH_TABLE_JIT JitState;
-    ULONG (*IndexFunction)(_In_ ULONG Key);
-
-    if (!ARGUMENT_PRESENT(Jit) || !ARGUMENT_PRESENT(Index)) {
-        return E_POINTER;
-    }
-
-    Table = Jit->Table;
-    if (!ARGUMENT_PRESENT(Table)) {
-        return E_POINTER;
-    }
-
-    JitState = Table->Jit;
-    if (!ARGUMENT_PRESENT(JitState) ||
-        !JitState->Flags.Valid ||
-        !JitState->Flags.Index32Compiled) {
-        return PH_E_NOT_IMPLEMENTED;
-    }
-
-    IndexFunction = (ULONG (*)(_In_ ULONG Key))JitState->Index32Function;
-    if (!ARGUMENT_PRESENT(IndexFunction)) {
-        return PH_E_NOT_IMPLEMENTED;
-    }
-
-    *Index = IndexFunction(Key);
-    return S_OK;
-}
-
-static
-HRESULT
-RawDogJitInterfaceIndex64(
-    _In_ PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
-    _In_ ULONGLONG Key,
-    _Out_ PULONG Index
-    )
-{
-    UNREFERENCED_PARAMETER(Jit);
-    UNREFERENCED_PARAMETER(Key);
-    UNREFERENCED_PARAMETER(Index);
-    return PH_E_NOT_IMPLEMENTED;
-}
-
-static
-HRESULT
-RawDogJitInterfaceIndex32x2(
-    _In_ PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
-    _In_ ULONG Key1,
-    _In_ ULONG Key2,
-    _Out_ PULONG Index1,
-    _Out_ PULONG Index2
-    )
-{
-    UNREFERENCED_PARAMETER(Jit);
-    UNREFERENCED_PARAMETER(Key1);
-    UNREFERENCED_PARAMETER(Key2);
-    UNREFERENCED_PARAMETER(Index1);
-    UNREFERENCED_PARAMETER(Index2);
-    return PH_E_NOT_IMPLEMENTED;
-}
-
-static
-HRESULT
-RawDogJitInterfaceIndex32x4(
-    _In_ PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
-    _In_ ULONG Key1,
-    _In_ ULONG Key2,
-    _In_ ULONG Key3,
-    _In_ ULONG Key4,
-    _Out_ PULONG Index1,
-    _Out_ PULONG Index2,
-    _Out_ PULONG Index3,
-    _Out_ PULONG Index4
-    )
-{
-    PPERFECT_HASH_TABLE Table;
-    PPERFECT_HASH_TABLE_JIT JitState;
-    PPH_JIT_INDEX32X4_FUNCTION IndexFunction;
-
-    if (!ARGUMENT_PRESENT(Jit) ||
-        !ARGUMENT_PRESENT(Index1) ||
-        !ARGUMENT_PRESENT(Index2) ||
-        !ARGUMENT_PRESENT(Index3) ||
-        !ARGUMENT_PRESENT(Index4)) {
-        return E_POINTER;
-    }
-
-    Table = Jit->Table;
-    if (!ARGUMENT_PRESENT(Table)) {
-        return E_POINTER;
-    }
-
-    JitState = Table->Jit;
-    if (!ARGUMENT_PRESENT(JitState) ||
-        !JitState->Flags.Valid ||
-        !JitState->Flags.Index32x4Compiled) {
-        return PH_E_NOT_IMPLEMENTED;
-    }
-
-    IndexFunction = (PPH_JIT_INDEX32X4_FUNCTION)JitState->Index32x4Function;
-    if (!ARGUMENT_PRESENT(IndexFunction)) {
-        return PH_E_NOT_IMPLEMENTED;
-    }
-
-    IndexFunction(Key1,
-                  Key2,
-                  Key3,
-                  Key4,
-                  Index1,
-                  Index2,
-                  Index3,
-                  Index4);
-    return S_OK;
-}
-
-static
-HRESULT
-RawDogJitInterfaceIndex32x8(
-    _In_ PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
-    _In_ ULONG Key1,
-    _In_ ULONG Key2,
-    _In_ ULONG Key3,
-    _In_ ULONG Key4,
-    _In_ ULONG Key5,
-    _In_ ULONG Key6,
-    _In_ ULONG Key7,
-    _In_ ULONG Key8,
-    _Out_ PULONG Index1,
-    _Out_ PULONG Index2,
-    _Out_ PULONG Index3,
-    _Out_ PULONG Index4,
-    _Out_ PULONG Index5,
-    _Out_ PULONG Index6,
-    _Out_ PULONG Index7,
-    _Out_ PULONG Index8
-    )
-{
-    PPERFECT_HASH_TABLE Table;
-    PPERFECT_HASH_TABLE_JIT JitState;
-    PPH_JIT_INDEX32X8_FUNCTION IndexFunction;
-
-    if (!ARGUMENT_PRESENT(Jit) ||
-        !ARGUMENT_PRESENT(Index1) ||
-        !ARGUMENT_PRESENT(Index2) ||
-        !ARGUMENT_PRESENT(Index3) ||
-        !ARGUMENT_PRESENT(Index4) ||
-        !ARGUMENT_PRESENT(Index5) ||
-        !ARGUMENT_PRESENT(Index6) ||
-        !ARGUMENT_PRESENT(Index7) ||
-        !ARGUMENT_PRESENT(Index8)) {
-        return E_POINTER;
-    }
-
-    Table = Jit->Table;
-    if (!ARGUMENT_PRESENT(Table)) {
-        return E_POINTER;
-    }
-
-    JitState = Table->Jit;
-    if (!ARGUMENT_PRESENT(JitState) ||
-        !JitState->Flags.Valid ||
-        !JitState->Flags.Index32x8Compiled) {
-        return PH_E_NOT_IMPLEMENTED;
-    }
-
-    IndexFunction = (PPH_JIT_INDEX32X8_FUNCTION)JitState->Index32x8Function;
-    if (!ARGUMENT_PRESENT(IndexFunction)) {
-        return PH_E_NOT_IMPLEMENTED;
-    }
-
-    IndexFunction(Key1,
-                  Key2,
-                  Key3,
-                  Key4,
-                  Key5,
-                  Key6,
-                  Key7,
-                  Key8,
-                  Index1,
-                  Index2,
-                  Index3,
-                  Index4,
-                  Index5,
-                  Index6,
-                  Index7,
-                  Index8);
-    return S_OK;
-}
-
-static
-HRESULT
-RawDogJitInterfaceIndex32x16(
-    _In_ PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
-    _In_ ULONG Key1,
-    _In_ ULONG Key2,
-    _In_ ULONG Key3,
-    _In_ ULONG Key4,
-    _In_ ULONG Key5,
-    _In_ ULONG Key6,
-    _In_ ULONG Key7,
-    _In_ ULONG Key8,
-    _In_ ULONG Key9,
-    _In_ ULONG Key10,
-    _In_ ULONG Key11,
-    _In_ ULONG Key12,
-    _In_ ULONG Key13,
-    _In_ ULONG Key14,
-    _In_ ULONG Key15,
-    _In_ ULONG Key16,
-    _Out_ PULONG Index1,
-    _Out_ PULONG Index2,
-    _Out_ PULONG Index3,
-    _Out_ PULONG Index4,
-    _Out_ PULONG Index5,
-    _Out_ PULONG Index6,
-    _Out_ PULONG Index7,
-    _Out_ PULONG Index8,
-    _Out_ PULONG Index9,
-    _Out_ PULONG Index10,
-    _Out_ PULONG Index11,
-    _Out_ PULONG Index12,
-    _Out_ PULONG Index13,
-    _Out_ PULONG Index14,
-    _Out_ PULONG Index15,
-    _Out_ PULONG Index16
-    )
-{
-    PPERFECT_HASH_TABLE Table;
-    PPERFECT_HASH_TABLE_JIT JitState;
-    PPH_JIT_INDEX32X16_FUNCTION IndexFunction;
-
-    if (!ARGUMENT_PRESENT(Jit) ||
-        !ARGUMENT_PRESENT(Index1) ||
-        !ARGUMENT_PRESENT(Index2) ||
-        !ARGUMENT_PRESENT(Index3) ||
-        !ARGUMENT_PRESENT(Index4) ||
-        !ARGUMENT_PRESENT(Index5) ||
-        !ARGUMENT_PRESENT(Index6) ||
-        !ARGUMENT_PRESENT(Index7) ||
-        !ARGUMENT_PRESENT(Index8) ||
-        !ARGUMENT_PRESENT(Index9) ||
-        !ARGUMENT_PRESENT(Index10) ||
-        !ARGUMENT_PRESENT(Index11) ||
-        !ARGUMENT_PRESENT(Index12) ||
-        !ARGUMENT_PRESENT(Index13) ||
-        !ARGUMENT_PRESENT(Index14) ||
-        !ARGUMENT_PRESENT(Index15) ||
-        !ARGUMENT_PRESENT(Index16)) {
-        return E_POINTER;
-    }
-
-    Table = Jit->Table;
-    if (!ARGUMENT_PRESENT(Table)) {
-        return E_POINTER;
-    }
-
-    JitState = Table->Jit;
-    if (!ARGUMENT_PRESENT(JitState) ||
-        !JitState->Flags.Valid ||
-        !JitState->Flags.Index32x16Compiled) {
-        return PH_E_NOT_IMPLEMENTED;
-    }
-
-    IndexFunction = (PPH_JIT_INDEX32X16_FUNCTION)JitState->Index32x16Function;
-    if (!ARGUMENT_PRESENT(IndexFunction)) {
-        return PH_E_NOT_IMPLEMENTED;
-    }
-
-    IndexFunction(Key1,
-                  Key2,
-                  Key3,
-                  Key4,
-                  Key5,
-                  Key6,
-                  Key7,
-                  Key8,
-                  Key9,
-                  Key10,
-                  Key11,
-                  Key12,
-                  Key13,
-                  Key14,
-                  Key15,
-                  Key16,
-                  Index1,
-                  Index2,
-                  Index3,
-                  Index4,
-                  Index5,
-                  Index6,
-                  Index7,
-                  Index8,
-                  Index9,
-                  Index10,
-                  Index11,
-                  Index12,
-                  Index13,
-                  Index14,
-                  Index15,
-                  Index16);
-    return S_OK;
-}
-
-static
-HRESULT
-RawDogJitInterfaceIndex64x2(
-    _In_ PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
-    _In_ ULONGLONG Key1,
-    _In_ ULONGLONG Key2,
-    _Out_ PULONG Index1,
-    _Out_ PULONG Index2
-    )
-{
-    UNREFERENCED_PARAMETER(Jit);
-    UNREFERENCED_PARAMETER(Key1);
-    UNREFERENCED_PARAMETER(Key2);
-    UNREFERENCED_PARAMETER(Index1);
-    UNREFERENCED_PARAMETER(Index2);
-    return PH_E_NOT_IMPLEMENTED;
-}
-
-static
-HRESULT
-RawDogJitInterfaceIndex64x4(
-    _In_ PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
-    _In_ ULONGLONG Key1,
-    _In_ ULONGLONG Key2,
-    _In_ ULONGLONG Key3,
-    _In_ ULONGLONG Key4,
-    _Out_ PULONG Index1,
-    _Out_ PULONG Index2,
-    _Out_ PULONG Index3,
-    _Out_ PULONG Index4
-    )
-{
-    UNREFERENCED_PARAMETER(Jit);
-    UNREFERENCED_PARAMETER(Key1);
-    UNREFERENCED_PARAMETER(Key2);
-    UNREFERENCED_PARAMETER(Key3);
-    UNREFERENCED_PARAMETER(Key4);
-    UNREFERENCED_PARAMETER(Index1);
-    UNREFERENCED_PARAMETER(Index2);
-    UNREFERENCED_PARAMETER(Index3);
-    UNREFERENCED_PARAMETER(Index4);
-    return PH_E_NOT_IMPLEMENTED;
-}
-
-static
-HRESULT
-RawDogJitInterfaceIndex64x8(
-    _In_ PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
-    _In_ ULONGLONG Key1,
-    _In_ ULONGLONG Key2,
-    _In_ ULONGLONG Key3,
-    _In_ ULONGLONG Key4,
-    _In_ ULONGLONG Key5,
-    _In_ ULONGLONG Key6,
-    _In_ ULONGLONG Key7,
-    _In_ ULONGLONG Key8,
-    _Out_ PULONG Index1,
-    _Out_ PULONG Index2,
-    _Out_ PULONG Index3,
-    _Out_ PULONG Index4,
-    _Out_ PULONG Index5,
-    _Out_ PULONG Index6,
-    _Out_ PULONG Index7,
-    _Out_ PULONG Index8
-    )
-{
-    UNREFERENCED_PARAMETER(Jit);
-    UNREFERENCED_PARAMETER(Key1);
-    UNREFERENCED_PARAMETER(Key2);
-    UNREFERENCED_PARAMETER(Key3);
-    UNREFERENCED_PARAMETER(Key4);
-    UNREFERENCED_PARAMETER(Key5);
-    UNREFERENCED_PARAMETER(Key6);
-    UNREFERENCED_PARAMETER(Key7);
-    UNREFERENCED_PARAMETER(Key8);
-    UNREFERENCED_PARAMETER(Index1);
-    UNREFERENCED_PARAMETER(Index2);
-    UNREFERENCED_PARAMETER(Index3);
-    UNREFERENCED_PARAMETER(Index4);
-    UNREFERENCED_PARAMETER(Index5);
-    UNREFERENCED_PARAMETER(Index6);
-    UNREFERENCED_PARAMETER(Index7);
-    UNREFERENCED_PARAMETER(Index8);
-    return PH_E_NOT_IMPLEMENTED;
-}
-
-static
-HRESULT
-RawDogJitInterfaceIndex64x16(
-    _In_ PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
-    _In_ ULONGLONG Key1,
-    _In_ ULONGLONG Key2,
-    _In_ ULONGLONG Key3,
-    _In_ ULONGLONG Key4,
-    _In_ ULONGLONG Key5,
-    _In_ ULONGLONG Key6,
-    _In_ ULONGLONG Key7,
-    _In_ ULONGLONG Key8,
-    _In_ ULONGLONG Key9,
-    _In_ ULONGLONG Key10,
-    _In_ ULONGLONG Key11,
-    _In_ ULONGLONG Key12,
-    _In_ ULONGLONG Key13,
-    _In_ ULONGLONG Key14,
-    _In_ ULONGLONG Key15,
-    _In_ ULONGLONG Key16,
-    _Out_ PULONG Index1,
-    _Out_ PULONG Index2,
-    _Out_ PULONG Index3,
-    _Out_ PULONG Index4,
-    _Out_ PULONG Index5,
-    _Out_ PULONG Index6,
-    _Out_ PULONG Index7,
-    _Out_ PULONG Index8,
-    _Out_ PULONG Index9,
-    _Out_ PULONG Index10,
-    _Out_ PULONG Index11,
-    _Out_ PULONG Index12,
-    _Out_ PULONG Index13,
-    _Out_ PULONG Index14,
-    _Out_ PULONG Index15,
-    _Out_ PULONG Index16
-    )
-{
-    UNREFERENCED_PARAMETER(Jit);
-    UNREFERENCED_PARAMETER(Key1);
-    UNREFERENCED_PARAMETER(Key2);
-    UNREFERENCED_PARAMETER(Key3);
-    UNREFERENCED_PARAMETER(Key4);
-    UNREFERENCED_PARAMETER(Key5);
-    UNREFERENCED_PARAMETER(Key6);
-    UNREFERENCED_PARAMETER(Key7);
-    UNREFERENCED_PARAMETER(Key8);
-    UNREFERENCED_PARAMETER(Key9);
-    UNREFERENCED_PARAMETER(Key10);
-    UNREFERENCED_PARAMETER(Key11);
-    UNREFERENCED_PARAMETER(Key12);
-    UNREFERENCED_PARAMETER(Key13);
-    UNREFERENCED_PARAMETER(Key14);
-    UNREFERENCED_PARAMETER(Key15);
-    UNREFERENCED_PARAMETER(Key16);
-    UNREFERENCED_PARAMETER(Index1);
-    UNREFERENCED_PARAMETER(Index2);
-    UNREFERENCED_PARAMETER(Index3);
-    UNREFERENCED_PARAMETER(Index4);
-    UNREFERENCED_PARAMETER(Index5);
-    UNREFERENCED_PARAMETER(Index6);
-    UNREFERENCED_PARAMETER(Index7);
-    UNREFERENCED_PARAMETER(Index8);
-    UNREFERENCED_PARAMETER(Index9);
-    UNREFERENCED_PARAMETER(Index10);
-    UNREFERENCED_PARAMETER(Index11);
-    UNREFERENCED_PARAMETER(Index12);
-    UNREFERENCED_PARAMETER(Index13);
-    UNREFERENCED_PARAMETER(Index14);
-    UNREFERENCED_PARAMETER(Index15);
-    UNREFERENCED_PARAMETER(Index16);
-    return PH_E_NOT_IMPLEMENTED;
-}
-
-static
-HRESULT
-RawDogJitInterfaceGetInfo(
-    _In_ PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
-    _Out_ PPERFECT_HASH_TABLE_JIT_INFO Info
-    )
-{
-    PPERFECT_HASH_TABLE Table;
-    PPERFECT_HASH_TABLE_JIT JitState;
-
-    if (!ARGUMENT_PRESENT(Jit) || !ARGUMENT_PRESENT(Info)) {
-        return E_POINTER;
-    }
-
-    Table = Jit->Table;
-    if (!ARGUMENT_PRESENT(Table)) {
-        return E_POINTER;
-    }
-
-    JitState = Table->Jit;
-    if (!ARGUMENT_PRESENT(JitState) || !JitState->Flags.Valid) {
-        return PH_E_NOT_IMPLEMENTED;
-    }
-
-    memset(Info, 0, sizeof(*Info));
-    Info->SizeOfStruct = sizeof(*Info);
-    Info->Flags.AsULong = JitState->Flags.AsULong;
-    Info->JitMaxIsa = JitState->JitMaxIsa;
-    CopyRawDogString(Info->TargetCpu,
-                     sizeof(Info->TargetCpu),
-                     JitState->TargetCpu);
-    CopyRawDogString(Info->TargetFeatures,
-                     sizeof(Info->TargetFeatures),
-                     JitState->TargetFeatures);
-
-    return S_OK;
-}
-
-static PERFECT_HASH_TABLE_JIT_INTERFACE_VTBL RawDogJitInterfaceVtbl = {
-    RawDogJitInterfaceQueryInterface,
-    RawDogJitInterfaceAddRef,
-    RawDogJitInterfaceRelease,
-    RawDogJitInterfaceCreateInstance,
-    RawDogJitInterfaceLockServer,
-    RawDogJitInterfaceIndex32,
-    RawDogJitInterfaceIndex64,
-    RawDogJitInterfaceIndex32x2,
-    RawDogJitInterfaceIndex32x4,
-    RawDogJitInterfaceIndex32x8,
-    RawDogJitInterfaceIndex32x16,
-    RawDogJitInterfaceIndex64x2,
-    RawDogJitInterfaceIndex64x4,
-    RawDogJitInterfaceIndex64x8,
-    RawDogJitInterfaceIndex64x16,
-    RawDogJitInterfaceGetInfo,
-};
 
 _Use_decl_annotations_
 HRESULT
@@ -4540,8 +3917,6 @@ PerfectHashTableCompileJitRawDog(
     Jit->OriginalIndex = Table->Vtbl->Index;
     Jit->OriginalQueryInterface = Table->Vtbl->QueryInterface;
     Jit->Flags.BackendRawDog = TRUE;
-    Jit->Interface.Table = Table;
-    Jit->Interface.Vtbl = &RawDogJitInterfaceVtbl;
     Table->Vtbl->QueryInterface = RawDogTableQueryInterfaceJit;
 
     Result = CompileChm01IndexJitRawDog(Table, Jit, &CompileFlags);
@@ -4618,6 +3993,14 @@ PerfectHashTableJitRundownRawDog(
 
     Table->Flags.JitEnabled = FALSE;
 
+#if defined(PH_WINDOWS) && defined(PH_RAWDOG_ARM64)
+    for (ULONG Slot = 0; Slot < ARRAYSIZE(Jit->RawDogBatchUnwind); Slot++) {
+        PRUNTIME_FUNCTION Entry = &Jit->RawDogBatchUnwind[Slot];
+        if (Entry->UnwindData) {
+            RtlDeleteFunctionTable(Entry);
+        }
+    }
+#endif
     FreeRawDogCode(&Jit->Index32Function);
     FreeRawDogCode(&Jit->Index32x4Function);
     FreeRawDogCode(&Jit->Index32x8Function);

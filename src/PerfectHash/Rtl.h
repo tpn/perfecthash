@@ -50,8 +50,8 @@ extern "C" {
 
 #ifdef PH_WINDOWS
 EXTERN_C
-size_t __cdecl __imp_wcslen(_In_z_ wchar_t const *s);
-#define wcslen __imp_wcslen
+size_t __cdecl PerfectHashWcslen(_In_z_ wchar_t const *s);
+#define wcslen PerfectHashWcslen
 #endif
 
 //

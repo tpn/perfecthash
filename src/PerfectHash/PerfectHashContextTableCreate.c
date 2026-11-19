@@ -144,6 +144,7 @@ Return Value:
     BOOLEAN FindBestGraph;
     ULONG NumberOfRows = 0;
     HRESULT Result = S_OK;
+    HRESULT CleanupResult;
     HRESULT TableCreateResult;
     PCHAR RowBuffer = NULL;
     PALLOCATOR Allocator;
@@ -154,7 +155,7 @@ Return Value:
     ULONGLONG RowBufferSize = 0;
     ULONG BytesWritten = 0;
     ULONG KeySizeInBytes = 0;
-    LARGE_INTEGER EmptyEndOfFile = { 0 };
+    LARGE_INTEGER CompletedCsvEndOfFile = { 0 };
     PLARGE_INTEGER EndOfFile;
     PPERFECT_HASH_KEYS Keys = NULL;
     PPERFECT_HASH_TABLE Table = NULL;
@@ -458,7 +459,7 @@ Return Value:
         goto Error;
     }
 
-    if (CtrlCPressed) {
+    if (CtrlCPressed && Result == S_OK) {
         Result = PH_E_CTRL_C_PRESSED;
         goto Error;
     }
@@ -469,6 +470,10 @@ Return Value:
     if (Result != S_OK) {
 
         Coverage = &EmptyCoverage;
+        if (Result == PH_I_CREATE_TABLE_ROUTINE_FAILED_TO_FIND_SOLUTION &&
+            Context->State.FixedAttemptsReached) {
+            Result = S_OK;
+        }
 
     } else {
 
@@ -502,6 +507,11 @@ Return Value:
                 PH_TABLE_ERROR(PerfectHashTableCompile, Result);
                 goto Error;
             }
+        }
+        // A cancelled post-solve test or compile must not commit a success row.
+        if (Result == S_OK && CtrlCPressed) {
+            Result = PH_E_CTRL_C_PRESSED;
+            goto Error;
         }
     }
 
@@ -540,6 +550,7 @@ Return Value:
         WRITE_TABLE_CREATE_CSV_ROW();
     }
     _No_competing_thread_end_
+    CompletedCsvEndOfFile = CsvFile->NumberOfBytesWritten;
 
     //
     // We're done, finish up.
@@ -571,38 +582,39 @@ End:
     if (RowBuffer) {
         ASSERT(Context->RowBuffer);
         ASSERT(RowBufferSize != 0);
-        Result = Rtl->Vtbl->DestroyBuffer(Rtl,
-                                          ProcessHandle,
-                                          &RowBuffer,
-                                          RowBufferSize);
-        if (FAILED(Result)) {
+        CleanupResult = Rtl->Vtbl->DestroyBuffer(Rtl,
+                                                 ProcessHandle,
+                                                 &RowBuffer,
+                                                 RowBufferSize);
+        if (FAILED(CleanupResult)) {
             SYS_ERROR(VirtualFree);
-            Result = PH_E_SYSTEM_CALL_FAILED;
+            if (Result == S_OK) {
+                Result = PH_E_SYSTEM_CALL_FAILED;
+            }
         }
         Context->RowBuffer = RowBuffer = NULL;
     }
 
     ClearContextTableCreate(Context);
 
-    if (CtrlCPressed) {
-        Result = PH_E_CTRL_C_PRESSED;
-    }
-
     //
-    // Close the .csv file.  If we encountered an error, use 0 as end-of-file,
-    // which will cause the Close() call to reset it to its original state.
+    // Keep a completed row even when it reports an unsuccessful solve.
+    // Before a row completes, zero restores the file to its original size.
     //
 
     if (Result != S_OK) {
-        EndOfFile = &EmptyEndOfFile;
+        EndOfFile = &CompletedCsvEndOfFile;
     } else {
         EndOfFile = NULL;
     }
 
     if (CsvFile) {
-        Result = CsvFile->Vtbl->Close(CsvFile, EndOfFile);
-        if (FAILED(Result)) {
-            PH_ERROR(PerfectHashTableCreate_CloseCsvFile, Result);
+        CleanupResult = CsvFile->Vtbl->Close(CsvFile, EndOfFile);
+        if (FAILED(CleanupResult)) {
+            PH_ERROR(PerfectHashTableCreate_CloseCsvFile, CleanupResult);
+            if (Result == S_OK) {
+                Result = CleanupResult;
+            }
         }
     }
 

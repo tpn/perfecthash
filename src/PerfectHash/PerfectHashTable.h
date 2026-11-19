@@ -365,6 +365,8 @@ typedef struct _PERFECT_HASH_TABLE_JIT_INTERFACE {
 typedef PERFECT_HASH_TABLE_JIT_INTERFACE
       *PPERFECT_HASH_TABLE_JIT_INTERFACE;
 
+extern PERFECT_HASH_TABLE_JIT_INTERFACE_VTBL PerfectHashTableJitInterfaceVtbl;
+
 //
 // Define the PERFECT_HASH_TABLE_HASH_JIT_INTERFACE structure used for
 // QueryInterface exposure of hash JIT-compiled routines.
@@ -410,9 +412,91 @@ typedef struct _PERFECT_HASH_TABLE_JIT {
     PPERFECT_HASH_TABLE_QUERY_INTERFACE OriginalQueryInterface;
     CHAR TargetCpu[PERFECT_HASH_JIT_CPU_NAME_MAX_CHARS];
     CHAR TargetFeatures[PERFECT_HASH_JIT_CPU_FEATURES_MAX_CHARS];
-    PERFECT_HASH_TABLE_JIT_INTERFACE Interface;
+#if defined(PH_WINDOWS) && defined(_M_ARM64)
+    // One OS function table per separately allocated RawDog batch routine.
+    RUNTIME_FUNCTION RawDogBatchUnwind[3];
+#endif
 } PERFECT_HASH_TABLE_JIT;
 typedef PERFECT_HASH_TABLE_JIT *PPERFECT_HASH_TABLE_JIT;
+
+//
+// Seeds and mask for one caller of the JIT-compiled hash routines.  The layout
+// is shared with the generated code, which indexes it as an array of ULONGs.
+//
+
+typedef struct _PERFECT_HASH_HASH_JIT_SEEDS {
+    ULONG Seed1;
+    ULONG Seed2;
+    ULONG Seed3Byte1;
+    ULONG Seed3Byte2;
+    ULONG Seed3Byte3;
+    ULONG Seed3Byte4;
+    ULONG Seed4;
+    ULONG Seed5;
+    ULONG HashMask;
+} PERFECT_HASH_HASH_JIT_SEEDS;
+typedef PERFECT_HASH_HASH_JIT_SEEDS *PPERFECT_HASH_HASH_JIT_SEEDS;
+typedef const PERFECT_HASH_HASH_JIT_SEEDS *PCPERFECT_HASH_HASH_JIT_SEEDS;
+
+FORCEINLINE
+VOID
+InitializeHashJitSeeds(
+    _Out_ PPERFECT_HASH_HASH_JIT_SEEDS JitSeeds,
+    _In_reads_(5) const ULONG *Seeds,
+    _In_ ULONG Mask
+    )
+{
+    ULONG Seed3 = Seeds[2];
+
+    JitSeeds->Seed1 = Seeds[0];
+    JitSeeds->Seed2 = Seeds[1];
+    JitSeeds->Seed3Byte1 = (Seed3 & 0xff);
+    JitSeeds->Seed3Byte2 = ((Seed3 >> 8) & 0xff);
+    JitSeeds->Seed3Byte3 = ((Seed3 >> 16) & 0xff);
+    JitSeeds->Seed3Byte4 = ((Seed3 >> 24) & 0xff);
+    JitSeeds->Seed4 = Seeds[3];
+    JitSeeds->Seed5 = Seeds[4];
+    JitSeeds->HashMask = Mask;
+}
+
+//
+// Signatures of the JIT-compiled hash routines that take the caller's seeds.
+// The 16-bit routines pack both vertices into one ULONG per key.
+//
+
+typedef
+ULONGLONG
+(PERFECT_HASH_JIT_HASH_EX)(
+    _In_ ULONG Key,
+    _In_ PCPERFECT_HASH_HASH_JIT_SEEDS Seeds
+    );
+typedef PERFECT_HASH_JIT_HASH_EX *PPERFECT_HASH_JIT_HASH_EX;
+
+typedef
+VOID
+(PERFECT_HASH_JIT_HASH_EX_BATCH)(
+    _In_ PULONG Keys,
+    _Out_ PULONGLONG VertexPairs,
+    _In_ PCPERFECT_HASH_HASH_JIT_SEEDS Seeds
+    );
+typedef PERFECT_HASH_JIT_HASH_EX_BATCH *PPERFECT_HASH_JIT_HASH_EX_BATCH;
+
+typedef
+ULONG
+(PERFECT_HASH_JIT_HASH16_EX)(
+    _In_ ULONG Key,
+    _In_ PCPERFECT_HASH_HASH_JIT_SEEDS Seeds
+    );
+typedef PERFECT_HASH_JIT_HASH16_EX *PPERFECT_HASH_JIT_HASH16_EX;
+
+typedef
+VOID
+(PERFECT_HASH_JIT_HASH16_EX_BATCH)(
+    _In_ PULONG Keys,
+    _Out_ PULONG VertexPairs,
+    _In_ PCPERFECT_HASH_HASH_JIT_SEEDS Seeds
+    );
+typedef PERFECT_HASH_JIT_HASH16_EX_BATCH *PPERFECT_HASH_JIT_HASH16_EX_BATCH;
 
 //
 // Define the PERFECT_HASH_TABLE_HASH_JIT structure.
@@ -428,16 +512,19 @@ typedef struct _PERFECT_HASH_TABLE_HASH_JIT {
     ULONGLONG Padding;
     PVOID ExecutionEngine;
     PVOID Context;
-    PULONG Seed1;
-    PULONG Seed2;
-    PULONG Seed3;
-    PULONG Seed4;
-    PULONG Seed5;
-    PULONG Seed3Byte1;
-    PULONG Seed3Byte2;
-    PULONG Seed3Byte3;
-    PULONG Seed3Byte4;
-    PULONG HashMask;
+
+    //
+    // The request this JIT was compiled for.  An identical request reuses it.
+    //
+
+    PERFECT_HASH_TABLE_COMPILE_FLAGS CompileFlags;
+    ULONG Padding2;
+
+    //
+    // Routines that take the caller's seeds as their final parameter.  The
+    // solver calls these, with each graph supplying its own seeds.
+    //
+
     PVOID HashExFunction;
     PVOID HashEx32x4Function;
     PVOID HashEx32x8Function;
@@ -446,8 +533,22 @@ typedef struct _PERFECT_HASH_TABLE_HASH_JIT {
     PVOID Hash16Ex32x4Function;
     PVOID Hash16Ex32x8Function;
     PVOID Hash16Ex32x16Function;
+
+    //
+    // Routines returned by the Bind methods of the hash JIT interface.  They
+    // all read BoundSeeds, which every Bind call overwrites.
+    //
+
+    PPERFECT_HASH_HASH_JIT_SEEDS BoundSeeds;
+    PVOID BoundHashExFunction;
+    PVOID BoundHashEx32x4Function;
+    PVOID BoundHashEx32x8Function;
+    PVOID BoundHashEx32x16Function;
+    PVOID BoundHash16ExFunction;
+    PVOID BoundHash16Ex32x4Function;
+    PVOID BoundHash16Ex32x8Function;
+    PVOID BoundHash16Ex32x16Function;
     PPERFECT_HASH_TABLE_QUERY_INTERFACE OriginalQueryInterface;
-    PERFECT_HASH_TABLE_HASH_JIT_INTERFACE Interface;
 } PERFECT_HASH_TABLE_HASH_JIT;
 typedef PERFECT_HASH_TABLE_HASH_JIT *PPERFECT_HASH_TABLE_HASH_JIT;
 
@@ -909,6 +1010,10 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
 
     PPERFECT_HASH_TABLE_JIT Jit;
     PPERFECT_HASH_TABLE_HASH_JIT HashJit;
+    // QueryInterface retains the table, so the interface must outlive each
+    // individual set of compiled functions.
+    PERFECT_HASH_TABLE_JIT_INTERFACE JitInterface;
+    PERFECT_HASH_TABLE_HASH_JIT_INTERFACE HashJitInterface;
 
 } PERFECT_HASH_TABLE;
 typedef PERFECT_HASH_TABLE *PPERFECT_HASH_TABLE;

@@ -49,6 +49,7 @@ set(Private_Header_Files
     "PerfectHashKeys.h"
     "PerfectHashNames.h"
     "PerfectHashOnline.h"
+    "PerfectHashOnlineJitPrivate.h"
     "PerfectHashPath.h"
     "PerfectHashPrimes.h"
     "PerfectHashPrivate.h"
@@ -156,6 +157,8 @@ source_group("Resource Files" FILES ${Resource_Files})
 set(Source_Files
     "BitManipulation.c"
     "ChmOnline01Stub.c"
+    "PerfectHashLLVMLoader.c"
+    "PerfectHashTableJitInterface.c"
     "ChmOnline01HashJit.c"
     "Chm01Shared.c"
     "Chm01FileWork.c"
@@ -214,6 +217,7 @@ set(Source_Files
     "Component.c"
     "dllmain.c"
     "Graph.c"
+    "GraphNeon.c"
     "GraphImpl1.c"
     "GraphImpl2.c"
     "GraphImpl3.c"
@@ -3616,15 +3620,17 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
     endif()
 endif()
 
-if(PERFECTHASH_ENABLE_RAWDOG_JIT AND (PERFECTHASH_IS_MAC OR
-   (PERFECTHASH_IS_LINUX AND PERFECTHASH_ARCH_ARM64)))
-    find_package(Python3 COMPONENTS Interpreter REQUIRED)
-
+if(PERFECTHASH_ENABLE_RAWDOG_JIT AND
+   (PERFECTHASH_IS_LINUX OR PERFECTHASH_IS_MAC OR PERFECTHASH_IS_WINDOWS))
     if(PERFECTHASH_ARCH_ARM64)
         find_program(PERFECTHASH_CLANG_EXECUTABLE clang)
         find_program(PERFECTHASH_OBJCOPY_EXECUTABLE llvm-objcopy)
 
         if(PERFECTHASH_CLANG_EXECUTABLE AND PERFECTHASH_OBJCOPY_EXECUTABLE)
+            set(RAWDOG_ARM64_ASSEMBLER "${PERFECTHASH_CLANG_EXECUTABLE}")
+            if(PERFECTHASH_IS_WINDOWS)
+                list(APPEND RAWDOG_ARM64_ASSEMBLER --target=aarch64-pc-windows-msvc)
+            endif()
             set(PERFECTHASH_HAS_RAWDOG_JIT ON CACHE BOOL "RawDog JIT availability" FORCE)
             if(PERFECTHASH_IS_MAC)
                 set(RAWDOG_OBJCOPY_TEXT_SECTION "__TEXT,__text")
@@ -4115,7 +4121,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND (PERFECTHASH_IS_MAC OR
 
             add_custom_command(
                 OUTPUT ${RAWDOG_ARM64_HDR}
-                COMMAND ${PERFECTHASH_CLANG_EXECUTABLE}
+                COMMAND ${RAWDOG_ARM64_ASSEMBLER}
                         -c
                         -o "${RAWDOG_ARM64_OBJ}"
                         "${RAWDOG_ARM64_ASM}"
@@ -4136,7 +4142,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND (PERFECTHASH_IS_MAC OR
 
             add_custom_command(
                 OUTPUT ${RAWDOG_ARM64_16_HDR}
-                COMMAND ${PERFECTHASH_CLANG_EXECUTABLE}
+                COMMAND ${RAWDOG_ARM64_ASSEMBLER}
                         -c
                         -o "${RAWDOG_ARM64_16_OBJ}"
                         "${RAWDOG_ARM64_16_ASM}"
@@ -4157,7 +4163,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND (PERFECTHASH_IS_MAC OR
 
             add_custom_command(
                 OUTPUT ${RAWDOG_MSRX_ARM64_HDR}
-                COMMAND ${PERFECTHASH_CLANG_EXECUTABLE}
+                COMMAND ${RAWDOG_ARM64_ASSEMBLER}
                         -c
                         -o "${RAWDOG_MSRX_ARM64_OBJ}"
                         "${RAWDOG_MSRX_ARM64_ASM}"
@@ -4178,7 +4184,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND (PERFECTHASH_IS_MAC OR
 
             add_custom_command(
                 OUTPUT ${RAWDOG_MSRX_ARM64_16_HDR}
-                COMMAND ${PERFECTHASH_CLANG_EXECUTABLE}
+                COMMAND ${RAWDOG_ARM64_ASSEMBLER}
                         -c
                         -o "${RAWDOG_MSRX_ARM64_16_OBJ}"
                         "${RAWDOG_MSRX_ARM64_16_ASM}"
@@ -4199,7 +4205,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND (PERFECTHASH_IS_MAC OR
 
             add_custom_command(
                 OUTPUT ${RAWDOG_M1_ARM64_HDR}
-                COMMAND ${PERFECTHASH_CLANG_EXECUTABLE}
+                COMMAND ${RAWDOG_ARM64_ASSEMBLER}
                         -c
                         -o "${RAWDOG_M1_ARM64_OBJ}"
                         "${RAWDOG_M1_ARM64_ASM}"
@@ -4220,7 +4226,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND (PERFECTHASH_IS_MAC OR
 
             add_custom_command(
                 OUTPUT ${RAWDOG_MSR_ARM64_X4_HDR}
-                COMMAND ${PERFECTHASH_CLANG_EXECUTABLE}
+                COMMAND ${RAWDOG_ARM64_ASSEMBLER}
                         -c
                         -o "${RAWDOG_MSR_ARM64_X4_OBJ}"
                         "${RAWDOG_MSR_ARM64_X4_ASM}"
@@ -4241,7 +4247,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND (PERFECTHASH_IS_MAC OR
 
             add_custom_command(
                 OUTPUT ${RAWDOG_MSR16_ARM64_X4_HDR}
-                COMMAND ${PERFECTHASH_CLANG_EXECUTABLE}
+                COMMAND ${RAWDOG_ARM64_ASSEMBLER}
                         -c
                         -o "${RAWDOG_MSR16_ARM64_X4_OBJ}"
                         "${RAWDOG_MSR16_ARM64_X4_ASM}"
@@ -4262,7 +4268,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND (PERFECTHASH_IS_MAC OR
 
             add_custom_command(
                 OUTPUT ${RAWDOG_MSRX_ARM64_X4_HDR}
-                COMMAND ${PERFECTHASH_CLANG_EXECUTABLE}
+                COMMAND ${RAWDOG_ARM64_ASSEMBLER}
                         -c
                         -o "${RAWDOG_MSRX_ARM64_X4_OBJ}"
                         "${RAWDOG_MSRX_ARM64_X4_ASM}"
@@ -4283,7 +4289,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND (PERFECTHASH_IS_MAC OR
 
             add_custom_command(
                 OUTPUT ${RAWDOG_MSRX16_ARM64_X4_HDR}
-                COMMAND ${PERFECTHASH_CLANG_EXECUTABLE}
+                COMMAND ${RAWDOG_ARM64_ASSEMBLER}
                         -c
                         -o "${RAWDOG_MSRX16_ARM64_X4_OBJ}"
                         "${RAWDOG_MSRX16_ARM64_X4_ASM}"
@@ -4304,7 +4310,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND (PERFECTHASH_IS_MAC OR
 
             add_custom_command(
                 OUTPUT ${RAWDOG_M1_ARM64_X4_HDR}
-                COMMAND ${PERFECTHASH_CLANG_EXECUTABLE}
+                COMMAND ${RAWDOG_ARM64_ASSEMBLER}
                         -c
                         -o "${RAWDOG_M1_ARM64_X4_OBJ}"
                         "${RAWDOG_M1_ARM64_X4_ASM}"
@@ -4325,7 +4331,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND (PERFECTHASH_IS_MAC OR
 
             add_custom_command(
                 OUTPUT ${RAWDOG_M1RX16_ARM64_X4_HDR}
-                COMMAND ${PERFECTHASH_CLANG_EXECUTABLE}
+                COMMAND ${RAWDOG_ARM64_ASSEMBLER}
                         -c
                         -o "${RAWDOG_M1RX16_ARM64_X4_OBJ}"
                         "${RAWDOG_M1RX16_ARM64_X4_ASM}"
@@ -4346,7 +4352,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND (PERFECTHASH_IS_MAC OR
 
             add_custom_command(
                 OUTPUT ${RAWDOG_M2_ARM64_X4_HDR}
-                COMMAND ${PERFECTHASH_CLANG_EXECUTABLE}
+                COMMAND ${RAWDOG_ARM64_ASSEMBLER}
                         -c
                         -o "${RAWDOG_M2_ARM64_X4_OBJ}"
                         "${RAWDOG_M2_ARM64_X4_ASM}"
@@ -4367,7 +4373,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND (PERFECTHASH_IS_MAC OR
 
             add_custom_command(
                 OUTPUT ${RAWDOG_M2RX16_ARM64_X4_HDR}
-                COMMAND ${PERFECTHASH_CLANG_EXECUTABLE}
+                COMMAND ${RAWDOG_ARM64_ASSEMBLER}
                         -c
                         -o "${RAWDOG_M2RX16_ARM64_X4_OBJ}"
                         "${RAWDOG_M2RX16_ARM64_X4_ASM}"
@@ -4388,7 +4394,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND (PERFECTHASH_IS_MAC OR
 
             add_custom_command(
                 OUTPUT ${RAWDOG_M3_ARM64_X4_HDR}
-                COMMAND ${PERFECTHASH_CLANG_EXECUTABLE}
+                COMMAND ${RAWDOG_ARM64_ASSEMBLER}
                         -c
                         -o "${RAWDOG_M3_ARM64_X4_OBJ}"
                         "${RAWDOG_M3_ARM64_X4_ASM}"
@@ -4409,7 +4415,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND (PERFECTHASH_IS_MAC OR
 
             add_custom_command(
                 OUTPUT ${RAWDOG_M3RX16_ARM64_X4_HDR}
-                COMMAND ${PERFECTHASH_CLANG_EXECUTABLE}
+                COMMAND ${RAWDOG_ARM64_ASSEMBLER}
                         -c
                         -o "${RAWDOG_M3RX16_ARM64_X4_OBJ}"
                         "${RAWDOG_M3RX16_ARM64_X4_ASM}"
@@ -4430,7 +4436,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND (PERFECTHASH_IS_MAC OR
 
             add_custom_command(
                 OUTPUT ${RAWDOG_MSR_ARM64_X8_HDR}
-                COMMAND ${PERFECTHASH_CLANG_EXECUTABLE}
+                COMMAND ${RAWDOG_ARM64_ASSEMBLER}
                         -c
                         -o "${RAWDOG_MSR_ARM64_X8_OBJ}"
                         "${RAWDOG_MSR_ARM64_X8_ASM}"
@@ -4451,7 +4457,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND (PERFECTHASH_IS_MAC OR
 
             add_custom_command(
                 OUTPUT ${RAWDOG_MSR16_ARM64_X8_HDR}
-                COMMAND ${PERFECTHASH_CLANG_EXECUTABLE}
+                COMMAND ${RAWDOG_ARM64_ASSEMBLER}
                         -c
                         -o "${RAWDOG_MSR16_ARM64_X8_OBJ}"
                         "${RAWDOG_MSR16_ARM64_X8_ASM}"
@@ -4472,8 +4478,8 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND (PERFECTHASH_IS_MAC OR
 
             add_custom_command(
                 OUTPUT ${RAWDOG_MSR_ARM64_X16_HDR}
-                COMMAND ${PERFECTHASH_CLANG_EXECUTABLE}
-                        -c
+                COMMAND ${RAWDOG_ARM64_ASSEMBLER}
+                        -x assembler-with-cpp -c
                         -o "${RAWDOG_MSR_ARM64_X16_OBJ}"
                         "${RAWDOG_MSR_ARM64_X16_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
@@ -4486,6 +4492,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND (PERFECTHASH_IS_MAC OR
                         --symbol PerfectHashJitRawDogMultiplyShiftRIndex32x16_arm64
                 DEPENDS
                     "${RAWDOG_MSR_ARM64_X16_ASM}"
+                    "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndex32x16Arm64.inc"
                     "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
                 COMMENT "Generating RawDog JIT blob for MultiplyShiftR Index32x16 (arm64)..."
                 VERBATIM
@@ -4493,8 +4500,8 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND (PERFECTHASH_IS_MAC OR
 
             add_custom_command(
                 OUTPUT ${RAWDOG_MSR16_ARM64_X16_HDR}
-                COMMAND ${PERFECTHASH_CLANG_EXECUTABLE}
-                        -c
+                COMMAND ${RAWDOG_ARM64_ASSEMBLER}
+                        -x assembler-with-cpp -c
                         -o "${RAWDOG_MSR16_ARM64_X16_OBJ}"
                         "${RAWDOG_MSR16_ARM64_X16_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
@@ -4507,6 +4514,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND (PERFECTHASH_IS_MAC OR
                         --symbol PerfectHashJitRawDogMultiplyShiftR16Index32x16_arm64
                 DEPENDS
                     "${RAWDOG_MSR16_ARM64_X16_ASM}"
+                    "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndex32x16Arm64.inc"
                     "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
                 COMMENT "Generating RawDog JIT blob for MultiplyShiftR16 Index32x16 (arm64)..."
                 VERBATIM
@@ -4514,7 +4522,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND (PERFECTHASH_IS_MAC OR
 
             add_custom_command(
                 OUTPUT ${RAWDOG_MSRX_ARM64_X8_HDR}
-                COMMAND ${PERFECTHASH_CLANG_EXECUTABLE}
+                COMMAND ${RAWDOG_ARM64_ASSEMBLER}
                         -c
                         -o "${RAWDOG_MSRX_ARM64_X8_OBJ}"
                         "${RAWDOG_MSRX_ARM64_X8_ASM}"
@@ -4535,7 +4543,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND (PERFECTHASH_IS_MAC OR
 
             add_custom_command(
                 OUTPUT ${RAWDOG_MSRX16_ARM64_X8_HDR}
-                COMMAND ${PERFECTHASH_CLANG_EXECUTABLE}
+                COMMAND ${RAWDOG_ARM64_ASSEMBLER}
                         -c
                         -o "${RAWDOG_MSRX16_ARM64_X8_OBJ}"
                         "${RAWDOG_MSRX16_ARM64_X8_ASM}"
@@ -4556,8 +4564,8 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND (PERFECTHASH_IS_MAC OR
 
             add_custom_command(
                 OUTPUT ${RAWDOG_MSRX_ARM64_X16_HDR}
-                COMMAND ${PERFECTHASH_CLANG_EXECUTABLE}
-                        -c
+                COMMAND ${RAWDOG_ARM64_ASSEMBLER}
+                        -x assembler-with-cpp -c
                         -o "${RAWDOG_MSRX_ARM64_X16_OBJ}"
                         "${RAWDOG_MSRX_ARM64_X16_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
@@ -4570,6 +4578,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND (PERFECTHASH_IS_MAC OR
                         --symbol PerfectHashJitRawDogMultiplyShiftRXIndex32x16_arm64
                 DEPENDS
                     "${RAWDOG_MSRX_ARM64_X16_ASM}"
+                    "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndex32x16Arm64.inc"
                     "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
                 COMMENT "Generating RawDog JIT blob for MultiplyShiftRX Index32x16 (arm64)..."
                 VERBATIM
@@ -4577,8 +4586,8 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND (PERFECTHASH_IS_MAC OR
 
             add_custom_command(
                 OUTPUT ${RAWDOG_MSRX16_ARM64_X16_HDR}
-                COMMAND ${PERFECTHASH_CLANG_EXECUTABLE}
-                        -c
+                COMMAND ${RAWDOG_ARM64_ASSEMBLER}
+                        -x assembler-with-cpp -c
                         -o "${RAWDOG_MSRX16_ARM64_X16_OBJ}"
                         "${RAWDOG_MSRX16_ARM64_X16_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
@@ -4591,6 +4600,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND (PERFECTHASH_IS_MAC OR
                         --symbol PerfectHashJitRawDogMultiplyShiftRX16Index32x16_arm64
                 DEPENDS
                     "${RAWDOG_MSRX16_ARM64_X16_ASM}"
+                    "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndex32x16Arm64.inc"
                     "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
                 COMMENT "Generating RawDog JIT blob for MultiplyShiftRX16 Index32x16 (arm64)..."
                 VERBATIM
@@ -4598,7 +4608,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND (PERFECTHASH_IS_MAC OR
 
             add_custom_command(
                 OUTPUT ${RAWDOG_M1RX16_ARM64_HDR}
-                COMMAND ${PERFECTHASH_CLANG_EXECUTABLE}
+                COMMAND ${RAWDOG_ARM64_ASSEMBLER}
                         -c
                         -o "${RAWDOG_M1RX16_ARM64_OBJ}"
                         "${RAWDOG_M1RX16_ARM64_ASM}"
@@ -4619,7 +4629,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND (PERFECTHASH_IS_MAC OR
 
             add_custom_command(
                 OUTPUT ${RAWDOG_M1_ARM64_X8_HDR}
-                COMMAND ${PERFECTHASH_CLANG_EXECUTABLE}
+                COMMAND ${RAWDOG_ARM64_ASSEMBLER}
                         -c
                         -o "${RAWDOG_M1_ARM64_X8_OBJ}"
                         "${RAWDOG_M1_ARM64_X8_ASM}"
@@ -4640,7 +4650,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND (PERFECTHASH_IS_MAC OR
 
             add_custom_command(
                 OUTPUT ${RAWDOG_M1RX16_ARM64_X8_HDR}
-                COMMAND ${PERFECTHASH_CLANG_EXECUTABLE}
+                COMMAND ${RAWDOG_ARM64_ASSEMBLER}
                         -c
                         -o "${RAWDOG_M1RX16_ARM64_X8_OBJ}"
                         "${RAWDOG_M1RX16_ARM64_X8_ASM}"
@@ -4661,8 +4671,8 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND (PERFECTHASH_IS_MAC OR
 
             add_custom_command(
                 OUTPUT ${RAWDOG_M1_ARM64_X16_HDR}
-                COMMAND ${PERFECTHASH_CLANG_EXECUTABLE}
-                        -c
+                COMMAND ${RAWDOG_ARM64_ASSEMBLER}
+                        -x assembler-with-cpp -c
                         -o "${RAWDOG_M1_ARM64_X16_OBJ}"
                         "${RAWDOG_M1_ARM64_X16_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
@@ -4675,6 +4685,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND (PERFECTHASH_IS_MAC OR
                         --symbol PerfectHashJitRawDogMulshrolate1RXIndex32x16_arm64
                 DEPENDS
                     "${RAWDOG_M1_ARM64_X16_ASM}"
+                    "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndex32x16Arm64.inc"
                     "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
                 COMMENT "Generating RawDog JIT blob for Mulshrolate1RX Index32x16 (arm64)..."
                 VERBATIM
@@ -4682,8 +4693,8 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND (PERFECTHASH_IS_MAC OR
 
             add_custom_command(
                 OUTPUT ${RAWDOG_M1RX16_ARM64_X16_HDR}
-                COMMAND ${PERFECTHASH_CLANG_EXECUTABLE}
-                        -c
+                COMMAND ${RAWDOG_ARM64_ASSEMBLER}
+                        -x assembler-with-cpp -c
                         -o "${RAWDOG_M1RX16_ARM64_X16_OBJ}"
                         "${RAWDOG_M1RX16_ARM64_X16_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
@@ -4696,6 +4707,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND (PERFECTHASH_IS_MAC OR
                         --symbol PerfectHashJitRawDogMulshrolate1RX16Index32x16_arm64
                 DEPENDS
                     "${RAWDOG_M1RX16_ARM64_X16_ASM}"
+                    "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndex32x16Arm64.inc"
                     "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
                 COMMENT "Generating RawDog JIT blob for Mulshrolate1RX16 Index32x16 (arm64)..."
                 VERBATIM
@@ -4703,7 +4715,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND (PERFECTHASH_IS_MAC OR
 
             add_custom_command(
                 OUTPUT ${RAWDOG_M2_ARM64_HDR}
-                COMMAND ${PERFECTHASH_CLANG_EXECUTABLE}
+                COMMAND ${RAWDOG_ARM64_ASSEMBLER}
                         -c
                         -o "${RAWDOG_M2_ARM64_OBJ}"
                         "${RAWDOG_M2_ARM64_ASM}"
@@ -4724,7 +4736,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND (PERFECTHASH_IS_MAC OR
 
             add_custom_command(
                 OUTPUT ${RAWDOG_M2RX16_ARM64_HDR}
-                COMMAND ${PERFECTHASH_CLANG_EXECUTABLE}
+                COMMAND ${RAWDOG_ARM64_ASSEMBLER}
                         -c
                         -o "${RAWDOG_M2RX16_ARM64_OBJ}"
                         "${RAWDOG_M2RX16_ARM64_ASM}"
@@ -4745,7 +4757,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND (PERFECTHASH_IS_MAC OR
 
             add_custom_command(
                 OUTPUT ${RAWDOG_M3_ARM64_HDR}
-                COMMAND ${PERFECTHASH_CLANG_EXECUTABLE}
+                COMMAND ${RAWDOG_ARM64_ASSEMBLER}
                         -c
                         -o "${RAWDOG_M3_ARM64_OBJ}"
                         "${RAWDOG_M3_ARM64_ASM}"
@@ -4766,7 +4778,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND (PERFECTHASH_IS_MAC OR
 
             add_custom_command(
                 OUTPUT ${RAWDOG_M3RX16_ARM64_HDR}
-                COMMAND ${PERFECTHASH_CLANG_EXECUTABLE}
+                COMMAND ${RAWDOG_ARM64_ASSEMBLER}
                         -c
                         -o "${RAWDOG_M3RX16_ARM64_OBJ}"
                         "${RAWDOG_M3RX16_ARM64_ASM}"
@@ -4787,7 +4799,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND (PERFECTHASH_IS_MAC OR
 
             add_custom_command(
                 OUTPUT ${RAWDOG_M2_ARM64_X8_HDR}
-                COMMAND ${PERFECTHASH_CLANG_EXECUTABLE}
+                COMMAND ${RAWDOG_ARM64_ASSEMBLER}
                         -c
                         -o "${RAWDOG_M2_ARM64_X8_OBJ}"
                         "${RAWDOG_M2_ARM64_X8_ASM}"
@@ -4808,7 +4820,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND (PERFECTHASH_IS_MAC OR
 
             add_custom_command(
                 OUTPUT ${RAWDOG_M2RX16_ARM64_X8_HDR}
-                COMMAND ${PERFECTHASH_CLANG_EXECUTABLE}
+                COMMAND ${RAWDOG_ARM64_ASSEMBLER}
                         -c
                         -o "${RAWDOG_M2RX16_ARM64_X8_OBJ}"
                         "${RAWDOG_M2RX16_ARM64_X8_ASM}"
@@ -4829,8 +4841,8 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND (PERFECTHASH_IS_MAC OR
 
             add_custom_command(
                 OUTPUT ${RAWDOG_M2_ARM64_X16_HDR}
-                COMMAND ${PERFECTHASH_CLANG_EXECUTABLE}
-                        -c
+                COMMAND ${RAWDOG_ARM64_ASSEMBLER}
+                        -x assembler-with-cpp -c
                         -o "${RAWDOG_M2_ARM64_X16_OBJ}"
                         "${RAWDOG_M2_ARM64_X16_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
@@ -4843,6 +4855,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND (PERFECTHASH_IS_MAC OR
                         --symbol PerfectHashJitRawDogMulshrolate2RXIndex32x16_arm64
                 DEPENDS
                     "${RAWDOG_M2_ARM64_X16_ASM}"
+                    "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndex32x16Arm64.inc"
                     "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
                 COMMENT "Generating RawDog JIT blob for Mulshrolate2RX Index32x16 (arm64)..."
                 VERBATIM
@@ -4850,8 +4863,8 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND (PERFECTHASH_IS_MAC OR
 
             add_custom_command(
                 OUTPUT ${RAWDOG_M2RX16_ARM64_X16_HDR}
-                COMMAND ${PERFECTHASH_CLANG_EXECUTABLE}
-                        -c
+                COMMAND ${RAWDOG_ARM64_ASSEMBLER}
+                        -x assembler-with-cpp -c
                         -o "${RAWDOG_M2RX16_ARM64_X16_OBJ}"
                         "${RAWDOG_M2RX16_ARM64_X16_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
@@ -4864,6 +4877,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND (PERFECTHASH_IS_MAC OR
                         --symbol PerfectHashJitRawDogMulshrolate2RX16Index32x16_arm64
                 DEPENDS
                     "${RAWDOG_M2RX16_ARM64_X16_ASM}"
+                    "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndex32x16Arm64.inc"
                     "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
                 COMMENT "Generating RawDog JIT blob for Mulshrolate2RX16 Index32x16 (arm64)..."
                 VERBATIM
@@ -4871,7 +4885,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND (PERFECTHASH_IS_MAC OR
 
             add_custom_command(
                 OUTPUT ${RAWDOG_M3_ARM64_X8_HDR}
-                COMMAND ${PERFECTHASH_CLANG_EXECUTABLE}
+                COMMAND ${RAWDOG_ARM64_ASSEMBLER}
                         -c
                         -o "${RAWDOG_M3_ARM64_X8_OBJ}"
                         "${RAWDOG_M3_ARM64_X8_ASM}"
@@ -4892,7 +4906,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND (PERFECTHASH_IS_MAC OR
 
             add_custom_command(
                 OUTPUT ${RAWDOG_M3RX16_ARM64_X8_HDR}
-                COMMAND ${PERFECTHASH_CLANG_EXECUTABLE}
+                COMMAND ${RAWDOG_ARM64_ASSEMBLER}
                         -c
                         -o "${RAWDOG_M3RX16_ARM64_X8_OBJ}"
                         "${RAWDOG_M3RX16_ARM64_X8_ASM}"
@@ -4913,8 +4927,8 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND (PERFECTHASH_IS_MAC OR
 
             add_custom_command(
                 OUTPUT ${RAWDOG_M3_ARM64_X16_HDR}
-                COMMAND ${PERFECTHASH_CLANG_EXECUTABLE}
-                        -c
+                COMMAND ${RAWDOG_ARM64_ASSEMBLER}
+                        -x assembler-with-cpp -c
                         -o "${RAWDOG_M3_ARM64_X16_OBJ}"
                         "${RAWDOG_M3_ARM64_X16_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
@@ -4927,6 +4941,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND (PERFECTHASH_IS_MAC OR
                         --symbol PerfectHashJitRawDogMulshrolate3RXIndex32x16_arm64
                 DEPENDS
                     "${RAWDOG_M3_ARM64_X16_ASM}"
+                    "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndex32x16Arm64.inc"
                     "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
                 COMMENT "Generating RawDog JIT blob for Mulshrolate3RX Index32x16 (arm64)..."
                 VERBATIM
@@ -4934,8 +4949,8 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND (PERFECTHASH_IS_MAC OR
 
             add_custom_command(
                 OUTPUT ${RAWDOG_M3RX16_ARM64_X16_HDR}
-                COMMAND ${PERFECTHASH_CLANG_EXECUTABLE}
-                        -c
+                COMMAND ${RAWDOG_ARM64_ASSEMBLER}
+                        -x assembler-with-cpp -c
                         -o "${RAWDOG_M3RX16_ARM64_X16_OBJ}"
                         "${RAWDOG_M3RX16_ARM64_X16_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
@@ -4948,6 +4963,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND (PERFECTHASH_IS_MAC OR
                         --symbol PerfectHashJitRawDogMulshrolate3RX16Index32x16_arm64
                 DEPENDS
                     "${RAWDOG_M3RX16_ARM64_X16_ASM}"
+                    "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndex32x16Arm64.inc"
                     "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
                 COMMENT "Generating RawDog JIT blob for Mulshrolate3RX16 Index32x16 (arm64)..."
                 VERBATIM
@@ -5082,16 +5098,29 @@ if(WIN32)
     set(PERFECTHASH_ERRORS_DBG
         "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashErrors.dbg"
     )
+    set(PERFECTHASH_ERRORS_RC_INPUTS
+        "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashErrors.rc"
+        ${PERFECTHASH_ERRORS_BIN}
+        "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashErrorsTEMP.BIN"
+    )
 
     add_custom_command(
         OUTPUT ${PERFECTHASH_ERRORS_HEADER}
                "${PERFECTHASH_ROOT_DIR}/include/PerfectHash/PerfectHashEvents.h"
         COMMAND mc.exe -v -o -c -b -h "${PERFECTHASH_ROOT_DIR}/include/PerfectHash" -x .
                 -km PerfectHashEvents.man PerfectHashErrors.mc
-        BYPRODUCTS ${PERFECTHASH_ERRORS_BIN} ${PERFECTHASH_ERRORS_DBG}
+        BYPRODUCTS ${PERFECTHASH_ERRORS_RC_INPUTS} ${PERFECTHASH_ERRORS_DBG}
         DEPENDS PerfectHashErrors.mc PerfectHashEvents.man
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
         COMMENT "Compiling PerfectHashErrors.mc and PerfectHashEvents.man..."
+    )
+
+    # rc.exe embeds what mc.exe writes. Without this, a build that runs mc.exe
+    # links the previous message table and only the next build picks it up.
+    set_source_files_properties(
+        "PerfectHash.rc"
+        PROPERTIES
+        OBJECT_DEPENDS "${PERFECTHASH_ERRORS_RC_INPUTS}"
     )
 
     add_custom_target(PerfectHashResources ALL DEPENDS ${PERFECTHASH_ERRORS_HEADER})
@@ -5136,7 +5165,7 @@ if(PERFECTHASH_HAS_RAWDOG_JIT)
         PRIVATE
         "PH_HAS_RAWDOG_JIT"
     )
-    if(PERFECTHASH_IS_WINDOWS)
+    if(PERFECTHASH_IS_WINDOWS AND PERFECTHASH_ARCH_X86_64)
         target_compile_definitions(
             ${target}
             PRIVATE
@@ -5219,6 +5248,35 @@ set(llvm_target PerfectHashLLVM)
 
 if(PERFECTHASH_HAS_LLVM)
     add_library(${llvm_target} SHARED ${LLVM_SOURCE_FILES})
+    # Online clients load this plugin on demand, including in a subproject
+    # where only the downstream client's link dependencies are built.
+    foreach(ph_library ${online_target} ${online_static_target} ${online_core_target} ${online_core_static_target})
+        add_dependencies(${ph_library} ${llvm_target})
+    endforeach()
+    if(PERFECTHASH_IS_LINUX OR PERFECTHASH_IS_MAC)
+        # With a static archive, dlopen runs from the consumer binary. Resolve
+        # the plugin directory from the active build or imported package target.
+        foreach(ph_archive ${online_static_target} ${online_core_static_target})
+            target_link_options(${ph_archive} INTERFACE
+                "LINKER:-rpath,$<TARGET_FILE_DIR:PerfectHash::${llvm_target}>")
+        endforeach()
+    endif()
+endif()
+
+if(PERFECTHASH_IS_LINUX OR PERFECTHASH_IS_MAC)
+    if(PERFECTHASH_IS_MAC)
+        set(ph_sibling_rpath "@loader_path")
+    else()
+        set(ph_sibling_rpath "$ORIGIN")
+    endif()
+    # The calling libraries load the LLVM plugin from their own directory,
+    # including under multiarch lib directories.
+    foreach(ph_library ${target} ${online_target} ${online_core_target})
+        if(TARGET ${ph_library})
+            set_property(TARGET ${ph_library} APPEND PROPERTY BUILD_RPATH "${ph_sibling_rpath}")
+            set_property(TARGET ${ph_library} PROPERTY INSTALL_RPATH "${ph_sibling_rpath}")
+        endif()
+    endforeach()
 endif()
 
 if(PERFECTHASH_ENABLE_EMBEDDED_ERROR_STRINGS)
@@ -5335,7 +5393,7 @@ foreach(ph_online_target ${online_target} ${online_static_target})
             PRIVATE
             "PH_HAS_RAWDOG_JIT"
         )
-        if(PERFECTHASH_IS_WINDOWS)
+        if(PERFECTHASH_IS_WINDOWS AND PERFECTHASH_ARCH_X86_64)
             target_compile_definitions(
                 ${ph_online_target}
                 PRIVATE
@@ -5367,7 +5425,7 @@ foreach(ph_online_target ${online_target} ${online_static_target})
     else()
         target_compile_definitions(
             ${ph_online_target}
-            PRIVATE
+            PUBLIC
             "PERFECT_HASH_ONLINE_RAWDOG_STATIC"
             "PERFECT_HASH_ONLINE_JIT_STATIC"
         )
@@ -5382,6 +5440,9 @@ foreach(ph_online_target ${online_core_target} ${online_core_static_target})
         "PH_ONLINE_ONLY"
         "PH_ONLINE_CORE_ONLY"
     )
+    if(TARGET ${llvm_target})
+        target_compile_definitions(${ph_online_target} PRIVATE PH_USE_LLVMLIB)
+    endif()
 
     if(PERFECTHASH_HAS_RAWDOG_JIT)
         target_compile_definitions(
@@ -5389,7 +5450,7 @@ foreach(ph_online_target ${online_core_target} ${online_core_static_target})
             PRIVATE
             "PH_HAS_RAWDOG_JIT"
         )
-        if(PERFECTHASH_IS_WINDOWS)
+        if(PERFECTHASH_IS_WINDOWS AND PERFECTHASH_ARCH_X86_64)
             target_compile_definitions(
                 ${ph_online_target}
                 PRIVATE
@@ -5421,7 +5482,7 @@ foreach(ph_online_target ${online_core_target} ${online_core_static_target})
     else()
         target_compile_definitions(
             ${ph_online_target}
-            PRIVATE
+            PUBLIC
             "PERFECT_HASH_ONLINE_RAWDOG_STATIC"
             "PERFECT_HASH_ONLINE_JIT_STATIC"
         )
@@ -5514,21 +5575,22 @@ foreach(ph_online_target ${online_core_target} ${online_core_static_target})
 endforeach()
 
 if(TARGET ${llvm_target})
-    target_link_libraries(${llvm_target} PRIVATE ${target})
-
+    # The plugin reaches its host only through the table it is handed, so it
+    # links LLVM and the C runtime and loads without the PerfectHash library.
     target_include_directories(${llvm_target} SYSTEM PRIVATE ${LLVM_INCLUDE_DIRS})
     if(LLVM_DEFINITIONS)
         separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
         target_compile_options(${llvm_target} PRIVATE ${LLVM_DEFINITIONS_LIST})
     endif()
-    if(MSVC)
-        find_library(LLVM_C_LIB NAMES LLVM-C)
-    endif()
-    if(MSVC AND LLVM_C_LIB)
-        target_link_libraries(${llvm_target} PRIVATE ${LLVM_C_LIB})
-    endif()
-    if(LLVM_LINK_LLVM_DYLIB AND TARGET LLVM)
+    if(MSVC AND NOT PERFECTHASH_STATIC_LLVM AND TARGET LLVM-C)
+        # Official Windows packages export the C API through LLVM-C.dll.
+        target_link_libraries(${llvm_target} PRIVATE LLVM-C)
+    elseif(LLVM_LINK_LLVM_DYLIB AND TARGET LLVM)
         target_link_libraries(${llvm_target} PRIVATE LLVM)
+        if(UNIX)
+            # The shared LLVM runtime can live outside the system search path.
+            set_property(TARGET ${llvm_target} PROPERTY INSTALL_RPATH_USE_LINK_PATH TRUE)
+        endif()
     else()
         llvm_map_components_to_libnames(
             LLVM_LIBS
@@ -5546,8 +5608,6 @@ if(TARGET ${llvm_target})
                 PRIVATE
                 $<$<CONFIG:Debug>:msvcprtd>
                 $<$<NOT:$<CONFIG:Debug>>:msvcprt>
-                $<$<CONFIG:Debug>:msvcrtd>
-                $<$<NOT:$<CONFIG:Debug>>:msvcrt>
                 oldnames
             )
         endif()
@@ -5557,6 +5617,8 @@ if(TARGET ${llvm_target})
         target_link_libraries(
             ${llvm_target}
             PRIVATE
+            $<$<CONFIG:Debug>:msvcrtd>
+            $<$<NOT:$<CONFIG:Debug>>:msvcrt>
             $<$<CONFIG:Debug>:vcruntimed>
             $<$<NOT:$<CONFIG:Debug>>:vcruntime>
             $<$<CONFIG:Debug>:ucrtd>
@@ -5565,11 +5627,13 @@ if(TARGET ${llvm_target})
     endif()
 endif()
 
-if(WIN32)
-    foreach(ph_rpc_target ${target} ${online_target} ${online_static_target}
+foreach(ph_runtime_target ${target} ${online_target} ${online_static_target}
                           ${online_core_target} ${online_core_static_target})
-        target_link_libraries(${ph_rpc_target} PRIVATE rpcrt4)
-    endforeach()
-endif()
+    if(WIN32)
+        target_link_libraries(${ph_runtime_target} PRIVATE rpcrt4)
+    elseif(CMAKE_DL_LIBS)
+        target_link_libraries(${ph_runtime_target} PRIVATE ${CMAKE_DL_LIBS})
+    endif()
+endforeach()
 
 # vim:set ts=8 sw=4 sts=4 tw=80 expandtab syntax=cmake                        :

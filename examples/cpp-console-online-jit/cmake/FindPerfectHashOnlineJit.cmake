@@ -1,73 +1,207 @@
 include(FindPackageHandleStandardArgs)
 
-set(_ph_root_hints)
-if(PERFECTHASH_ROOT)
-    list(APPEND _ph_root_hints "${PERFECTHASH_ROOT}")
-endif()
-if(DEFINED ENV{PERFECTHASH_ROOT} AND NOT "$ENV{PERFECTHASH_ROOT}" STREQUAL "")
-    list(APPEND _ph_root_hints "$ENV{PERFECTHASH_ROOT}")
-endif()
-if(PerfectHashOnlineJit_ROOT)
-    list(APPEND _ph_root_hints "${PerfectHashOnlineJit_ROOT}")
-endif()
+# The public cache variables are overrides. Keep discoveries local to
+# this configure so a new SDK, configuration, or linkage preference takes effect.
+function(_ph_find finder variable)
+    if((finder STREQUAL "find_path" AND IS_DIRECTORY "${${variable}}") OR
+       (NOT finder STREQUAL "find_path" AND EXISTS "${${variable}}" AND NOT IS_DIRECTORY "${${variable}}"))
+        set(${variable}_IS_OVERRIDE TRUE PARENT_SCOPE)
+        return()
+    endif()
+    while(TRUE)
+        cmake_language(CALL ${finder} _ph_discovered_path ${ARGN})
+        if(NOT _ph_discovered_path)
+            break()
+        endif()
+        _ph_is_excluded(excluded "${_ph_discovered_path}")
+        if(NOT excluded AND finder STREQUAL "find_path" AND _ph_excluded_prefixes)
+            # find_path returns the include directory, even when the matched
+            # header or an intervening subdirectory points into another SDK.
+            cmake_parse_arguments(search "" "" "NAMES;HINTS;PATHS;PATH_SUFFIXES" ${ARGN})
+            foreach(name IN LISTS search_NAMES)
+                set(header "${_ph_discovered_path}/${name}")
+                if(EXISTS "${header}")
+                    _ph_is_excluded(excluded "${header}")
+                    break()
+                endif()
+            endforeach()
+        endif()
+        if(NOT excluded)
+            break()
+        endif()
+        # Ignore the spelling used by find_*, including an alias to a nested SDK.
+        set(skip_dir "${_ph_discovered_path}")
+        if(NOT finder STREQUAL "find_path")
+            get_filename_component(skip_dir "${skip_dir}" DIRECTORY)
+        endif()
+        unset(_ph_discovered_path CACHE)
+        if(skip_dir IN_LIST CMAKE_IGNORE_PATH)
+            break()
+        endif()
+        list(APPEND CMAKE_IGNORE_PATH "${skip_dir}")
+    endwhile()
+    set(${variable} "${_ph_discovered_path}" PARENT_SCOPE)
+    unset(_ph_discovered_path CACHE)
+endfunction()
 
-list(REMOVE_DUPLICATES _ph_root_hints)
+# An excluded file alias for one library name must leave the other name eligible
+# in the same directory. Each name gets its own find_library retry scope.
+function(_ph_find_online_library)
+    foreach(name IN LISTS _ph_online_names)
+        _ph_find(find_library PERFECTHASH_ONLINE_JIT_LIBRARY NAMES "${name}"
+            HINTS ${_ph_search_hints} PATH_SUFFIXES ${_ph_lib_suffixes} ${_ph_sdk_search_scope})
+        if(PERFECTHASH_ONLINE_JIT_LIBRARY)
+            break()
+        endif()
+    endforeach()
+    set(PERFECTHASH_ONLINE_JIT_LIBRARY "${PERFECTHASH_ONLINE_JIT_LIBRARY}" PARENT_SCOPE)
+    set(PERFECTHASH_ONLINE_JIT_LIBRARY_IS_OVERRIDE "${PERFECTHASH_ONLINE_JIT_LIBRARY_IS_OVERRIDE}" PARENT_SCOPE)
+endfunction()
 
-set(_ph_search_hints ${_ph_root_hints})
-foreach(_ph_hint IN LISTS _ph_root_hints)
-    if(IS_DIRECTORY "${_ph_hint}")
-        file(GLOB _ph_build_hints LIST_DIRECTORIES TRUE "${_ph_hint}/build*")
-        foreach(_ph_build_hint IN LISTS _ph_build_hints)
-            if(IS_DIRECTORY "${_ph_build_hint}")
-                list(APPEND _ph_search_hints "${_ph_build_hint}")
+include("${CMAKE_CURRENT_LIST_DIR}/PerfectHashOnlineJitRoots.cmake")
+
+function(_ph_canonical_path output path)
+    file(REAL_PATH "${path}" canonical)
+    if(WIN32)
+        string(TOLOWER "${canonical}" canonical)
+    endif()
+    set(${output} "${canonical}" PARENT_SCOPE)
+endfunction()
+
+function(_ph_is_excluded output path)
+    set(excluded FALSE)
+    if(_ph_excluded_prefixes)
+        cmake_path(ABSOLUTE_PATH path NORMALIZE OUTPUT_VARIABLE spelling)
+        if(WIN32)
+            string(TOLOWER "${spelling}" spelling)
+        endif()
+        _ph_canonical_path(resolved "${path}")
+        foreach(prefix IN LISTS _ph_excluded_prefixes)
+            cmake_path(IS_PREFIX prefix "${spelling}" NORMALIZE inside)
+            cmake_path(IS_PREFIX prefix "${resolved}" NORMALIZE points_inside)
+            if(inside OR points_inside)
+                set(excluded TRUE)
+                break()
             endif()
         endforeach()
     endif()
-endforeach()
+    set(${output} "${excluded}" PARENT_SCOPE)
+endfunction()
 
-list(REMOVE_DUPLICATES _ph_search_hints)
+function(_ph_checkout_owns_build output checkout sdk_root root library_dir)
+    _ph_canonical_path(source_path "${checkout}")
+    _ph_canonical_path(sdk_path "${sdk_root}")
+    _ph_canonical_path(root_path "${root}")
+    _ph_canonical_path(dir "${library_dir}")
+    # A nested prefix may be a separate installation. Its producer cache must
+    # identify the checkout before it can use headers from the enclosing SDK.
+    set(owns_build FALSE)
+    if(NOT sdk_path STREQUAL source_path)
+        cmake_path(IS_PREFIX source_path "${dir}" NORMALIZE owns_build)
+    endif()
+    cmake_path(IS_PREFIX root_path "${dir}" NORMALIZE inside_root)
+    # The nearest build cache identifies the producer, including preset subdirectories.
+    while(inside_root)
+        if(EXISTS "${dir}/CMakeCache.txt")
+            # A subproject's home directory belongs to its parent project.
+            file(STRINGS "${dir}/CMakeCache.txt" project_source LIMIT_COUNT 1 REGEX "^PerfectHash_SOURCE_DIR:STATIC=.")
+            if(project_source)
+                set(entry "${project_source}")
+            else()
+                file(STRINGS "${dir}/CMakeCache.txt" entry LIMIT_COUNT 1 REGEX "^CMAKE_HOME_DIRECTORY:INTERNAL=.")
+            endif()
+            if(entry)
+                string(REGEX REPLACE "^[^=]+=" "" cache_home "${entry}")
+                _ph_canonical_path(cache_source "${cache_home}")
+                if(cache_source STREQUAL source_path OR cache_source STREQUAL "${source_path}/src")
+                    set(owns_build TRUE)
+                elseif(project_source)
+                    set(owns_build FALSE)
+                endif()
+            endif()
+            break()
+        endif()
+        if(dir STREQUAL root_path)
+            break()
+        endif()
+        cmake_path(GET dir PARENT_PATH dir)
+    endwhile()
+    set(${output} "${owns_build}" PARENT_SCOPE)
+endfunction()
 
-find_path(
-    PERFECTHASH_ONLINE_JIT_INCLUDE_DIR
-    NAMES
-        PerfectHash/PerfectHashOnlineJit.h
-        PerfectHashOnlineJit.h
-    HINTS ${_ph_search_hints}
-    PATH_SUFFIXES
-        include
-        .
-)
+function(_ph_filter_dirs output root)
+    _ph_canonical_path(root "${root}")
+    set(found)
+    foreach(dir IN LISTS ARGN)
+        get_filename_component(dir "${dir}" ABSOLUTE)
+        _ph_canonical_path(candidate "${dir}")
+        cmake_path(IS_PREFIX root "${candidate}" NORMALIZE owned)
+        _ph_is_excluded(excluded "${candidate}")
+        if(owned AND NOT excluded AND IS_DIRECTORY "${dir}")
+            list(APPEND found "${dir}")
+        endif()
+    endforeach()
+    set(${output} "${found}" PARENT_SCOPE)
+endfunction()
 
+function(_ph_search_paths output variable)
+    set(paths)
+    if(NOT "${ARGV2}" STREQUAL "env" AND (NOT DEFINED CMAKE_FIND_USE_CMAKE_PATH OR CMAKE_FIND_USE_CMAKE_PATH))
+        list(APPEND paths ${${variable}})
+    endif()
+    if(NOT "${ARGV2}" STREQUAL "cmake" AND (NOT DEFINED CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH OR CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH))
+        file(TO_CMAKE_PATH "$ENV{${variable}}" env_paths)
+        list(APPEND paths ${env_paths})
+    endif()
+    list(FILTER paths EXCLUDE REGEX "^$")
+    list(REMOVE_DUPLICATES paths)
+    set(${output} "${paths}" PARENT_SCOPE)
+endfunction()
+
+function(_ph_owned_dirs output variable root)
+    _ph_search_paths(paths ${variable})
+    _ph_filter_dirs(found "${root}" ${paths})
+    set(${output} "${found}" PARENT_SCOPE)
+endfunction()
+
+# Each example chooses its preferred library and the header spellings it
+# accepts before calling find_package. These defaults suit an installed SDK.
+set(_ph_online_names PerfectHashOnlineCore PerfectHashOnline)
+if(PH_ONLINE_JIT_LIBRARY_NAMES)
+    set(_ph_online_names ${PH_ONLINE_JIT_LIBRARY_NAMES})
+endif()
+set(_ph_header_names PerfectHash/PerfectHashOnlineJit.h)
+if(PH_ONLINE_JIT_HEADER_NAMES)
+    set(_ph_header_names ${PH_ONLINE_JIT_HEADER_NAMES})
+endif()
 set(_ph_lib_suffixes)
 if(WIN32)
+    set(_ph_configs ${CMAKE_BUILD_TYPE} Release RelWithDebInfo Debug MinSizeRel ${CMAKE_CONFIGURATION_TYPES})
+    list(REMOVE_DUPLICATES _ph_configs)
+    set(_ph_shared_layouts ".")
+    set(_ph_static_layouts static)
+    foreach(_ph_config IN LISTS _ph_configs)
+        set(_ph_insert APPEND)
+        if(NOT CMAKE_CONFIGURATION_TYPES AND _ph_config STREQUAL CMAKE_BUILD_TYPE)
+            set(_ph_insert PREPEND)
+        endif()
+        list(${_ph_insert} _ph_shared_layouts "${_ph_config}")
+        list(${_ph_insert} _ph_static_layouts "${_ph_config}/static" "static/${_ph_config}")
+    endforeach()
     if(PH_ONLINE_JIT_PREFER_SHARED)
-        list(APPEND _ph_lib_suffixes
-            lib
-            build/lib
-            lib/Release
-            build/lib/Release
-            lib/RelWithDebInfo
-            build/lib/RelWithDebInfo
-            lib/static
-            build/lib/static
-            lib/Debug
-            build/lib/Debug
-        )
+        set(_ph_linkages shared static)
     else()
-        list(APPEND _ph_lib_suffixes
-            lib/static
-            build/lib/static
-            lib
-            build/lib
-            lib/Release
-            build/lib/Release
-            lib/RelWithDebInfo
-            build/lib/RelWithDebInfo
-            lib/Debug
-            build/lib/Debug
-        )
+        set(_ph_linkages static shared)
     endif()
+    foreach(_ph_linkage IN LISTS _ph_linkages)
+        foreach(_ph_layout IN LISTS _ph_${_ph_linkage}_layouts)
+            list(APPEND _ph_lib_suffixes "lib/${_ph_layout}" "build/lib/${_ph_layout}")
+        endforeach()
+    endforeach()
 else()
+    if(CMAKE_LIBRARY_ARCHITECTURE)
+        list(APPEND _ph_lib_suffixes "lib/${CMAKE_LIBRARY_ARCHITECTURE}")
+    endif()
     list(APPEND _ph_lib_suffixes
         lib
         build/lib
@@ -105,78 +239,552 @@ if(NOT WIN32)
     endif()
 endif()
 
-find_library(
-    PERFECTHASH_ONLINE_JIT_LIBRARY
-    NAMES
-        PerfectHashOnlineCore
-        PerfectHashOnline
-    HINTS ${_ph_search_hints}
-    PATH_SUFFIXES ${_ph_lib_suffixes}
-)
-
-find_library(
-    PERFECTHASH_ONLINE_JIT_LLVM_LIBRARY
-    NAMES
-        PerfectHashLLVM
-    HINTS ${_ph_search_hints}
-    PATH_SUFFIXES ${_ph_lib_suffixes}
-)
-
-set(CMAKE_FIND_LIBRARY_SUFFIXES "${_ph_saved_suffixes}")
-
-if(PERFECTHASH_ONLINE_JIT_LIBRARY)
-    get_filename_component(
-        PERFECTHASH_ONLINE_JIT_LIBRARY_DIR
-        "${PERFECTHASH_ONLINE_JIT_LIBRARY}"
-        DIRECTORY
-    )
+if(WIN32 AND PERFECTHASH_ONLINE_JIT_STATIC_LIBRARY)
+    set(PERFECTHASH_ONLINE_JIT_LIBRARY "${PERFECTHASH_ONLINE_JIT_STATIC_LIBRARY}")
+endif()
+if(WIN32 AND PERFECTHASH_ONLINE_JIT_LIBRARY AND
+   (NOT EXISTS "${PERFECTHASH_ONLINE_JIT_LIBRARY}" OR IS_DIRECTORY "${PERFECTHASH_ONLINE_JIT_LIBRARY}"))
+    set(_ph_invalid_library "${PERFECTHASH_ONLINE_JIT_LIBRARY}")
+    set(PERFECTHASH_ONLINE_JIT_LIBRARY "PERFECTHASH_ONLINE_JIT_LIBRARY-NOTFOUND")
 endif()
 
-if(PERFECTHASH_ONLINE_JIT_LLVM_LIBRARY)
-    get_filename_component(
-        PERFECTHASH_ONLINE_JIT_LLVM_LIBRARY_DIR
-        "${PERFECTHASH_ONLINE_JIT_LLVM_LIBRARY}"
-        DIRECTORY
+set(_ph_assume_static FALSE)
+unset(_ph_required_runtime)
+unset(_ph_runtime_error)
+if(_ph_invalid_library)
+    set(_ph_runtime_error REASON_FAILURE_MESSAGE "The requested library ${_ph_invalid_library} is not a file.")
+endif()
+set(_ph_target_arch "${CMAKE_CXX_COMPILER_ARCHITECTURE_ID}")
+if(APPLE AND CMAKE_OSX_ARCHITECTURES)
+    set(_ph_target_arch "${CMAKE_OSX_ARCHITECTURES}")
+elseif(NOT _ph_target_arch)
+    set(_ph_target_arch "${CMAKE_SYSTEM_PROCESSOR}")
+endif()
+string(TOLOWER "${_ph_target_arch}" _ph_target_arch)
+set(_ph_requires_asm FALSE)
+if(NOT APPLE AND _ph_target_arch MATCHES "(^|;)(x64|x86_64|amd64)(;|$)")
+    set(_ph_requires_asm TRUE)
+endif()
+if(WIN32)
+    list(TRANSFORM _ph_configs TOLOWER OUTPUT_VARIABLE _ph_configs_lower)
+    # Static archives and DLL import libraries share the same .lib suffix.
+    function(_ph_windows_layout library_dir)
+        set(_ph_assume_static FALSE)
+        get_filename_component(_ph_leaf "${library_dir}" NAME)
+        get_filename_component(_ph_parent "${library_dir}" DIRECTORY)
+        string(TOLOWER "${_ph_leaf}" _ph_leaf_lower)
+        string(TOLOWER "${_ph_parent}" _ph_parent_lower)
+        set(_ph_shared_dir "${library_dir}")
+        if(_ph_leaf_lower STREQUAL "static")
+            set(_ph_assume_static TRUE)
+            set(_ph_shared_dir "${_ph_parent}")
+        elseif(_ph_parent_lower MATCHES "[/\\\\]static$" AND
+               (_ph_leaf_lower IN_LIST _ph_configs_lower OR _ph_parent_lower MATCHES "[/\\\\]lib[/\\\\]static$"))
+            set(_ph_assume_static TRUE)
+            get_filename_component(_ph_lib_base "${_ph_parent}" DIRECTORY)
+            set(_ph_shared_dir "${_ph_lib_base}/${_ph_leaf}")
+        elseif(PERFECTHASH_ONLINE_JIT_STATIC_LIBRARY)
+            set(_ph_assume_static TRUE)
+        endif()
+        set(_ph_assume_static "${_ph_assume_static}" PARENT_SCOPE)
+        set(_ph_shared_dir "${_ph_shared_dir}" PARENT_SCOPE)
+    endfunction()
+
+    # The LLVM plugin is searched in extra directories and is kept together
+    # with an LLVM-C.dll beside it. It needs no other PerfectHash runtime.
+    function(_ph_find_runtime output import_library is_plugin)
+        get_filename_component(lib_dir "${import_library}" DIRECTORY)
+        get_filename_component(config "${lib_dir}" NAME)
+        get_filename_component(parent "${lib_dir}" DIRECTORY)
+        get_filename_component(parent_name "${parent}" NAME)
+        string(TOLOWER "${config}" config_lower)
+        string(TOLOWER "${parent_name}" parent_lower)
+        if(config_lower IN_LIST _ph_configs_lower OR parent_lower STREQUAL "lib")
+            set(bin_dir "${parent}/../bin/${config}")
+        else()
+            set(bin_dir "${parent}/bin")
+        endif()
+        get_filename_component(stem "${import_library}" NAME_WE)
+        get_filename_component(override_name "${${output}}" NAME)
+        string(TOLOWER "${stem}.dll" expected)
+        string(TOLOWER "${override_name}" actual)
+        get_filename_component(override_dir "${${output}}" DIRECTORY)
+        get_filename_component(override_config "${override_dir}" NAME)
+        string(TOLOWER "${override_config}" override_config_lower)
+        set(directories "${lib_dir}" "${bin_dir}" ${ARGN})
+        # Older Release SDKs installed the import library in lib/Release and
+        # the Core DLL in bin. Other configurations need their own runtime.
+        if(NOT is_plugin AND config_lower STREQUAL "release" AND parent_lower STREQUAL "lib")
+            list(APPEND directories "${parent}/../bin")
+        endif()
+        set(pinned FALSE)
+        if(EXISTS "${${output}}" AND NOT IS_DIRECTORY "${${output}}" AND actual STREQUAL expected AND
+           NOT (config_lower IN_LIST _ph_configs_lower AND override_config_lower IN_LIST _ph_configs_lower
+                AND NOT config_lower STREQUAL override_config_lower))
+            set(directories "${override_dir}")
+            set(pinned TRUE)
+        endif()
+        set(found "")
+        foreach(directory IN LISTS directories)
+            set(candidate "${directory}/${stem}.dll")
+            if(NOT EXISTS "${candidate}" OR IS_DIRECTORY "${candidate}")
+                continue()
+            endif()
+            if(NOT pinned)
+                _ph_is_excluded(excluded "${candidate}")
+                if(NOT excluded AND is_plugin AND EXISTS "${directory}/LLVM-C.dll" AND
+                   NOT IS_DIRECTORY "${directory}/LLVM-C.dll")
+                    _ph_is_excluded(excluded "${directory}/LLVM-C.dll")
+                endif()
+                if(excluded)
+                    continue()
+                endif()
+            endif()
+            get_filename_component(found "${candidate}" ABSOLUTE)
+            break()
+        endforeach()
+        set(${output} "${found}" PARENT_SCOPE)
+    endfunction()
+
+    function(_ph_windows_asm output library base)
+        get_filename_component(archive_dir "${library}" DIRECTORY)
+        _ph_windows_layout("${archive_dir}")
+        set(asm_dirs "${_ph_shared_dir}" "${archive_dir}" "${base}")
+        # MASM is configuration-independent and may ship with a different variant.
+        foreach(layout IN LISTS _ph_shared_layouts _ph_static_layouts)
+            list(APPEND asm_dirs "${base}/${layout}")
+        endforeach()
+        _ph_find(find_library PERFECTHASH_ASM_LIBRARY NAMES PerfectHashAsm
+            PATHS ${asm_dirs} NO_DEFAULT_PATH)
+        set(${output} "${PERFECTHASH_ASM_LIBRARY}" PARENT_SCOPE)
+    endfunction()
+
+    # Resolve a complete candidate inside this SDK. The first find_library
+    # locates its library directory even if the corresponding runtime is absent.
+    function(_ph_choose_windows_library root build_dirs)
+        set(bases "${_ph_lib_base}")
+        string(TOLOWER "${_ph_lib_base}" initial_base)
+        if(root)
+            get_filename_component(root "${root}" ABSOLUTE)
+            set(owned_bases "${root}/lib" "${root}/build/lib")
+            foreach(build_dir IN LISTS build_dirs)
+                list(APPEND owned_bases "${build_dir}/lib" "${build_dir}/build/lib")
+            endforeach()
+            list(TRANSFORM owned_bases TOLOWER OUTPUT_VARIABLE owned_bases_lower)
+            if(initial_base IN_LIST owned_bases_lower)
+                list(APPEND bases ${owned_bases})
+                list(REMOVE_DUPLICATES bases)
+            endif()
+        endif()
+        foreach(linkage IN LISTS _ph_linkages)
+            foreach(base IN LISTS bases)
+                foreach(name IN LISTS _ph_online_names)
+                    foreach(layout IN LISTS _ph_${linkage}_layouts)
+                        unset(candidate)
+                        _ph_find(find_library candidate NAMES "${name}"
+                            PATHS "${base}/${layout}" NO_DEFAULT_PATH)
+                        if(NOT candidate)
+                            continue()
+                        endif()
+                        if(linkage STREQUAL "shared")
+                            set(runtime "${PERFECTHASH_ONLINE_JIT_RUNTIME_DLL}")
+                            _ph_find_runtime(runtime "${candidate}" "")
+                            if(NOT runtime)
+                                continue()
+                            endif()
+                        elseif(_ph_requires_asm)
+                            _ph_windows_asm(asm "${candidate}" "${base}")
+                            if(NOT asm)
+                                continue()
+                            endif()
+                        endif()
+                        set(PERFECTHASH_ONLINE_JIT_LIBRARY "${candidate}" PARENT_SCOPE)
+                        set(_ph_lib_base "${base}" PARENT_SCOPE)
+                        return()
+                    endforeach()
+                endforeach()
+            endforeach()
+        endforeach()
+    endfunction()
+
+    # One bundle contains the link dependencies and runtime files for the same library.
+    function(_ph_windows_bundle output library shared_dir)
+        set(files)
+        if(_ph_assume_static)
+            _ph_windows_asm(asm "${library}" "${_ph_lib_base}")
+            set(${output}_asm "${asm}" PARENT_SCOPE)
+        else()
+            _ph_find_runtime(PERFECTHASH_ONLINE_JIT_RUNTIME_DLL "${library}" "")
+            if(PERFECTHASH_ONLINE_JIT_RUNTIME_DLL)
+                list(APPEND files "${PERFECTHASH_ONLINE_JIT_RUNTIME_DLL}")
+            endif()
+            set(${output}_core "${PERFECTHASH_ONLINE_JIT_RUNTIME_DLL}" PARENT_SCOPE)
+        endif()
+
+        get_filename_component(bundle_config "${shared_dir}" NAME)
+        get_filename_component(override_dir "${PERFECTHASH_ONLINE_JIT_LLVM_LIBRARY}" DIRECTORY)
+        get_filename_component(override_config "${override_dir}" NAME)
+        string(TOLOWER "${bundle_config}" bundle_config)
+        string(TOLOWER "${override_config}" override_config)
+        if(bundle_config IN_LIST _ph_configs_lower AND override_config IN_LIST _ph_configs_lower
+           AND NOT bundle_config STREQUAL override_config)
+            set(PERFECTHASH_ONLINE_JIT_LLVM_LIBRARY "")
+        endif()
+        _ph_find(find_library PERFECTHASH_ONLINE_JIT_LLVM_LIBRARY NAMES PerfectHashLLVM
+            PATHS "${shared_dir}" "${_ph_lib_base}" NO_DEFAULT_PATH)
+        if(PERFECTHASH_ONLINE_JIT_LLVM_LIBRARY_IS_OVERRIDE)
+            set(plugin_library "${PERFECTHASH_ONLINE_JIT_LLVM_LIBRARY}")
+        else()
+            # Prefer this configuration's runtime, even if it has no import library.
+            set(plugin_library "${shared_dir}/PerfectHashLLVM.lib")
+        endif()
+        get_filename_component(flat_bin "${_ph_lib_base}/../bin" ABSOLUTE)
+        _ph_find_runtime(PERFECTHASH_ONLINE_JIT_LLVM_RUNTIME_DLL "${plugin_library}" TRUE
+            "${_ph_lib_base}" "${flat_bin}")
+        if(PERFECTHASH_ONLINE_JIT_LLVM_RUNTIME_DLL)
+            get_filename_component(plugin_dir "${PERFECTHASH_ONLINE_JIT_LLVM_RUNTIME_DLL}" DIRECTORY)
+            list(APPEND files "${PERFECTHASH_ONLINE_JIT_LLVM_RUNTIME_DLL}")
+            if(EXISTS "${plugin_dir}/LLVM-C.dll" AND NOT IS_DIRECTORY "${plugin_dir}/LLVM-C.dll")
+                list(APPEND files "${plugin_dir}/LLVM-C.dll")
+            endif()
+        endif()
+        set(${output}_library "${library}" PARENT_SCOPE)
+        set(${output}_llvm "${PERFECTHASH_ONLINE_JIT_LLVM_LIBRARY}" PARENT_SCOPE)
+        set(${output}_plugin "${PERFECTHASH_ONLINE_JIT_LLVM_RUNTIME_DLL}" PARENT_SCOPE)
+        set(${output}_files "${files}" PARENT_SCOPE)
+    endfunction()
+
+endif()
+
+# Try each library type in preference order. A static archive and its assembly
+# dependency belong to the same library directory or its matching static layout.
+function(_ph_posix_library)
+    set(suffixes ${CMAKE_FIND_LIBRARY_SUFFIXES})
+    set(original_ignore "${CMAKE_IGNORE_PATH}")
+    set(first_incomplete "")
+    foreach(suffix IN LISTS suffixes)
+        set(CMAKE_FIND_LIBRARY_SUFFIXES "${suffix}")
+        set(CMAKE_IGNORE_PATH "${original_ignore}")
+        while(TRUE)
+            _ph_find_online_library()
+            if(NOT PERFECTHASH_ONLINE_JIT_LIBRARY)
+                break()
+            endif()
+            get_filename_component(lib_dir "${PERFECTHASH_ONLINE_JIT_LIBRARY}" DIRECTORY)
+            if(PERFECTHASH_ONLINE_JIT_LIBRARY MATCHES "\\.a$")
+                set(asm_dirs "${lib_dir}")
+                # The build tree may keep the online archive in lib[/<config>]/static.
+                if(lib_dir MATCHES "^(.*)/static(/[^/]+)?$")
+                    list(APPEND asm_dirs "${CMAKE_MATCH_1}${CMAKE_MATCH_2}")
+                endif()
+                if(lib_dir MATCHES "^(.*/lib(64)?)/")
+                    list(APPEND asm_dirs "${CMAKE_MATCH_1}")
+                endif()
+                _ph_find(find_file PERFECTHASH_ASM_LIBRARY
+                    NAMES "${CMAKE_STATIC_LIBRARY_PREFIX}PerfectHashAsm${CMAKE_STATIC_LIBRARY_SUFFIX}"
+                    PATHS ${asm_dirs} NO_DEFAULT_PATH)
+                if(_ph_requires_asm AND NOT PERFECTHASH_ASM_LIBRARY AND NOT PERFECTHASH_ONLINE_JIT_LIBRARY_IS_OVERRIDE)
+                    if(NOT first_incomplete)
+                        set(first_incomplete "${PERFECTHASH_ONLINE_JIT_LIBRARY}")
+                    endif()
+                    # Both static library names here require the same missing archive.
+                    unset(PERFECTHASH_ONLINE_JIT_LIBRARY)
+                    if(lib_dir IN_LIST CMAKE_IGNORE_PATH)
+                        break()
+                    endif()
+                    list(APPEND CMAKE_IGNORE_PATH "${lib_dir}")
+                    continue()
+                endif()
+            endif()
+            set(PERFECTHASH_ONLINE_JIT_LIBRARY "${PERFECTHASH_ONLINE_JIT_LIBRARY}" PARENT_SCOPE)
+            set(PERFECTHASH_ASM_LIBRARY "${PERFECTHASH_ASM_LIBRARY}" PARENT_SCOPE)
+            return()
+        endwhile()
+    endforeach()
+    # Preserve the missing assembly diagnostic if no complete candidate exists.
+    set(PERFECTHASH_ONLINE_JIT_LIBRARY "${first_incomplete}" PARENT_SCOPE)
+endfunction()
+
+# Each call gets a fresh scope for automatic discoveries and keeps file overrides.
+function(_ph_probe_sdk root)
+    set(_ph_search_hints)
+    set(_ph_include_hints)
+    set(_ph_sdk_search_scope)
+    set(_ph_excluded_prefixes)
+    _ph_canonical_path(probe_root "${root}")
+    foreach(prefix IN LISTS _ph_prefixes)
+        _ph_canonical_path(prefix "${prefix}")
+        cmake_path(IS_PREFIX probe_root "${prefix}" NORMALIZE nested)
+        if(NOT root OR (nested AND NOT prefix STREQUAL probe_root))
+            list(APPEND _ph_excluded_prefixes "${prefix}")
+        endif()
+    endforeach()
+    if(root)
+        file(GLOB build_paths LIST_DIRECTORIES TRUE "${root}/build*")
+        _ph_filter_dirs(build_dirs "${root}" ${build_paths})
+        if(_ph_sdk_roots)
+            # Explicit SDKs may use custom directories inside the selected root.
+            _ph_owned_dirs(_ph_search_hints CMAKE_LIBRARY_PATH "${root}")
+            _ph_owned_dirs(_ph_include_hints CMAKE_INCLUDE_PATH "${root}")
+        elseif(ARGC EQUAL 3)
+            _ph_filter_dirs(_ph_search_hints "${root}" ${ARGV1})
+            _ph_filter_dirs(_ph_include_hints "${root}" ${ARGV2})
+            if(NOT _ph_search_hints AND NOT _ph_include_hints)
+                return()
+            endif()
+        endif()
+        list(APPEND _ph_search_hints "${root}" ${build_dirs})
+        list(APPEND _ph_include_hints "${root}" ${build_dirs})
+        set(_ph_sdk_search_scope NO_DEFAULT_PATH)
+    elseif(ARGC EQUAL 3)
+        # Direct include/library paths are an explicit pair selected by the caller.
+        set(_ph_excluded_prefixes)
+        set(_ph_search_hints "${ARGV1}")
+        set(_ph_include_hints "${ARGV2}")
+        set(_ph_sdk_search_scope NO_DEFAULT_PATH)
+    else()
+        # Each standard prefix has already been searched as a complete SDK.
+        # Leave independent system include/library paths to native find_*.
+        set(CMAKE_SYSTEM_PREFIX_PATH "")
+    endif()
+
+    if(NOT WIN32)
+        _ph_posix_library()
+    elseif(NOT _ph_invalid_library)
+        _ph_find_online_library()
+    endif()
+    get_filename_component(PERFECTHASH_ONLINE_JIT_LIBRARY_DIR "${PERFECTHASH_ONLINE_JIT_LIBRARY}" DIRECTORY)
+    set(usable TRUE)
+    if(NOT PERFECTHASH_ONLINE_JIT_LIBRARY)
+        set(usable FALSE)
+    elseif(WIN32)
+        _ph_windows_layout("${PERFECTHASH_ONLINE_JIT_LIBRARY_DIR}")
+        get_filename_component(_ph_shared_leaf "${_ph_shared_dir}" NAME)
+        get_filename_component(_ph_shared_parent "${_ph_shared_dir}" DIRECTORY)
+        get_filename_component(_ph_shared_parent_leaf "${_ph_shared_parent}" NAME)
+        string(TOLOWER "${_ph_shared_leaf}" _ph_shared_lower)
+        string(TOLOWER "${_ph_shared_parent_leaf}" _ph_shared_parent_lower)
+        if(_ph_shared_lower IN_LIST _ph_configs_lower OR _ph_shared_parent_lower STREQUAL "lib")
+            set(_ph_lib_base "${_ph_shared_parent}")
+        else()
+            set(_ph_lib_base "${_ph_shared_dir}")
+        endif()
+        if(NOT PERFECTHASH_ONLINE_JIT_LIBRARY_IS_OVERRIDE)
+            _ph_choose_windows_library("${root}" "${build_dirs}")
+            get_filename_component(PERFECTHASH_ONLINE_JIT_LIBRARY_DIR "${PERFECTHASH_ONLINE_JIT_LIBRARY}" DIRECTORY)
+            _ph_windows_layout("${PERFECTHASH_ONLINE_JIT_LIBRARY_DIR}")
+        endif()
+        if(_ph_assume_static AND _ph_requires_asm)
+            _ph_windows_asm(required_asm "${PERFECTHASH_ONLINE_JIT_LIBRARY}" "${_ph_lib_base}")
+            if(NOT required_asm)
+                set(usable FALSE)
+            endif()
+        elseif(NOT _ph_assume_static)
+            set(runtime "${PERFECTHASH_ONLINE_JIT_RUNTIME_DLL}")
+            _ph_find_runtime(runtime "${PERFECTHASH_ONLINE_JIT_LIBRARY}" "")
+            if(NOT runtime)
+                set(usable FALSE)
+            endif()
+        endif()
+    else()
+        if(PERFECTHASH_ONLINE_JIT_LIBRARY MATCHES "\\.a$" AND _ph_requires_asm AND NOT PERFECTHASH_ASM_LIBRARY)
+            set(usable FALSE)
+        endif()
+        _ph_find(find_library PERFECTHASH_ONLINE_JIT_LLVM_LIBRARY NAMES PerfectHashLLVM
+            HINTS ${_ph_search_hints} PATH_SUFFIXES ${_ph_lib_suffixes} ${_ph_sdk_search_scope})
+    endif()
+    if(root AND PERFECTHASH_ONLINE_JIT_LIBRARY AND _ph_project_root AND NOT root STREQUAL _ph_project_root)
+        _ph_checkout_owns_build(owns_build "${_ph_project_root}" "${_ph_root}" "${root}" "${PERFECTHASH_ONLINE_JIT_LIBRARY_DIR}")
+        if(owns_build)
+            _ph_owned_dirs(source_includes CMAKE_INCLUDE_PATH "${_ph_project_root}")
+            list(APPEND _ph_include_hints ${source_includes} "${_ph_project_root}")
+        endif()
+    endif()
+    set(include_suffixes include)
+    if(CMAKE_LIBRARY_ARCHITECTURE)
+        list(PREPEND include_suffixes "include/${CMAKE_LIBRARY_ARCHITECTURE}")
+    endif()
+    _ph_find(find_path
+        PERFECTHASH_ONLINE_JIT_INCLUDE_DIR
+        NAMES ${_ph_header_names}
+        HINTS ${_ph_include_hints}
+        PATH_SUFFIXES ${include_suffixes} ${PH_ONLINE_JIT_HEADER_SUFFIXES}
+        ${_ph_sdk_search_scope}
     )
+    if(NOT PERFECTHASH_ONLINE_JIT_INCLUDE_DIR)
+        set(usable FALSE)
+    endif()
+    # Keep a concrete library dependency error if a later prefix is empty.
+    if(usable OR PERFECTHASH_ONLINE_JIT_LIBRARY OR NOT _ph_result_PERFECTHASH_ONLINE_JIT_LIBRARY)
+        foreach(var IN LISTS _ph_sdk_results)
+            set(_ph_result_${var} "${${var}}" PARENT_SCOPE)
+        endforeach()
+    endif()
+    set(_ph_usable "${usable}" PARENT_SCOPE)
+endfunction()
+
+set(_ph_sdk_results
+    PERFECTHASH_ONLINE_JIT_INCLUDE_DIR PERFECTHASH_ONLINE_JIT_LIBRARY
+    PERFECTHASH_ONLINE_JIT_LIBRARY_DIR PERFECTHASH_ONLINE_JIT_LIBRARY_IS_OVERRIDE
+    PERFECTHASH_ONLINE_JIT_LLVM_LIBRARY PERFECTHASH_ASM_LIBRARY _ph_assume_static _ph_shared_dir
+    _ph_lib_base _ph_search_hints _ph_sdk_search_scope _ph_excluded_prefixes)
+_ph_search_paths(_ph_cmake_prefixes CMAKE_PREFIX_PATH cmake)
+_ph_search_paths(_ph_env_prefixes CMAKE_PREFIX_PATH env)
+set(_ph_user_prefixes ${_ph_cmake_prefixes} ${_ph_env_prefixes})
+set(_ph_sdk_prefixes ${_ph_sdk_roots})
+set(_ph_system_prefixes)
+if(_ph_sdk_roots)
+    set(_ph_stages sdk)
+else()
+    set(_ph_stages cmake env system)
+    if(NOT DEFINED CMAKE_FIND_USE_CMAKE_SYSTEM_PATH OR CMAKE_FIND_USE_CMAKE_SYSTEM_PATH)
+        set(_ph_system_prefixes ${CMAKE_SYSTEM_PREFIX_PATH})
+    endif()
+endif()
+set(_ph_prefixes ${_ph_sdk_roots} ${_ph_user_prefixes} ${_ph_system_prefixes})
+list(REMOVE_DUPLICATES _ph_prefixes)
+set(_ph_explicit_root_ids)
+foreach(_ph_root IN LISTS _ph_sdk_roots)
+    _ph_canonical_path(id "${_ph_root}")
+    list(APPEND _ph_explicit_root_ids "${id}")
+endforeach()
+
+# Like find_library/find_path, each user search tier checks prefixes, then
+# direct paths, before search advances to the next tier and system defaults.
+set(_ph_direct_libraries)
+set(_ph_direct_includes)
+set(_ph_hint_prefixes)
+foreach(stage IN LISTS _ph_stages)
+    foreach(_ph_root IN LISTS _ph_${stage}_prefixes)
+        if(NOT _ph_root)
+            continue()
+        endif()
+        set(_ph_candidates "${_ph_root}")
+        if(_ph_sdk_roots)
+            _ph_filter_dirs(owned_prefixes "${_ph_root}" ${_ph_user_prefixes})
+            foreach(prefix IN LISTS owned_prefixes)
+                _ph_canonical_path(id "${prefix}")
+                if(NOT id IN_LIST _ph_explicit_root_ids)
+                    list(APPEND _ph_candidates "${prefix}")
+                endif()
+            endforeach()
+        endif()
+        foreach(_ph_candidate IN LISTS _ph_candidates)
+            _ph_probe_sdk("${_ph_candidate}")
+            if(_ph_usable)
+                break()
+            endif()
+        endforeach()
+        if(_ph_usable)
+            break()
+        endif()
+    endforeach()
+    if(NOT _ph_usable AND (stage STREQUAL "cmake" OR stage STREQUAL "env"))
+        list(APPEND _ph_hint_prefixes ${_ph_${stage}_prefixes})
+        list(REMOVE_DUPLICATES _ph_hint_prefixes)
+        _ph_search_paths(library_paths CMAKE_LIBRARY_PATH "${stage}")
+        _ph_search_paths(include_paths CMAKE_INCLUDE_PATH "${stage}")
+        list(APPEND _ph_direct_libraries ${library_paths})
+        list(APPEND _ph_direct_includes ${include_paths})
+        if(_ph_direct_libraries OR _ph_direct_includes)
+            # A single custom lib or include directory may complete an earlier prefix.
+            foreach(prefix IN LISTS _ph_hint_prefixes)
+                _ph_probe_sdk("${prefix}" "${_ph_direct_libraries}" "${_ph_direct_includes}")
+                if(_ph_usable)
+                    break()
+                endif()
+            endforeach()
+            if(NOT _ph_usable)
+                _ph_probe_sdk("" "${_ph_direct_libraries}" "${_ph_direct_includes}")
+            endif()
+        endif()
+    endif()
+    if(_ph_usable)
+        break()
+    endif()
+endforeach()
+if(NOT _ph_sdk_roots AND NOT _ph_usable)
+    set(_ph_prefixes ${_ph_user_prefixes})
+    _ph_probe_sdk("")
+endif()
+foreach(_ph_var IN LISTS _ph_sdk_results)
+    set(${_ph_var} "${_ph_result_${_ph_var}}")
+endforeach()
+set(CMAKE_FIND_LIBRARY_SUFFIXES "${_ph_saved_suffixes}")
+if(PERFECTHASH_ONLINE_JIT_LLVM_LIBRARY)
+    get_filename_component(PERFECTHASH_ONLINE_JIT_LLVM_LIBRARY_DIR "${PERFECTHASH_ONLINE_JIT_LLVM_LIBRARY}" DIRECTORY)
 endif()
 
 if(WIN32)
-    find_file(
-        PERFECTHASH_ONLINE_JIT_RUNTIME_DLL
-        NAMES
-            PerfectHashOnlineCore.dll
-            PerfectHashOnline.dll
-        HINTS
-            ${_ph_search_hints}
-            "${PERFECTHASH_ONLINE_JIT_LIBRARY_DIR}"
-        PATH_SUFFIXES
-            bin
-            build/bin
-            bin/Release
-            build/bin/Release
-            bin/RelWithDebInfo
-            build/bin/RelWithDebInfo
-            bin/Debug
-            build/bin/Debug
-    )
-
-    find_file(
-        PERFECTHASH_ONLINE_JIT_LLVM_RUNTIME_DLL
-        NAMES
-            PerfectHashLLVM.dll
-        HINTS
-            ${_ph_search_hints}
-            "${PERFECTHASH_ONLINE_JIT_LLVM_LIBRARY_DIR}"
-        PATH_SUFFIXES
-            bin
-            build/bin
-            bin/Release
-            build/bin/Release
-            bin/RelWithDebInfo
-            build/bin/RelWithDebInfo
-            bin/Debug
-            build/bin/Debug
-    )
+    if(PERFECTHASH_ONLINE_JIT_LIBRARY)
+        set(_ph_all_runtimes TRUE)
+        set(_ph_required_runtime _ph_all_runtimes)
+        _ph_windows_bundle(_ph_default "${PERFECTHASH_ONLINE_JIT_LIBRARY}" "${_ph_shared_dir}")
+        foreach(_ph_config IN LISTS CMAKE_CONFIGURATION_TYPES)
+            set(_ph_bundle _ph_default)
+            if(NOT PERFECTHASH_ONLINE_JIT_LIBRARY_IS_OVERRIDE)
+                set(_ph_config_dir "${_ph_lib_base}/${_ph_config}")
+                if(_ph_assume_static)
+                    set(_ph_paths "${_ph_config_dir}/static" "${_ph_lib_base}/static/${_ph_config}")
+                else()
+                    set(_ph_paths "${_ph_config_dir}")
+                endif()
+                foreach(_ph_name IN LISTS _ph_online_names)
+                    unset(_ph_variant)
+                    _ph_find(find_library _ph_variant NAMES "${_ph_name}" PATHS ${_ph_paths} NO_DEFAULT_PATH)
+                    if(NOT _ph_variant)
+                        continue()
+                    elseif(_ph_variant STREQUAL PERFECTHASH_ONLINE_JIT_LIBRARY)
+                        break()
+                    endif()
+                    set(_ph_candidate "_ph_${_ph_config}_${_ph_name}")
+                    _ph_windows_bundle(${_ph_candidate} "${_ph_variant}" "${_ph_config_dir}")
+                    if(_ph_assume_static OR ${_ph_candidate}_core)
+                        set(_ph_bundle "${_ph_candidate}")
+                        break()
+                    endif()
+                endforeach()
+            endif()
+            set(_ph_bundle_${_ph_config} "${_ph_bundle}")
+        endforeach()
+        if(NOT _ph_assume_static AND NOT _ph_default_core)
+            get_filename_component(stem "${PERFECTHASH_ONLINE_JIT_LIBRARY}" NAME_WE)
+            set(_ph_all_runtimes FALSE)
+            set(_ph_runtime_error REASON_FAILURE_MESSAGE
+                "The import library ${PERFECTHASH_ONLINE_JIT_LIBRARY} requires ${stem}.dll.")
+        elseif(_ph_assume_static AND _ph_requires_asm AND NOT _ph_default_asm)
+            set(_ph_all_runtimes FALSE)
+            set(_ph_runtime_error REASON_FAILURE_MESSAGE
+                "The x64 static library ${PERFECTHASH_ONLINE_JIT_LIBRARY} requires PerfectHashAsm.lib.")
+        endif()
+        # Retain complete link/runtime pairs, even when one installed configuration
+        # is incomplete. An explicitly selected library is the only candidate.
+        foreach(_ph_config IN LISTS CMAKE_CONFIGURATION_TYPES)
+            set(_ph_bundle "${_ph_bundle_${_ph_config}}")
+            if(NOT _ph_assume_static AND NOT ${_ph_bundle}_core)
+                set(_ph_bundle _ph_default)
+                set(_ph_bundle_${_ph_config} "${_ph_bundle}")
+            elseif(_ph_assume_static AND _ph_requires_asm AND NOT ${_ph_bundle}_asm)
+                set(${_ph_bundle}_asm "${_ph_default_asm}")
+            endif()
+            list(APPEND PERFECTHASH_ONLINE_JIT_RUNTIME_FILES "$<$<CONFIG:${_ph_config}>:${${_ph_bundle}_files}>")
+        endforeach()
+        if(NOT CMAKE_CONFIGURATION_TYPES)
+            set(PERFECTHASH_ONLINE_JIT_RUNTIME_FILES "${_ph_default_files}")
+        endif()
+        set(PERFECTHASH_ONLINE_JIT_LIBRARY "${_ph_default_library}")
+        get_filename_component(PERFECTHASH_ONLINE_JIT_LIBRARY_DIR "${PERFECTHASH_ONLINE_JIT_LIBRARY}" DIRECTORY)
+        set(PERFECTHASH_ONLINE_JIT_RUNTIME_DLL "${_ph_default_core}")
+        set(PERFECTHASH_ONLINE_JIT_LLVM_LIBRARY "${_ph_default_llvm}")
+        set(PERFECTHASH_ONLINE_JIT_LLVM_RUNTIME_DLL "${_ph_default_plugin}")
+        get_filename_component(PERFECTHASH_ONLINE_JIT_LLVM_LIBRARY_DIR "${PERFECTHASH_ONLINE_JIT_LLVM_LIBRARY}" DIRECTORY)
+        set(PERFECTHASH_ASM_LIBRARY "${_ph_default_asm}")
+    endif()
+elseif(PERFECTHASH_ONLINE_JIT_LIBRARY MATCHES "\\.a$")
+    set(_ph_assume_static TRUE)
+    if(_ph_requires_asm)
+        set(_ph_required_runtime PERFECTHASH_ASM_LIBRARY)
+    endif()
 endif()
 
 find_package_handle_standard_args(
@@ -184,6 +792,8 @@ find_package_handle_standard_args(
     REQUIRED_VARS
         PERFECTHASH_ONLINE_JIT_LIBRARY
         PERFECTHASH_ONLINE_JIT_INCLUDE_DIR
+        ${_ph_required_runtime}
+    ${_ph_runtime_error}
 )
 
 if(PerfectHashOnlineJit_FOUND AND NOT TARGET PerfectHash::OnlineJit)
@@ -195,64 +805,32 @@ if(PerfectHashOnlineJit_FOUND AND NOT TARGET PerfectHash::OnlineJit)
             INTERFACE_INCLUDE_DIRECTORIES "${PERFECTHASH_ONLINE_JIT_INCLUDE_DIR}"
     )
 
-    set(_ph_assume_static FALSE)
-    if(NOT WIN32)
-        if(PERFECTHASH_ONLINE_JIT_LIBRARY MATCHES "\\.a$")
-            set(_ph_assume_static TRUE)
-        endif()
-    endif()
-
     if(WIN32)
-        if(PERFECTHASH_ONLINE_JIT_LIBRARY MATCHES "([/\\\\]|^)static([/\\\\]|$)")
-            set(_ph_assume_static TRUE)
-        elseif(NOT PERFECTHASH_ONLINE_JIT_RUNTIME_DLL)
-            set(_ph_assume_static TRUE)
+        foreach(_ph_config IN LISTS CMAKE_CONFIGURATION_TYPES)
+            set(_ph_bundle "${_ph_bundle_${_ph_config}}")
+            string(TOUPPER "${_ph_config}" _ph_upper)
+            set_property(TARGET PerfectHash::OnlineJit PROPERTY
+                IMPORTED_LOCATION_${_ph_upper} "${${_ph_bundle}_library}")
+            if(${_ph_bundle}_asm)
+                target_link_libraries(PerfectHash::OnlineJit INTERFACE "$<$<CONFIG:${_ph_config}>:${${_ph_bundle}_asm}>")
+            endif()
+        endforeach()
+        if(NOT CMAKE_CONFIGURATION_TYPES AND PERFECTHASH_ASM_LIBRARY)
+            target_link_libraries(PerfectHash::OnlineJit INTERFACE "${PERFECTHASH_ASM_LIBRARY}")
         endif()
-
         if(_ph_assume_static)
-            set_property(
-                TARGET PerfectHash::OnlineJit
-                APPEND
-                PROPERTY INTERFACE_COMPILE_DEFINITIONS PERFECT_HASH_ONLINE_JIT_STATIC
-            )
+            target_compile_definitions(PerfectHash::OnlineJit INTERFACE PERFECT_HASH_ONLINE_JIT_STATIC)
+            target_link_libraries(PerfectHash::OnlineJit INTERFACE rpcrt4)
         endif()
-    endif()
-
-    if(_ph_assume_static)
-        find_library(
-            PERFECTHASH_ASM_LIBRARY
-            NAMES PerfectHashAsm
-            HINTS ${_ph_search_hints}
-            PATH_SUFFIXES ${_ph_lib_suffixes}
-        )
-
+    elseif(_ph_assume_static)
         if(PERFECTHASH_ASM_LIBRARY)
-            set_property(
-                TARGET PerfectHash::OnlineJit
-                APPEND
-                PROPERTY INTERFACE_LINK_LIBRARIES "${PERFECTHASH_ASM_LIBRARY}"
-            )
+            target_link_libraries(PerfectHash::OnlineJit INTERFACE "${PERFECTHASH_ASM_LIBRARY}")
         endif()
-
-        if(WIN32)
-            set_property(
-                TARGET PerfectHash::OnlineJit
-                APPEND
-                PROPERTY INTERFACE_LINK_LIBRARIES rpcrt4
-            )
-        elseif(UNIX)
+        if(UNIX)
             find_package(Threads REQUIRED)
-            set_property(
-                TARGET PerfectHash::OnlineJit
-                APPEND
-                PROPERTY INTERFACE_LINK_LIBRARIES Threads::Threads
-            )
+            target_link_libraries(PerfectHash::OnlineJit INTERFACE Threads::Threads ${CMAKE_DL_LIBS})
             if(NOT APPLE)
-                set_property(
-                    TARGET PerfectHash::OnlineJit
-                    APPEND
-                    PROPERTY INTERFACE_LINK_LIBRARIES rt
-                )
+                target_link_libraries(PerfectHash::OnlineJit INTERFACE rt)
             endif()
         endif()
     endif()

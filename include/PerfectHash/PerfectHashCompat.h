@@ -2374,6 +2374,7 @@ HANDLE GetCurrentProcess();
 #define ERROR_PATH_NOT_FOUND             3L
 #define ERROR_ACCESS_DENIED              5L
 #define ERROR_NOT_ENOUGH_MEMORY          8L
+#define ERROR_NO_MORE_FILES              18L
 #define ERROR_DIR_NOT_EMPTY              145L
 #define ERROR_INSUFFICIENT_BUFFER        122L
 #define ERROR_ALREADY_EXISTS             183L
@@ -2901,7 +2902,33 @@ GetStdHandle(
 #define STD_OUTPUT_HANDLE   ((DWORD)-11)
 #define STD_ERROR_HANDLE    ((DWORD)-12)
 
-#define ExitProcess exit
+//
+// exit() keeps only the low byte of its argument.  PH_E_INVALID_PATH and
+// PH_E_CONTEXT_MAIN_WORK_LIST_EMPTY end in a zero byte, so report a failure
+// whose low byte is zero as status 1 rather than as success.
+//
+
+static inline int
+PerfectHashExitStatus(
+    unsigned int ExitCode
+    )
+{
+    if ((ExitCode & 0x80000000u) != 0 && (ExitCode & 0xffu) == 0) {
+        return 1;
+    }
+    return (int)ExitCode;
+}
+
+__attribute__((noreturn))
+static inline void
+PerfectHashExitProcess(
+    unsigned int ExitCode
+    )
+{
+    exit(PerfectHashExitStatus(ExitCode));
+}
+
+#define ExitProcess PerfectHashExitProcess
 
 #define ACL_REVISION     (2)
 #define ACL_REVISION_DS  (4)

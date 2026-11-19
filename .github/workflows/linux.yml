@@ -68,6 +68,24 @@ jobs:
         run: |
           micromamba run -n "${{ matrix.env_name }}" ctest --test-dir "${{ matrix.build_dir }}" --output-on-failure -C Release --timeout 300
 
+      - name: Test installed ARM64 JIT libraries
+        if: matrix.name == 'linux-arm64-py313'
+        shell: bash -l {0}
+        run: |
+          set -euo pipefail
+          prefix="$RUNNER_TEMP/perfecthash-installed"
+          build_dir="${{ matrix.build_dir }}"
+          micromamba run -n "${{ matrix.env_name }}" cmake --install "$build_dir" --config Release --prefix "$prefix"
+          client="$RUNNER_TEMP/perfecthash-client"
+          # Conda's GNU ld needs a link-time search path for shared Core's C++ runtime.
+          cxx_runtime="$(micromamba run -n "${{ matrix.env_name }}" c++ -print-file-name=libstdc++.so.6)"
+          micromamba run -n "${{ matrix.env_name }}" cmake -S tests/installed-online-jit -B "$client" \
+            -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$prefix" \
+            -DCMAKE_EXE_LINKER_FLAGS="-Wl,-rpath-link,$(dirname "$cxx_runtime")"
+          micromamba run -n "${{ matrix.env_name }}" cmake --build "$client"
+          micromamba run -n "${{ matrix.env_name }}" env -u LD_LIBRARY_PATH ctest \
+            --test-dir "$client" --no-tests=error --output-on-failure
+
       - name: Examples (RawDog JIT + LLVM JIT + sqlite-online-jit)
         shell: bash -l {0}
         run: |

@@ -2,9 +2,12 @@
 
 #include <PerfectHash/PerfectHashOnlineJit.h>
 #include <PerfectHash/PerfectHash.h>
+#include <PerfectHash/PerfectHashOnlineJitPrivate.h>
 
+#include <array>
 #include <cstdint>
 #include <cstdlib>
+#include <future>
 #include <memory>
 #include <string>
 #include <unordered_set>
@@ -88,7 +91,195 @@ std::vector<uint64_t> MakeNonDownsized64Keys(size_t count) {
   return keys;
 }
 
+// What each backend returns while ScriptedCompileTable stands in for a
+// context's Online interface.
+HRESULT scripted_rawdog_result;
+HRESULT scripted_llvm_result;
+int scripted_llvm_compiles;
+
+HRESULT STDAPICALLTYPE ScriptedCompileTable(
+    PPERFECT_HASH_ONLINE, PPERFECT_HASH_TABLE,
+    PPERFECT_HASH_TABLE_COMPILE_FLAGS flags) {
+  if (flags->JitBackendLlvm) {
+    ++scripted_llvm_compiles;
+    return scripted_llvm_result;
+  }
+  return scripted_rawdog_result;
+}
+
 }  // namespace
+
+#if (defined(PH_HAS_RAWDOG_JIT) || defined(PH_HAS_LLVM)) && \
+    (defined(_M_ARM64) || defined(__aarch64__))
+static void VerifyArm64BatchWidths(PH_ONLINE_JIT_BACKEND requested) {
+  ScopedEnvVar concurrency_cap("PERFECT_HASH_ONLINE_MAX_CONCURRENCY", "4");
+  const std::array<uint32_t, 16> keys = {
+      1, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53};
+  PH_ONLINE_JIT_CONTEXT *raw_context = nullptr;
+  ASSERT_GE(PhOnlineJitOpen(&raw_context), 0);
+  std::unique_ptr<PH_ONLINE_JIT_CONTEXT, decltype(&PhOnlineJitClose)> context(
+      raw_context, &PhOnlineJitClose);
+
+  for (auto hash : {PhOnlineJitHashMultiplyShiftR, PhOnlineJitHashMultiplyShiftRX,
+                    PhOnlineJitHashMulshrolate1RX, PhOnlineJitHashMulshrolate2RX,
+                    PhOnlineJitHashMulshrolate3RX}) {
+    SCOPED_TRACE(hash);
+    PH_ONLINE_JIT_TABLE *raw_table = nullptr;
+    ASSERT_GE(PhOnlineJitCreateTable32(context.get(), hash, keys.data(),
+                                       keys.size(), &raw_table), 0);
+    std::unique_ptr<PH_ONLINE_JIT_TABLE, decltype(&PhOnlineJitReleaseTable)>
+        table(raw_table, &PhOnlineJitReleaseTable);
+    std::array<uint32_t, 16> expected;
+    for (size_t i = 0; i < keys.size(); ++i) {
+      ASSERT_GE(PhOnlineJitIndex32(table.get(), keys[i], &expected[i]), 0);
+    }
+
+    for (uint32_t requested_width : {0u, 1u, 4u, 8u, 16u}) {
+      SCOPED_TRACE(requested_width);
+      PH_ONLINE_JIT_BACKEND backend = PhOnlineJitBackendAuto;
+      uint32_t width = 0;
+      ASSERT_GE(PhOnlineJitCompileTableEx(
+                    context.get(), table.get(), requested,
+                    requested_width, PhOnlineJitMaxIsaAuto,
+                    PH_ONLINE_JIT_COMPILE_FLAG_STRICT_VECTOR_WIDTH,
+                    &backend, &width), 0);
+      ASSERT_EQ(backend, requested);
+      ASSERT_EQ(width, requested_width ? requested_width : 1u);
+
+      std::array<uint32_t, 16> actual = {};
+      for (size_t i = 0; i < keys.size(); i += width) {
+        if (width == 1) {
+          ASSERT_GE(PhOnlineJitIndex32(table.get(), keys[i], &actual[i]), 0);
+        } else {
+          const auto index = width == 4 ? PhOnlineJitIndex32x4 :
+                             width == 8 ? PhOnlineJitIndex32x8 : PhOnlineJitIndex32x16;
+          ASSERT_GE(index(table.get(), &keys[i], &actual[i]), 0);
+        }
+      }
+      EXPECT_EQ(actual, expected);
+    }
+  }
+}
+#ifdef PH_HAS_RAWDOG_JIT
+TEST(PerfectHashOnlineJitTests, Arm64RawDogStrictWidthsMatchScalar) {
+  VerifyArm64BatchWidths(PhOnlineJitBackendRawDogJit);
+}
+#endif
+#ifdef PH_HAS_LLVM
+TEST(PerfectHashOnlineJitTests, Arm64LlvmStrictWidthsMatchScalar) {
+  VerifyArm64BatchWidths(PhOnlineJitBackendLlvmJit);
+}
+#endif
+#endif
+
+#if defined(PH_HAS_LLVM) && defined(PH_HAS_RAWDOG_JIT)
+TEST(PerfectHashOnlineJitTests, SwitchBackendsAndReportCompiledWidth) {
+  ScopedEnvVar concurrency_cap("PERFECT_HASH_ONLINE_MAX_CONCURRENCY", "4");
+  std::array<uint32_t, 16> keys = {
+      1, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53};
+  PH_ONLINE_JIT_CONTEXT *raw_context = nullptr;
+  ASSERT_GE(PhOnlineJitOpen(&raw_context), 0);
+  std::unique_ptr<PH_ONLINE_JIT_CONTEXT, decltype(&PhOnlineJitClose)> context(
+      raw_context, &PhOnlineJitClose);
+  PH_ONLINE_JIT_TABLE *raw_table = nullptr;
+  ASSERT_GE(PhOnlineJitCreateTable32(context.get(), PhOnlineJitHashMultiplyShiftR,
+                                     keys.data(), keys.size(), &raw_table), 0);
+  std::unique_ptr<PH_ONLINE_JIT_TABLE, decltype(&PhOnlineJitReleaseTable)>
+      table(raw_table, &PhOnlineJitReleaseTable);
+  std::array<uint32_t, 16> expected;
+  for (size_t i = 0; i < keys.size(); ++i) {
+    ASSERT_GE(PhOnlineJitIndex32(table.get(), keys[i], &expected[i]), 0);
+  }
+
+  PH_ONLINE_JIT_BACKEND effective_backend = PhOnlineJitBackendAuto;
+  uint32_t effective_width = 0;
+  auto compile = [&](PH_ONLINE_JIT_BACKEND backend, uint32_t width,
+                     PH_ONLINE_JIT_MAX_ISA isa, uint32_t flags) {
+    return PhOnlineJitCompileTableEx(context.get(), table.get(), backend, width,
+                                     isa, flags, &effective_backend, &effective_width);
+  };
+  for (auto backend : {PhOnlineJitBackendRawDogJit, PhOnlineJitBackendLlvmJit,
+                       PhOnlineJitBackendRawDogJit}) {
+    ASSERT_GE(compile(backend, 1, PhOnlineJitMaxIsaAuto,
+                      PH_ONLINE_JIT_COMPILE_FLAG_STRICT_VECTOR_WIDTH), 0);
+    ASSERT_EQ(effective_backend, backend);
+    ASSERT_EQ(effective_width, 1u);
+    for (size_t i = 0; i < keys.size(); ++i) {
+      uint32_t index = 0;
+      ASSERT_GE(PhOnlineJitIndex32(table.get(), keys[i], &index), 0);
+      EXPECT_EQ(index, expected[i]);
+    }
+  }
+
+  const auto strict = PH_ONLINE_JIT_COMPILE_FLAG_STRICT_VECTOR_WIDTH;
+  ASSERT_GE(compile(PhOnlineJitBackendLlvmJit, 8, PhOnlineJitMaxIsaAuto, strict), 0);
+  auto check_x8 = [&]() {
+    std::array<uint32_t, 16> actual = {};
+    for (size_t i = 0; i < keys.size(); i += 8) {
+      ASSERT_GE(PhOnlineJitIndex32x8(table.get(), &keys[i], &actual[i]), 0);
+    }
+    EXPECT_EQ(actual, expected);
+  };
+
+  // An unsupported request for either backend must keep the existing
+  // x8 routine and its executable pages available.
+  ASSERT_EQ(compile(PhOnlineJitBackendRawDogJit, 2, PhOnlineJitMaxIsaAuto,
+                    strict), PH_E_NOT_IMPLEMENTED);
+  check_x8();
+  ASSERT_EQ(compile(PhOnlineJitBackendLlvmJit, 16, PhOnlineJitMaxIsaAvx2,
+                    strict), PH_E_NOT_IMPLEMENTED);
+  check_x8();
+#if defined(_M_ARM64) || defined(__aarch64__)
+  ASSERT_GE(compile(PhOnlineJitBackendRawDogJit, 8, PhOnlineJitMaxIsaAuto, strict), 0);
+  ASSERT_EQ(compile(PhOnlineJitBackendLlvmJit, 16, PhOnlineJitMaxIsaAvx2,
+                    strict), PH_E_NOT_IMPLEMENTED);
+  check_x8();
+#endif
+  ASSERT_GE(compile(PhOnlineJitBackendLlvmJit, 16, PhOnlineJitMaxIsaAvx2, 0), 0);
+  ASSERT_EQ(effective_backend, PhOnlineJitBackendLlvmJit);
+  ASSERT_EQ(effective_width, 8u);
+  check_x8();
+
+  // Concurrent compiles either complete or return PH_E_TABLE_LOCKED. Query
+  // the final x8 binding once both compilers have finished.
+  auto recompile = [&]() {
+    for (int pass = 0; pass < 8; ++pass) {
+      auto result = PhOnlineJitCompileTableEx(
+          context.get(), table.get(), PhOnlineJitBackendLlvmJit, 8,
+          PhOnlineJitMaxIsaAuto, strict, nullptr, nullptr);
+      if (result < 0 && result != PH_E_TABLE_LOCKED) {
+        return false;
+      }
+    }
+    return true;
+  };
+  auto first = std::async(std::launch::async, recompile);
+  auto second = std::async(std::launch::async, recompile);
+  EXPECT_TRUE(first.get());
+  EXPECT_TRUE(second.get());
+  check_x8();
+
+  // Lock contention is not a RawDog failure. An automatic request RawDog can
+  // satisfy reports RawDog or PH_E_TABLE_LOCKED, never a fallback to LLVM.
+  auto recompile_auto = [&]() {
+    for (int pass = 0; pass < 2000; ++pass) {
+      PH_ONLINE_JIT_BACKEND backend = PhOnlineJitBackendAuto;
+      auto result = PhOnlineJitCompileTableEx(
+          context.get(), table.get(), PhOnlineJitBackendAuto, 1,
+          PhOnlineJitMaxIsaAuto, strict, &backend, nullptr);
+      if (result < 0 ? result != PH_E_TABLE_LOCKED
+                     : backend != PhOnlineJitBackendRawDogJit) {
+        return false;
+      }
+    }
+    return true;
+  };
+  first = std::async(std::launch::async, recompile_auto);
+  second = std::async(std::launch::async, recompile_auto);
+  EXPECT_TRUE(first.get());
+  EXPECT_TRUE(second.get());
+}
+#endif
 
 TEST(PerfectHashOnlineJitTests, CreateTable64AndIndex64) {
   ScopedEnvVar concurrency_cap("PERFECT_HASH_ONLINE_MAX_CONCURRENCY", "4");
@@ -198,6 +389,59 @@ TEST(PerfectHashOnlineJitTests, CreateTable32AndIndex32) {
     ASSERT_GE(PhOnlineJitIndex32(table.get(), key, &index), 0);
     ASSERT_TRUE(seen.insert(index).second);
   }
+}
+
+TEST(PerfectHashOnlineJitTests, AutoBackendKeepsRawDogFailureLlvmCannotExplain) {
+  const std::array<uint32_t, 8> keys = {1, 3, 5, 7, 11, 13, 17, 19};
+  PH_ONLINE_JIT_CONTEXT *raw_context = nullptr;
+  ASSERT_GE(PhOnlineJitOpen(&raw_context), 0);
+  std::unique_ptr<PH_ONLINE_JIT_CONTEXT, decltype(&PhOnlineJitClose)> context(
+      raw_context, &PhOnlineJitClose);
+  PH_ONLINE_JIT_TABLE *raw_table = nullptr;
+  ASSERT_GE(PhOnlineJitCreateTable32(context.get(), PhOnlineJitHashMultiplyShiftR,
+                                     keys.data(), keys.size(), &raw_table), 0);
+  std::unique_ptr<PH_ONLINE_JIT_TABLE, decltype(&PhOnlineJitReleaseTable)> table(
+      raw_table, &PhOnlineJitReleaseTable);
+
+  // Answer for both backends until the real interface is restored below.
+  PERFECT_HASH_ONLINE_VTBL scripted = *context->Online->Vtbl;
+  scripted.CompileTable = ScriptedCompileTable;
+  PPERFECT_HASH_ONLINE_VTBL real = context->Online->Vtbl;
+  context->Online->Vtbl = &scripted;
+
+  PH_ONLINE_JIT_BACKEND backend = PhOnlineJitBackendAuto;
+  auto compile = [&](HRESULT rawdog, HRESULT llvm) {
+    scripted_rawdog_result = rawdog;
+    scripted_llvm_result = llvm;
+    scripted_llvm_compiles = 0;
+    backend = PhOnlineJitBackendAuto;
+    return PhOnlineJitCompileTableEx(context.get(), table.get(),
+                                     PhOnlineJitBackendAuto, 8,
+                                     PhOnlineJitMaxIsaAuto, 0, &backend, nullptr);
+  };
+
+  // RawDog has no routine for the request, so the absent plugin is the reason.
+  EXPECT_EQ(compile(PH_E_NOT_IMPLEMENTED, PH_E_LLVM_BACKEND_NOT_FOUND),
+            PH_E_LLVM_BACKEND_NOT_FOUND);
+
+  // RawDog failed outright. An absent plugin, or one with no routine for the
+  // request, does not explain that.
+  EXPECT_EQ(compile(PH_E_SYSTEM_CALL_FAILED, PH_E_LLVM_BACKEND_NOT_FOUND),
+            PH_E_SYSTEM_CALL_FAILED);
+  EXPECT_EQ(scripted_llvm_compiles, 1);
+  EXPECT_EQ(compile(PH_E_SYSTEM_CALL_FAILED, PH_E_NOT_IMPLEMENTED),
+            PH_E_SYSTEM_CALL_FAILED);
+
+  // LLVM still serves the request when it can, and reports its own failures.
+  EXPECT_EQ(compile(PH_E_SYSTEM_CALL_FAILED, S_OK), S_OK);
+  EXPECT_EQ(backend, PhOnlineJitBackendLlvmJit);
+  EXPECT_EQ(compile(PH_E_SYSTEM_CALL_FAILED, E_OUTOFMEMORY), E_OUTOFMEMORY);
+
+  // Contention ends the attempt before LLVM is tried.
+  EXPECT_EQ(compile(PH_E_TABLE_LOCKED, S_OK), PH_E_TABLE_LOCKED);
+  EXPECT_EQ(scripted_llvm_compiles, 0);
+
+  context->Online->Vtbl = real;
 }
 
 TEST(PerfectHashOnlineJitTests, Index64On32BitTableIsNotImplemented) {

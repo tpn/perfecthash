@@ -184,6 +184,7 @@ TryExtractArgTableCreateFlags(
     DECL_ARG(DoNotTryUseAvx2HashFunction);
     DECL_ARG(TryUseAvx512HashFunction);
     DECL_ARG(DoNotTryUseAvx512HashFunction);
+    DECL_ARG(DoNotTryUseNeonHashFunction);
     DECL_ARG(TryUseJitHashFunction);
     DECL_ARG(DoNotTryUseJitHashFunction);
     DECL_ARG(DoNotTryUseAvx2MemoryCoverageFunction);
@@ -244,6 +245,7 @@ TryExtractArgTableCreateFlags(
     SET_FLAG_AND_RETURN_IF_EQUAL(RngUseRandomStartSeed);
     SET_FLAG_AND_RETURN_IF_EQUAL(TryUseAvx2HashFunction);
     SET_FLAG_AND_RETURN_IF_EQUAL(TryUseAvx512HashFunction);
+    SET_FLAG_AND_RETURN_IF_EQUAL(DoNotTryUseNeonHashFunction);
     SET_FLAG_AND_RETURN_IF_EQUAL(TryUseJitHashFunction);
     SET_FLAG_AND_RETURN_IF_EQUAL(DoNotTryUseAvx2MemoryCoverageFunction);
     SET_FLAG_AND_RETURN_IF_EQUAL(IncludeKeysInCompiledDll);

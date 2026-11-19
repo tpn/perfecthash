@@ -56,3 +56,14 @@
 - [x] Add strict vector-width benchmarking mode to distinguish AVX/AVX2/AVX-512
   variant outcomes per permutation.
 - [x] Add CI execution for sqlite example.
+
+## Windows Runtime Packaging (PR #90 review, 2026-11-18)
+- [x] Stop requiring and staging `PerfectHash.dll` beside `PerfectHashLLVM.dll`
+  in `cpp-console-online-jit` and `sqlite-online-jit`.
+- [x] Keep `FindPerfectHashOnlineJit.cmake`, `PerfectHashOnlineJitRoots.cmake`
+  and `StagePerfectHashRuntime.cmake` byte-identical across both examples and
+  test for drift (`perfecthash.examples.online-jit-cmake-in-sync.*`).
+- [x] Stage Windows runtime DLLs only when the selection, a selected DLL or the
+  staging script changes.
+- [ ] Confirm the hosted Windows x64 and macOS jobs stay green with these
+  changes (validated locally on Linux x86_64 and Windows ARM64 only).

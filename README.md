@@ -196,8 +196,41 @@ ctest --test-dir build -C Release --output-on-failure --timeout 300
 Adjust the Visual Studio path for your installed version/edition. Install CMake,
 Ninja, Python, and native ARM64 Rust/Cargo first; the code-generation tests compile
 and validate the emitted C, C++, Python, Rust, and, when available, CUDA outputs.
-The default build works without LLVM; JIT-specific tests are skipped when their
-backend is unavailable.
+For both JITs on Windows ARM64, extract the **clang+llvm AArch64 Windows MSVC
+development archive** from an LLVM release. The following configuration was
+tested with LLVM 23.1.6. Run it in the native developer shell above and adjust
+the archive location for your machine. [LLVM 23.1.6 release](https://github.com/llvm/llvm-project/releases/tag/llvmorg-23.1.6)
+
+```powershell
+$llvm = 'D:/src/clang+llvm-23.1.6-aarch64-pc-windows-msvc'
+$env:PATH = "$llvm/bin;$env:PATH"
+cmake --preset ninja-multi -DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl "-DLLVM_DIR=$llvm/lib/cmake/llvm" -DPERFECTHASH_STATIC_LLVM=OFF
+cmake --build --preset ninja-release --parallel
+```
+
+RawDog uses `clang` and `llvm-objcopy` at build time. The LLVM backend uses
+`LLVM-C.dll` at runtime, so keep the absolute path to the archive's `bin`
+directory on `PATH` when running the examples, tests or benchmarks.
+Windows loads `PerfectHashLLVM.dll` from the directory containing the
+PerfectHash host DLL. When linking Online or OnlineCore statically into an
+executable, deploy `PerfectHashLLVM.dll` beside the executable. The plugin
+needs no other PerfectHash DLL. A build without the optional tools
+continues to support native lookup.
+
+Windows ARM64 RawDog provides scalar and 4-, 8-, and 16-key batch lookup for
+MultiplyShiftR, MultiplyShiftRX, and Mulshrolate1RX through Mulshrolate3RX.
+LLVM also supports Mulshrolate4RX and can generate SIMD lookup kernels.
+
+With `--HashAllKeysFirst`, the ARM64 solver can hash four keys at a time
+using NEON for MultiplyShiftR, MultiplyShiftRX, and Mulshrolate1RX through
+Mulshrolate4RX. Both 16-bit and 32-bit vertex pairs are supported. A hash
+JIT selected with `--TryUseJitHashFunction` takes precedence, at any
+concurrency. To benchmark NEON against scalar, leave that option off in both
+runs and add `--DoNotTryUseNeonHashFunction` to the scalar run. The CSV fields
+`UsedNeonHashFunction` and `UsedJitHashFunction` show which of the two the
+winning graph used. Lookups
+in a solved table use the backend and batch width chosen by the caller.
+[Grace lookup and solver benchmarks](docs/benchmarks/windows-arm64-grace-jit/README.md)
 
 You can also download the latest binaries from the [Releases](https://github.com/tpn/perfecthash/releases/)
 page.  The `PGO` zip files refer to profile-guided optimization builds, and are

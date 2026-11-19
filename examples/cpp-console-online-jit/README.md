@@ -53,6 +53,16 @@ cmake --build build\examples\cpp-console-online-jit --config Release
 
 ### Local Tree Fallback (No FetchContent)
 
+Older Windows builds may have copied `PerfectHashLLVM.dll` beside the executable before CMake tracked staged files. Staging stops if it finds an untracked plugin there and the selected SDK supplies none. Move the previous SDK's DLL out of the executable directory and rebuild. To use a compatible plugin you supplied, reconfigure with `-DPERFECTHASH_ONLINE_JIT_LLVM_RUNTIME_DLL="C:/path/to/PerfectHashLLVM.dll"`.
+
+When reusing a build directory with a cached `ON` or `OFF`, pass `-DPH_ONLINE_JIT_USE_FETCHCONTENT=AUTO` to select local discovery whenever `PerfectHashOnlineJit_ROOT` or `PERFECTHASH_ROOT` is set as a CMake or environment variable.
+
+To rediscover SDK paths cached by an older finder, add `-U "PERFECTHASH_ONLINE_JIT_*" -U PERFECTHASH_ASM_LIBRARY` to the configure command and repeat any intentional path overrides after those options.
+
+`PerfectHashOnlineJit_ROOT` accepts an ordered list of SDKs for the target architecture. Discovery uses the first complete SDK. If a Windows repository contains builds for several target architectures, set `PERFECTHASH_ROOT` to the intended build or install directory. A headerless build can use the named checkout when the build is inside it or its CMake cache identifies that source directory. For a headerless SDK from another location, also pass `-DPERFECTHASH_ONLINE_JIT_INCLUDE_DIR=<repository>/include`.
+
+For a Windows SDK with a static archive outside a `static` directory, pass `-DPERFECTHASH_ONLINE_JIT_STATIC_LIBRARY=C:/sdk/lib/Debug/PerfectHashOnlineCore.lib` with the path to the archive.
+
 ```bash
 cmake -S examples/cpp-console-online-jit \
       -B build/examples/cpp-console-online-jit \

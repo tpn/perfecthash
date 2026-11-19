@@ -66,35 +66,7 @@
 
 PerfectHashJitIndexMulshrolate1RXIndex32x16_arm64:
 
-        stp     x29, x30, [sp, #-80]!
-        mov     x29, sp
-
-        str     w0, [x29, #16]
-        str     w1, [x29, #20]
-        str     w2, [x29, #24]
-        str     w3, [x29, #28]
-        str     w4, [x29, #32]
-        str     w5, [x29, #36]
-        str     w6, [x29, #40]
-        str     w7, [x29, #44]
-
-        add     x12, x29, #80                // Stack args base.
-        ldr     w0, [x12, #0]
-        str     w0, [x29, #48]
-        ldr     w0, [x12, #4]
-        str     w0, [x29, #52]
-        ldr     w0, [x12, #8]
-        str     w0, [x29, #56]
-        ldr     w0, [x12, #12]
-        str     w0, [x29, #60]
-        ldr     w0, [x12, #16]
-        str     w0, [x29, #64]
-        ldr     w0, [x12, #20]
-        str     w0, [x29, #68]
-        ldr     w0, [x12, #24]
-        str     w0, [x29, #72]
-        ldr     w0, [x12, #28]
-        str     w0, [x29, #76]
+#include "PerfectHashJitIndex32x16Arm64.inc"
 
         ldr     x10, RawDogAssigned
         ldr     w11, RawDogSeed3Byte1
@@ -104,7 +76,7 @@ PerfectHashJitIndexMulshrolate1RXIndex32x16_arm64:
         ldr     w16, RawDogIndexMask
 
         add     x9, x29, #16                 // Key base.
-        add     x17, x29, #112               // Output pointer base.
+        add     x17, x29, #(80 + 8 * STACK_KEY_SLOT_SIZE) // Output pointer base.
         mov     w8, wzr
 
 1:

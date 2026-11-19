@@ -124,6 +124,9 @@
     <ClCompile Include="Graph.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="GraphNeon.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="PerfectHashTableCompile.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -149,6 +152,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="ChmOnline01Stub.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PerfectHashLLVMLoader.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PerfectHashTableJitInterface.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="ChmOnline01HashJit.c">
@@ -466,6 +475,9 @@
       <Filter>Private Header Files</Filter>
     </ClInclude>
     <ClInclude Include="PerfectHashPath.h">
+      <Filter>Private Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PerfectHashOnlineJitPrivate.h">
       <Filter>Private Header Files</Filter>
     </ClInclude>
     <ClInclude Include="PerfectHashPrivate.h">
