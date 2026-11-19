@@ -3,6 +3,7 @@
 import argparse
 import csv
 import os
+import struct
 import subprocess
 import tempfile
 from pathlib import Path
@@ -13,8 +14,9 @@ parser.add_argument("exe")
 parser.add_argument("source", type=Path)
 parser.add_argument("width", type=int, choices=(16, 32), nargs="?", default=32)
 parser.add_argument("--mixed", action="store_true", help="run one CPU and one CUDA worker")
+parser.add_argument("--subset", action="store_true", help="select width automatically for key-subset coverage")
 args = parser.parse_args()
-width_flags = ["--DoNotTryUseHash16Impl"] if args.width == 32 else []
+width_flags = ["--DoNotTryUseHash16Impl"] if args.width == 32 and not args.subset else []
 # The CPU can consume the short CUDA-only budget while the GPU initializes.
 attempts = 8192 if args.mixed else 128
 workers = "2" if args.mixed else "1"
@@ -22,14 +24,20 @@ with tempfile.TemporaryDirectory() as tmp:
     output = Path(tmp)
     keys = output / "Hologram8193.keys"
     with args.source.open("rb") as fixture:
-        keys.write_bytes(fixture.read(8193 * 4))
+        data = fixture.read(8193 * 4)
+    keys.write_bytes(data)
+    coverage_flags = ["--BestCoverageType=HighestNumberOfEmptyCacheLines"]
+    if args.subset:
+        subset = ",".join(map(str, struct.unpack_from("<512I", data)))
+        coverage_flags = ["--BestCoverageType=HighestMaxAssignedPerCacheLineCountForKeysSubset",
+                          f"--KeysSubset={subset}"]
 
     # Philox selects new seeds each attempt. This prefix produces several
     # successive winners and the best graph predates the final attempt.
     result = subprocess.run(
         [args.exe, keys, output, "Chm02", "Mulshrolate3RX", "And", workers,
          "--CuConcurrency=1", "--FindBestGraph",
-         "--BestCoverageType=HighestNumberOfEmptyCacheLines",
+         *coverage_flags,
          f"--FixedAttempts={attempts}", *width_flags,
          "--Rng=Philox43210", "--RngSeed=12345", "--NoFileIo"],
         env={**os.environ, "PH_DEBUG_CUDA_CHM02": "1"},
@@ -57,6 +65,8 @@ with tempfile.TemporaryDirectory() as tmp:
     winners = int(row["NewBestGraphCount"])
     if winners < 2:
         raise AssertionError(f"Expected multiple best graphs, got {winners}")
+    if args.subset and int(row[f"BestGraph{winners}_Value"]) <= int(row["BestGraph1_Value"]):
+        raise AssertionError("The retained graph did not improve the key-subset score")
     winning_attempt = int(row[f"BestGraph{winners}_Attempt"])
     if int(row["AttemptThatFoundBestGraph"]) != winning_attempt:
         raise AssertionError(f"Expected the summary and winner to agree on attempt {winning_attempt}")

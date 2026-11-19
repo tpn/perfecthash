@@ -3411,8 +3411,10 @@ End:
         ASSERT(!FoundBestGraph);
         ASSERT(EqualBestGraphIndex >= 0);
 
-        BestGraphInfo = &Context->BestGraphInfo[EqualBestGraphIndex];
-        EqualCount = ++BestGraphInfo->EqualCount;
+        EqualCount = ++Context->CurrentBestGraphEqualCount;
+        if (EqualBestGraphIndex < MAX_BEST_GRAPH_INFO) {
+            Context->BestGraphInfo[EqualBestGraphIndex].EqualCount = EqualCount;
+        }
 
         //
         // If we've hit the maximum number of equal graphs, we can stop solving.
@@ -3428,6 +3430,7 @@ End:
     } else if (FoundBestGraph) {
 
         BestGraph = Graph;
+        Context->CurrentBestGraphEqualCount = 0;
 
         Graph->AssignedMemoryCoverage.BestGraphNumber = BestGraphIndex + 1;
 
@@ -3458,39 +3461,29 @@ End:
 
             BestCoverage = &BestGraphInfo->Coverage;
 
-        } else {
-
             //
-            // Nothing to do if we've exceeded the number of best graphs we
-            // capture in the context.  (The information may still be emitted
-            // via an ETW event.)
+            // Capture the value used to determine that this graph was the best.
             //
-
-            ASSERT(BestCoverage == NULL);
-        }
-
-        //
-        // Capture the value used to determine that this graph was the best.
-        //
 
 #define EXPAND_AS_SAVE_BEST_GRAPH_VALUE(Name, Comparison, Comparator) \
-    case BestCoverageType##Comparison##Name##Id:                      \
-        BestGraphInfo->Value = (ULONG)Coverage->Name;               \
-        BestGraphInfo->ValueAsDouble = (DOUBLE)Coverage->Name;      \
-        break;
+        case BestCoverageType##Comparison##Name##Id:                      \
+            BestGraphInfo->Value = (ULONG)Coverage->Name;               \
+            BestGraphInfo->ValueAsDouble = (DOUBLE)Coverage->Name;      \
+            break;
 
-        switch (CoverageType) {
+            switch (CoverageType) {
 
-            case BestCoverageTypeNullId:
-            case BestCoverageTypeInvalidId:
-                PH_RAISE(PH_E_UNREACHABLE_CODE);
-                break;
+                case BestCoverageTypeNullId:
+                case BestCoverageTypeInvalidId:
+                    PH_RAISE(PH_E_UNREACHABLE_CODE);
+                    break;
 
-            BEST_COVERAGE_TYPE_TABLE_ENTRY(EXPAND_AS_SAVE_BEST_GRAPH_VALUE)
+                BEST_COVERAGE_TYPE_TABLE_ENTRY(EXPAND_AS_SAVE_BEST_GRAPH_VALUE)
 
-            default:
-                Result = PH_E_INVALID_BEST_COVERAGE_TYPE_ID;
-                break;
+                default:
+                    Result = PH_E_INVALID_BEST_COVERAGE_TYPE_ID;
+                    break;
+            }
         }
     }
 
@@ -6603,8 +6596,10 @@ End:
         ASSERT(!FoundBestGraph);
         ASSERT(EqualBestGraphIndex >= 0);
 
-        BestGraphInfo = &Context->BestGraphInfo[EqualBestGraphIndex];
-        EqualCount = ++BestGraphInfo->EqualCount;
+        EqualCount = ++Context->CurrentBestGraphEqualCount;
+        if (EqualBestGraphIndex < MAX_BEST_GRAPH_INFO) {
+            Context->BestGraphInfo[EqualBestGraphIndex].EqualCount = EqualCount;
+        }
 
         //
         // If we've hit the maximum number of equal graphs, we can stop solving.
@@ -6619,6 +6614,7 @@ End:
     } else if (FoundBestGraph) {
 
         BestGraph = Graph;
+        Context->CurrentBestGraphEqualCount = 0;
 
         Graph->Assigned16MemoryCoverage.BestGraphNumber = BestGraphIndex + 1;
 
@@ -6649,39 +6645,29 @@ End:
 
             BestCoverage = &BestGraphInfo->Coverage16;
 
-        } else {
-
             //
-            // Nothing to do if we've exceeded the number of best graphs we
-            // capture in the context.  (The information may still be emitted
-            // via an ETW event.)
+            // Capture the value used to determine that this graph was the best.
             //
-
-            ASSERT(BestCoverage == NULL);
-        }
-
-        //
-        // Capture the value used to determine that this graph was the best.
-        //
 
 #define EXPAND_AS_SAVE_BEST_GRAPH_VALUE(Name, Comparison, Comparator) \
-    case BestCoverageType##Comparison##Name##Id:                      \
-        BestGraphInfo->Value = (ULONG)Coverage->Name;                 \
-        BestGraphInfo->ValueAsDouble = (DOUBLE)Coverage->Name;        \
-        break;
+        case BestCoverageType##Comparison##Name##Id:                      \
+            BestGraphInfo->Value = (ULONG)Coverage->Name;                 \
+            BestGraphInfo->ValueAsDouble = (DOUBLE)Coverage->Name;        \
+            break;
 
-        switch (CoverageType) {
+            switch (CoverageType) {
 
-            case BestCoverageTypeNullId:
-            case BestCoverageTypeInvalidId:
-                PH_RAISE(PH_E_UNREACHABLE_CODE);
-                break;
+                case BestCoverageTypeNullId:
+                case BestCoverageTypeInvalidId:
+                    PH_RAISE(PH_E_UNREACHABLE_CODE);
+                    break;
 
-            BEST_COVERAGE_TYPE_TABLE_ENTRY(EXPAND_AS_SAVE_BEST_GRAPH_VALUE)
+                BEST_COVERAGE_TYPE_TABLE_ENTRY(EXPAND_AS_SAVE_BEST_GRAPH_VALUE)
 
-            default:
-                Result = PH_E_INVALID_BEST_COVERAGE_TYPE_ID;
-                break;
+                default:
+                    Result = PH_E_INVALID_BEST_COVERAGE_TYPE_ID;
+                    break;
+            }
         }
     }
 

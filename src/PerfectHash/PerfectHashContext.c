@@ -1533,7 +1533,6 @@ Return Value:
             BestGraph = Context->BestGraph;
             BestCoverage = &BestGraph->AssignedMemoryCoverage;
             CopyCoverage(Context->Table->Coverage, BestCoverage);
-            Context->Table->Coverage->Attempt = BestGraph->Attempt;
 
         } else {
 
