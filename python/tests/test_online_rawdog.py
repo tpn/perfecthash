@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 import pytest
@@ -9,21 +10,24 @@ from perfecthash.online import OnlineLibraryNotFoundError, build_rawdog_table
 from perfecthash.online.rawdog import find_default_library_path
 from perfecthash.online.rawdog_jit import _candidate_roots
 
-pytestmark = pytest.mark.skipif(
+requires_native_library = pytest.mark.skipif(
     find_default_library_path() is None,
     reason="PerfectHash shared library not found for online RawDog tests.",
 )
 
 
-def test_candidate_roots_include_repo_root() -> None:
-    roots = _candidate_roots()
-
+def test_candidate_roots_include_repo_root(monkeypatch: pytest.MonkeyPatch) -> None:
     expected_root = Path(__file__).resolve().parents[2]
+    module_path = expected_root / "python" / "perfecthash" / "online" / "rawdog_jit.py"
+    monkeypatch.setattr("perfecthash.online.rawdog_jit.__file__", str(module_path))
+
+    roots = _candidate_roots()
     assert roots[0] == expected_root
     assert (roots[0] / "pyproject.toml").is_file()
     assert (roots[0] / "python" / "perfecthash").is_dir()
 
 
+@requires_native_library
 def test_build_rawdog_table_indexes_small_sorted_key_set() -> None:
     keys = [1, 3, 5, 7, 11, 13, 17, 19]
 
@@ -37,6 +41,7 @@ def test_build_rawdog_table_indexes_small_sorted_key_set() -> None:
     assert sorted(indexes) == list(range(len(keys)))
 
 
+@requires_native_library
 def test_build_rawdog_table_indexes_small_unsorted_key_set() -> None:
     keys = [37, 13, 1, 53, 7, 19, 41, 3]
 
@@ -67,14 +72,28 @@ def test_build_rawdog_table_raises_if_library_missing(
         )
 
 
+@pytest.mark.parametrize(
+    ("platform", "relative_path"),
+    [
+        ("darwin", "lib/libPerfectHash.dylib"),
+        ("linux", "lib/libPerfectHash.so"),
+        ("win32", "Library/bin/PerfectHash.dll"),
+    ],
+)
 def test_find_default_rawdog_jit_library_path_prefix_override(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
+    platform: str,
+    relative_path: str,
 ) -> None:
-    library_path = tmp_path / "lib" / "libPerfectHash.so"
+    library_path = tmp_path / relative_path
     library_path.parent.mkdir(parents=True)
     library_path.write_text("", encoding="utf-8")
 
+    monkeypatch.setattr(sys, "platform", platform)
+    monkeypatch.setattr(
+        "perfecthash.discovery.package_native_root", lambda: tmp_path / "_native"
+    )
     monkeypatch.delenv("PERFECTHASH_LIBRARY_PATH", raising=False)
     monkeypatch.delenv("PERFECTHASH_LIB_PATH", raising=False)
     monkeypatch.setenv("PERFECTHASH_PREFIX", str(tmp_path))
