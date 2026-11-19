@@ -3931,7 +3931,7 @@ Severity=Fail
 Facility=ITF
 SymbolicName=PH_E_CU_DEVICES_COUNT_MUST_MATCH_CU_CONCONCURRENCY
 Language=English
-Number of values supplied to --CuDevices must match the value supplied by --CuConcurrency.
+An explicit --CuDevices list must contain between one and --CuConcurrency device ordinals.
 .
 
 MessageId=0x3b2

@@ -136,7 +136,6 @@ Return Value:
     PGRAPH Graph;
     BOOLEAN Silent;
     BOOLEAN Success;
-    ULONG Attempt = 0;
     BYTE NumberOfEvents;
     SIZE_T KeysSizeInBytes;
     HRESULT Result = S_OK;
@@ -605,6 +604,7 @@ Return Value:
 
         if (!NoFileIo(Table)) {
             ThreadpoolWait(FileWorkThreadpool);
+            CHECK_ALL_PREPARE_ERRORS();
         }
 
         //
@@ -671,6 +671,11 @@ FinishedSolution:
         LeaveCriticalSection(&Context->BestGraphCriticalSection);
 
         ASSERT(Graph != NULL);
+    }
+
+    Result = WaitForChm02WinnerStream(Graph);
+    if (FAILED(Result)) {
+        goto Error;
     }
 
     //
@@ -767,20 +772,17 @@ FinishedSolution:
     Context->SolvedContext = Graph;
 
     //
-    // Graphs always pass verification in normal circumstances.  The only time
-    // they don't is if there's an internal bug in our code.  So, knowing that
-    // the graph is probably correct, we can dispatch the file work required to
-    // save it to disk to the file work threadpool whilst we verify it has been
-    // solved correctly.
+    // CPU winners can be saved while verification runs. CUDA winners use
+    // managed memory, so host file workers must wait for the verification
+    // stream to finish reading the same assigned array.
     //
 
     if (!NoFileIo(Table)) {
-
-        //
-        // Dispatch save file work for the table data.
-        //
-
-        SUBMIT_SAVE_FILE_WORK();
+        ThreadpoolWait(FileWorkThreadpool);
+        CHECK_ALL_PREPARE_ERRORS();
+        if (!IsCuGraph(Graph)) {
+            SUBMIT_SAVE_FILE_WORK();
+        }
 
     } else {
 
@@ -954,6 +956,10 @@ FinishedSolution:
         goto End;
     }
 
+    if (IsCuGraph(Graph)) {
+        SUBMIT_SAVE_FILE_WORK();
+    }
+
     //
     // Wait on the saved file events before returning.
     //
@@ -984,8 +990,10 @@ Error:
     }
 
     SetEvent(Context->ShutdownEvent);
-    ThreadpoolWait(GraphThreadpool);
-    if (!NoFileIo(Table)) {
+    if (GraphThreadpool != NULL) {
+        ThreadpoolWait(GraphThreadpool);
+    }
+    if (FileWorkThreadpool != NULL) {
         ThreadpoolWait(FileWorkThreadpool);
     }
 
@@ -996,22 +1004,10 @@ Error:
 End:
 
     //
-    // Convert the out-of-memory error codes into our equivalent info codes.
+    // Close every file prepared by the file workers, including on error.
     //
 
-    if (Result == E_OUTOFMEMORY) {
-        Result = PH_I_OUT_OF_MEMORY;
-    } else if (Result == PH_E_CUDA_OUT_OF_MEMORY) {
-        Result = PH_I_CUDA_OUT_OF_MEMORY;
-    }
-
-    //
-    // If no attempts were made, no file work was submitted, which means we
-    // can skip the close logic below and jump straight to releasing graphs.
-    // Likewise for no file I/O.
-    //
-
-    if (Attempt == 0 || NoFileIo(Table)) {
+    if (FileWorkThreadpool == NULL) {
         goto ReleaseGraphs;
     }
 
@@ -1037,9 +1033,13 @@ End:
     Verb##Name.FileWorkId = FileWork##Verb##Name##Id;   \
     Verb##Name.Context = Context;                       \
     Verb##Name.EndOfFile = EndOfFile;                   \
-    ThreadpoolAddWork(FileWorkThreadpool,               \
-                      FileWorkItemCallbackChm01,        \
-                      &Verb##Name);
+    if (Result == S_OK ||                               \
+        (Prepare##Name.FilePointer &&                   \
+         *Prepare##Name.FilePointer)) {                 \
+        ThreadpoolAddWork(FileWorkThreadpool,           \
+                          FileWorkItemCallbackChm01,    \
+                          &Verb##Name);                 \
+    }
 
 #define SUBMIT_CLOSE_FILE_WORK() \
     CLOSE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_SUBMIT_CLOSE_FILE_WORK)
@@ -1060,7 +1060,7 @@ End:
         }                                                            \
         PH_ERROR(                                                    \
             CreatePerfectHashTableImplChm02_ErrorDuring##Verb##Name, \
-            Result                                                   \
+            CloseResult                                              \
         );                                                           \
         CloseFileErrorCount++;                                       \
     }
@@ -1071,15 +1071,24 @@ End:
     CHECK_ALL_CLOSE_ERRORS();
 
     //
-    // Just use whatever the last close file error was for our return value if
-    // we encountered any errors.
+    // A close failure takes precedence over an informational solve result.
     //
 
-    if (CloseFileErrorCount > 0) {
+    if (CloseFileErrorCount > 0 && SUCCEEDED(Result)) {
         Result = CloseResult;
     }
 
 ReleaseGraphs:
+
+    //
+    // Convert the out-of-memory error codes into our equivalent info codes.
+    //
+
+    if (Result == E_OUTOFMEMORY) {
+        Result = PH_I_OUT_OF_MEMORY;
+    } else if (Result == PH_E_CUDA_OUT_OF_MEMORY) {
+        Result = PH_I_CUDA_OUT_OF_MEMORY;
+    }
 
     Graphs = Context->Graphs;
 

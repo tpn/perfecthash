@@ -1073,7 +1073,7 @@ _Must_inspect_result_
 CU_RESULT
 (CU_STREAM_ATTACH_MEM_ASYNC)(
     _In_ CU_STREAM Stream,
-    _In_ PCU_DEVICE_POINTER Address,
+    _In_ CU_DEVICE_POINTER Address,
     _In_ _Pre_ _Field_range_(==, 0) SIZE_T Length,
     _In_ CU_MEM_ATTACH_FLAGS Flags
     );

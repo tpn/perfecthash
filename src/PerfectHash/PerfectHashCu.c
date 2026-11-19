@@ -519,6 +519,7 @@ CreateCuRuntimeContext(
                                         &CuRuntimeContext->CuDevices);
     if (FAILED(Result)) {
         PH_ERROR(CreatePerfectHashCuDevices, Result);
+        DestroyCuRuntimeContext(&CuRuntimeContext);
         return Result;
     }
 
@@ -532,6 +533,7 @@ DestroyCuRuntimeContext(
     _Inout_ PPH_CU_RUNTIME_CONTEXT *CuRuntimeContextPointer
     )
 {
+    PCU Cu;
     PALLOCATOR Allocator;
     PPH_CU_RUNTIME_CONTEXT CuRuntimeContext;
 
@@ -544,7 +546,8 @@ DestroyCuRuntimeContext(
         return;
     }
 
-    Allocator = CuRuntimeContext->Cu->Allocator;
+    Cu = CuRuntimeContext->Cu;
+    Allocator = Cu->Allocator;
 
     //
     // TODO: loop through the device contexts and free any device-specific allocs.
@@ -565,16 +568,11 @@ DestroyCuRuntimeContext(
                                  &CuRuntimeContext->CuDeviceContexts);
 
     //
-    // Release the CU instance.
+    // Release the runtime record while its component still owns the allocator.
     //
 
-    RELEASE(CuRuntimeContext->Cu);
-
-    //
-    // Clear the caller's pointer and return.
-    //
-
-    *CuRuntimeContextPointer = NULL;
+    Allocator->Vtbl->FreePointer(Allocator, (PVOID *)CuRuntimeContextPointer);
+    RELEASE(Cu);
 }
 
 _Must_inspect_result_
@@ -959,18 +957,9 @@ Routine Description:
 
     Process the device ordinals optionally supplied via --CuDevices.
 
-    This parameter is a bit quirky: it can be a single value or list of comma-
-    separated values.  Each value represents a device ordinal, and any device
-    ordinal can appear one or more times.  The number of *unique* ordinals
-    dictates the number of CUDA contexts we create.  (We only want one context
-    per device; multiple contexts would impede performance.)
-
-    If only one device ordinal is supplied, then all GPU solver threads will
-    use this device.  If more than one ordinal is supplied, there must be at
-    least two unique ordinals present in the entire set.  E.g.:
-
-         Valid:      --CuDevices=0,1
-         Invalid:    --CuDevices=0,0
+    Each ordinal selects the device for a GPU solver, in command-line order.
+    If fewer ordinals are supplied than solvers, the remaining solvers use the
+    last ordinal.  Without --CuDevices, all solvers use device zero.
 
     Additionally, if more than one ordinal is supplied, the dependent params
     like --CuDevicesBlocksPerGrid and --CuDevicesThreadsPerBlock must have
@@ -998,24 +987,13 @@ Return Value:
 --*/
 {
     PCU Cu;
-    PRTL Rtl;
     ULONG Index;
-    LONG Ordinal;
-    HRESULT Result;
-    RTL_BITMAP Bitmap;
+    CU_DEVICE Device;
     CU_RESULT CuResult;
-    CU_DEVICE DeviceId;
-    CU_DEVICE MinDeviceId;
-    CU_DEVICE MaxDeviceId;
-    ULONG NumberOfDevices;
-    ULONG NumberOfContexts;
     PVALUE_ARRAY Ordinals;
     PVALUE_ARRAY BlocksPerGrid;
     PVALUE_ARRAY ThreadsPerBlock;
     PVALUE_ARRAY KernelRuntimeTarget;
-    ULARGE_INTEGER BitmapBufferSizeInBytes;
-    PALLOCATOR Allocator = NULL;
-    PULONG BitmapBuffer = NULL;
 
     //
     // Initialize local aliases.
@@ -1026,221 +1004,47 @@ Return Value:
     ThreadsPerBlock = CuRuntimeContext->ThreadsPerBlock;
     KernelRuntimeTarget = CuRuntimeContext->KernelRuntimeTarget;
 
-    //
-    // First, if --CuDevices (local variable `Ordinals`) has not been supplied,
-    // verify no dependent params are present.
-    //
-
     if (Ordinals == NULL) {
-
         if (BlocksPerGrid != NULL) {
-            Result = PH_E_CU_BLOCKS_PER_GRID_REQUIRES_CU_DEVICES;
-            goto Error;
+            return PH_E_CU_BLOCKS_PER_GRID_REQUIRES_CU_DEVICES;
         }
-
         if (ThreadsPerBlock != NULL) {
-            Result = PH_E_CU_THREADS_PER_BLOCK_REQUIRES_CU_DEVICES;
-            goto Error;
+            return PH_E_CU_THREADS_PER_BLOCK_REQUIRES_CU_DEVICES;
         }
-
         if (KernelRuntimeTarget != NULL) {
-            Result = PH_E_CU_KERNEL_RUNTIME_TARGET_IN_MILLISECONDS_REQUIRES_CU_DEVICES;
-            goto Error;
+            return PH_E_CU_KERNEL_RUNTIME_TARGET_IN_MILLISECONDS_REQUIRES_CU_DEVICES;
+        }
+    } else {
+        if (Ordinals->NumberOfValues == 0 ||
+            Ordinals->NumberOfValues > Context->CuConcurrency) {
+            return PH_E_CU_DEVICES_COUNT_MUST_MATCH_CU_CONCONCURRENCY;
+        }
+        if (BlocksPerGrid != NULL &&
+            BlocksPerGrid->NumberOfValues != Ordinals->NumberOfValues) {
+            return PH_E_CU_BLOCKS_PER_GRID_COUNT_MUST_MATCH_CU_DEVICES_COUNT;
+        }
+        if (ThreadsPerBlock != NULL &&
+            ThreadsPerBlock->NumberOfValues != Ordinals->NumberOfValues) {
+            return PH_E_CU_THREADS_PER_BLOCK_COUNT_MUST_MATCH_CU_DEVICES_COUNT;
+        }
+        if (KernelRuntimeTarget != NULL &&
+            KernelRuntimeTarget->NumberOfValues != Ordinals->NumberOfValues) {
+            return PH_E_CU_KERNEL_RUNTIME_TARGET_IN_MILLISECONDS_COUNT_MUST_MATCH_CU_DEVICES_COUNT;
         }
 
-        //
-        // We default the number of contexts and devices to 1 in the absence of any
-        // user-supplied values.
-        //
-
-        NumberOfContexts = 1;
-        NumberOfDevices = 1;
-        goto FinalizeOrdinalsProcessing;
-    }
-
-    //
-    // Ordinals have been supplied.  Verify the number of values matches the
-    // supplied value for --CuConcurrency, then verify that if any dependent
-    // parameters have been supplied, they have the same number of values.
-    //
-
-#if 0
-    if (0 && Context->CuConcurrency != Ordinals->NumberOfValues) {
-        Result = PH_E_CU_DEVICES_COUNT_MUST_MATCH_CU_CONCONCURRENCY;
-        goto Error;
-    }
-#endif
-
-    if ((BlocksPerGrid != NULL) &&
-        (BlocksPerGrid->NumberOfValues != Ordinals->NumberOfValues))
-    {
-        Result = PH_E_CU_BLOCKS_PER_GRID_COUNT_MUST_MATCH_CU_DEVICES_COUNT;
-        goto Error;
-    }
-
-    if ((ThreadsPerBlock != NULL) &&
-        (ThreadsPerBlock->NumberOfValues != Ordinals->NumberOfValues))
-    {
-        Result = PH_E_CU_THREADS_PER_BLOCK_COUNT_MUST_MATCH_CU_DEVICES_COUNT;
-        goto Error;
-    }
-
-    if ((KernelRuntimeTarget != NULL) &&
-        (KernelRuntimeTarget->NumberOfValues != Ordinals->NumberOfValues))
-    {
-        Result = PH_E_CU_KERNEL_RUNTIME_TARGET_IN_MILLISECONDS_COUNT_MUST_MATCH_CU_DEVICES_COUNT;
-        goto Error;
-    }
-
-    //
-    // Initialize the min and max device IDs, then enumerate the supplied
-    // ordinals, validating each one as we go and updating the min/max values
-    // accordingly.
-    //
-
-    MinDeviceId = 1 << 30;
-    MaxDeviceId = 0;
-    Cu = CuRuntimeContext->Cu;
-
-    for (Index = 0; Index < Ordinals->NumberOfValues; Index++) {
-        Ordinal = (LONG)Ordinals->Values[Index];
-        CuResult = Cu->DeviceGet(&DeviceId, Ordinal);
-        if (CU_FAILED(CuResult)) {
-            CU_ERROR(CuDeviceGet, CuResult);
-            Result = PH_E_INVALID_CU_DEVICES;
-            goto Error;
-        }
-        if (DeviceId > MaxDeviceId) {
-            MaxDeviceId = DeviceId;
-        }
-        if (DeviceId < MinDeviceId) {
-            MinDeviceId = DeviceId;
+        Cu = CuRuntimeContext->Cu;
+        for (Index = 0; Index < Ordinals->NumberOfValues; Index++) {
+            CuResult = Cu->DeviceGet(&Device, (LONG)Ordinals->Values[Index]);
+            if (CU_FAILED(CuResult)) {
+                CU_ERROR(CuDeviceGet, CuResult);
+                return PH_E_INVALID_CU_DEVICES;
+            }
         }
     }
 
-    //
-    // We use a bitmap to count the number of unique devices supplied in the
-    // --CuDevices parameter.  Calculate the bitmap buffer size in bytes.
-    //
-
-    BitmapBufferSizeInBytes.QuadPart = ALIGN_UP_POINTER(
-        ALIGN_UP((MaxDeviceId + 1ULL), 8) >> 3
-    );
-
-    //
-    // Sanity check we haven't overflowed.
-    //
-
-    if (BitmapBufferSizeInBytes.HighPart != 0) {
-        Result = PH_E_TOO_MANY_BITS_FOR_BITMAP;
-        goto Error;
-    }
-
-    ASSERT(BitmapBufferSizeInBytes.LowPart > 0);
-
-    //
-    // Allocate sufficient bitmap buffer space.
-    //
-
-    Allocator = Cu->Allocator;
-    BitmapBuffer = Allocator->Vtbl->Calloc(Allocator,
-                                           1,
-                                           BitmapBufferSizeInBytes.LowPart);
-    if (BitmapBuffer == NULL) {
-        Result = E_OUTOFMEMORY;
-        goto Error;
-    }
-
-    //
-    // Wire-up the device bitmap.
-    //
-
-    Bitmap.Buffer = BitmapBuffer;
-    Bitmap.SizeOfBitMap = (MaxDeviceId + 1);
-
-    //
-    // Enumerate the ordinals again, setting a corresponding bit for each
-    // ordinal we see.
-    //
-
-    for (Index = 0; Index < Ordinals->NumberOfValues; Index++) {
-        Ordinal = (LONG)Ordinals->Values[Index];
-        ASSERT(Ordinal >= 0);
-        _Analysis_assume_(Ordinal >= 0);
-        SetBit32(Bitmap.Buffer, Ordinal);
-    }
-
-    //
-    // Count the number of bits set, this will represent the number of unique
-    // devices we encountered.  Sanity check the number doesn't exceed the
-    // total number of devices reported in the system.
-    //
-
-    Rtl = Context->Rtl;
-#if 0
-    NumberOfContexts = Rtl->RtlNumberOfSetBits(&Bitmap);
-    NumberOfDevices = CuRuntimeContext->CuDevices.NumberOfDevices;
-#else
-    NumberOfContexts = Context->CuConcurrency;
-    NumberOfDevices = CuRuntimeContext->CuDevices.NumberOfDevices;
-#endif
-
-    //
-    // Intentional follow-on to FinalizeOrdinalsProcessing.
-    //
-
-FinalizeOrdinalsProcessing:
-
-#if 0
-    if (NumberOfContexts > NumberOfDevices) {
-        Result = PH_E_INVARIANT_CHECK_FAILED;
-        PH_ERROR(PerfectHashContextInitializeCuda_SetBitsExceedsNumDevices,
-                 Result);
-        goto Error;
-    } else if (NumberOfContexts == 0) {
-        Result = PH_E_INVARIANT_CHECK_FAILED;
-        PH_ERROR(PerfectHashContextInitializeCuda_NumContextsIsZero, Result);
-        goto Error;
-    }
-#endif
-
-    //Context->NumberOfCuContexts = NumberOfContexts;
-
-    //
-    // Copy local aliases back to the runtime context.
-    //
-
-    CuRuntimeContext->NumberOfContexts = NumberOfContexts;
-    CuRuntimeContext->NumberOfDevices = NumberOfDevices;
-
-    //
-    // We're done, indicate success and finish up.
-    //
-
-    Result = S_OK;
-    goto End;
-
-Error:
-
-    if (Result == S_OK) {
-        Result = E_UNEXPECTED;
-    }
-
-    //
-    // Intentional follow-on to End.
-    //
-
-End:
-
-    //
-    // If we allocated a bitmap buffer, free it now.
-    //
-
-    if (BitmapBuffer != NULL) {
-        Allocator->Vtbl->FreePointer(Allocator, &BitmapBuffer);
-    }
-
-    return Result;
+    CuRuntimeContext->NumberOfDevices = CuRuntimeContext->CuDevices.NumberOfDevices;
+    CuRuntimeContext->NumberOfContexts = Context->CuConcurrency;
+    return S_OK;
 }
 
 _Must_inspect_result_
@@ -1271,7 +1075,6 @@ Return Value:
     PRTL Rtl;
     ULONG Index;
     HRESULT Result;
-    RTL_BITMAP Bitmap;
     PALLOCATOR Allocator;
     PVALUE_ARRAY Ordinals;
     ULONG NumberOfContexts;
@@ -1339,67 +1142,18 @@ Return Value:
     Ordinals = CuRuntimeContext->Ordinals;
 
     //
-    // First pass: set each device context's ordinal to the value obtained via
-    // the --CuDevices parameter.  (The logic we use to do this is a little
-    // different if we're dealing with one context versus more than one.)
+    // There is one device context per solve context. Preserve the ordinal order
+    // and repeat the last supplied device for any additional solvers.
     //
 
-    if (NumberOfContexts == 1) {
-
-        DeviceContext = &DeviceContexts->DeviceContexts[0];
+    for (Index = 0; Index < NumberOfContexts; Index++) {
+        DeviceContext = &DeviceContexts->DeviceContexts[Index];
         DeviceContext->Rtl = Rtl;
-
         if (Ordinals != NULL) {
-            ASSERT(Ordinals->NumberOfValues == 1);
-            DeviceContext->Ordinal = (LONG)Ordinals->Values[0];
+            ULONG OrdinalIndex = min(Index, Ordinals->NumberOfValues - 1);
+            DeviceContext->Ordinal = (LONG)Ordinals->Values[OrdinalIndex];
         } else {
-
-            //
-            // If no --CuDevices parameter has been supplied, default to 0 for
-            // the device ordinal.
-            //
-
             DeviceContext->Ordinal = 0;
-        }
-
-    } else if (NumberOfContexts > 1 && Ordinals != NULL &&
-               Ordinals->NumberOfValues == 1) {
-
-        //
-        // Multiple contexts for a single device.
-        //
-
-        for (Index = 0; Index < NumberOfContexts; Index++) {
-            DeviceContext = &DeviceContexts->DeviceContexts[Index];
-            DeviceContext->Rtl = Rtl;
-            DeviceContext->Ordinal = (LONG)Ordinals->Values[0];
-        }
-
-    } else {
-
-        ULONG Bit = 0;
-        const ULONG FindOneBit = 1;
-
-        for (Index = 0; Index < NumberOfContexts; Index++) {
-            DeviceContext = &DeviceContexts->DeviceContexts[Index];
-            DeviceContext->Rtl = Rtl;
-
-            //
-            // Get the device ordinal from the first set/next set bit of the
-            // bitmap.
-            //
-
-            Bit = Rtl->RtlFindSetBits(&Bitmap, FindOneBit, Bit);
-
-            if (Bit == BITS_NOT_FOUND) {
-                Result = PH_E_INVARIANT_CHECK_FAILED;
-                PH_ERROR(PerfectHashContextInitializeCuda_BitsNotFound,
-                         Result);
-                PH_RAISE(Result);
-            }
-
-            DeviceContext->Ordinal = (LONG)Bit;
-            Bit += 1;
         }
     }
 

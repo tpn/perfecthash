@@ -16,6 +16,49 @@ Abstract:
 #include "Chm01.h"
 #include "Chm02Private.h"
 
+_Use_decl_annotations_
+HRESULT
+WaitForChm02WinnerStream(
+    PGRAPH Graph
+    )
+{
+    PCU Cu;
+    CU_RESULT CuResult;
+    HRESULT Result = S_OK;
+    PPH_CU_SOLVE_CONTEXT SolveContext;
+
+    if (!IsCuGraph(Graph)) {
+        return S_OK;
+    }
+
+    // The worker may have queued a reset of its spare before it stopped.
+    // Both graphs belong to this stream on basic unified-memory devices.
+    SolveContext = Graph->CuSolveContext;
+    Cu = SolveContext->DeviceContext->Cu;
+    CuResult = Cu->CtxPushCurrent(SolveContext->DeviceContext->Context);
+    if (CU_FAILED(CuResult)) {
+        CU_ERROR(WaitForChm02WinnerStream_CtxPushCurrent, CuResult);
+        return PH_E_CUDA_DRIVER_API_CALL_FAILED;
+    }
+
+    CuResult = Cu->StreamSynchronize(SolveContext->Stream);
+    if (CU_FAILED(CuResult)) {
+        CU_ERROR(WaitForChm02WinnerStream_StreamSynchronize, CuResult);
+        Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+    }
+
+    CuResult = Cu->CtxPopCurrent(NULL);
+    if (CU_FAILED(CuResult)) {
+        CU_ERROR(WaitForChm02WinnerStream_CtxPopCurrent, CuResult);
+        Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+    }
+
+    if (SUCCEEDED(Result) && IsPerfectHashCudaDebugEnabled()) {
+        fprintf(stderr, "[Chm02] Winning CUDA stream synchronized.\n");
+    }
+    return Result;
+}
+
 //
 // Main initialization routine.
 //
@@ -49,11 +92,11 @@ Return Value:
 
 --*/
 {
-    PCU Cu;
+    PCU Cu = NULL;
     ULONG Index;
     ULONG Inner;
-    LONG Ordinal;
     BOOLEAN Found;
+    BOOLEAN DebugCuda = IsPerfectHashCudaDebugEnabled();
     CU_RESULT CuResult;
     ULONG NumberOfDevices;
     ULONG NumberOfContexts;
@@ -65,7 +108,6 @@ Return Value:
     PGRAPH *Graphs;
     PGRAPH *CpuGraphs;
     PGRAPH *GpuGraphs;
-    PGRAPH DeviceGraph;
     PGRAPH DeviceGraphs;
     PCHAR LinkedModule;
     SIZE_T LinkedModuleSizeInBytes;
@@ -74,12 +116,10 @@ Return Value:
     PCU_LINK_STATE LinkState;
     PUNICODE_STRING CuPtxPath;
     PUNICODE_STRING CuCudaDevRuntimeLibPath;
-    PVALUE_ARRAY Ordinals;
     ULONG NumberOfGpuGraphs;
     ULONG NumberOfCpuGraphs;
     ULONG TotalNumberOfGraphs;
     ULONG SpareGraphCount;
-    ULONG MatchedGraphCount;
     ULONG NumberOfGraphsForDevice;
     ULONG NumberOfSolveContexts;
     CU_STREAM_FLAGS StreamFlags;
@@ -89,8 +129,9 @@ Return Value:
     PPH_CU_SOLVE_CONTEXT SolveContext;
     PPH_CU_SOLVE_CONTEXTS SolveContexts;
     PPH_CU_RUNTIME_CONTEXT CuRuntimeContext;
-    PPERFECT_HASH_TLS_CONTEXT TlsContext;
+    PPERFECT_HASH_TLS_CONTEXT TlsContext = NULL;
     PERFECT_HASH_TLS_CONTEXT LocalTlsContext;
+    PERFECT_HASH_TLS_CONTEXT SavedTlsContext = { 0 };
     //PERFECT_HASH_CU_RNG_ID CuRngId = PerfectHashCuNullRngId;
     PPERFECT_HASH_PATH PtxPath;
     PPERFECT_HASH_FILE PtxFile;
@@ -130,11 +171,12 @@ Return Value:
         Context->Table->TableCreateFlags.AsULongLong;
 
     //
-    // If we've already got a CU instance, assume we're already initialized.
+    // Late driver setup failures release the runtime configuration. A context
+    // in that state has no solver arrays that can safely be reused.
     //
 
     if (Context->Cu != NULL) {
-        return S_FALSE;
+        return Context->CuRuntimeContext ? S_FALSE : PH_E_INVARIANT_CHECK_FAILED;
     }
 
     PtxPath = NULL;
@@ -145,7 +187,7 @@ Return Value:
     DeviceContexts = NULL;
     CuCudaDevRuntimeLibPath = NULL;
 
-    Result = CreateCuInstance(Context, &Context->Cu);
+    Result = CreateCuInstance(Context, &Cu);
     if (FAILED(Result)) {
         PH_ERROR(InitializeCudaAndGraphsChm02_CreateCuInstance, Result);
         goto Error;
@@ -155,7 +197,6 @@ Return Value:
     // Create and initialize the CU runtime context.
     //
 
-    Cu = Context->Cu;
     Result = CreateCuRuntimeContext(Cu, &Context->CuRuntimeContext);
     if (FAILED(Result)) {
         PH_ERROR(InitializeCudaAndGraphsChm02_CreateCuRuntimeContext, Result);
@@ -332,6 +373,9 @@ Return Value:
     NumberOfContexts = CuRuntimeContext->NumberOfContexts;
     DeviceContexts = CuRuntimeContext->CuDeviceContexts;
 
+    // Parameter and input file failures can be retried before the first driver
+    // context is created. From here, the parent owns the CUDA component.
+    Context->Cu = Cu;
     for (Index = 0; Index < NumberOfContexts; Index++) {
         DeviceContext = &DeviceContexts->DeviceContexts[Index];
 
@@ -514,7 +558,7 @@ Return Value:
     // Wire up the solve contexts to their respective device context.
     //
 
-    Ordinals = CuRuntimeContext->Ordinals;
+    ASSERT(NumberOfSolveContexts == NumberOfContexts);
 
     for (Index = 0; Index < NumberOfSolveContexts; Index++) {
         PCU_STREAM FirstStream;
@@ -524,41 +568,11 @@ Return Value:
         SolveContext = &SolveContexts->SolveContexts[Index];
 
         //
-        // Resolve the ordinal and kernel launch parameters.
+        // Device contexts are initialized in solver order, including when
+        // several workers select the same physical device.
         //
 
-        if (Ordinals == NULL) {
-            Ordinal = 0;
-        } else if (Index+1 > Ordinals->NumberOfValues) {
-            Ordinal = (LONG)Ordinals->Values[Ordinals->NumberOfValues - 1];
-        } else {
-            Ordinal = (LONG)Ordinals->Values[Index];
-        }
-
-        //
-        // Find the device context for this device ordinal.
-        //
-
-        Found = FALSE;
-        DeviceContext = NULL;
-        for (Inner = 0; Inner < NumberOfContexts; Inner++) {
-            DeviceContext = &DeviceContexts->DeviceContexts[Inner];
-            if (DeviceContext->Ordinal == Ordinal) {
-                if (DeviceContext->NumberOfSolveContexts == 0) {
-                    Found = TRUE;
-                    break;
-                }
-            }
-        }
-
-        if (!Found) {
-            Result = PH_E_INVARIANT_CHECK_FAILED;
-            PH_ERROR(PerfectHashContextInitializeCuda_ContextOrdinalNotFound,
-                     Result);
-            PH_RAISE(Result);
-        }
-
-        ASSERT(DeviceContext != NULL);
+        DeviceContext = &DeviceContexts->DeviceContexts[Index];
 
         //
         // Increment the count of solve contexts for this device context.
@@ -578,6 +592,11 @@ Return Value:
 
         CuResult = Cu->CtxPushCurrent(DeviceContext->Context);
         CU_CHECK(CuResult, CtxPushCurrent);
+
+        if (DebugCuda) {
+            fprintf(stderr, "[Chm02] Solver %u CUDA device %d\n",
+                    (unsigned)Index, (int)DeviceContext->Handle);
+        }
 
         //
         // Create the streams for this solve context.
@@ -641,33 +660,17 @@ Return Value:
         CuResult = Cu->CtxPushCurrent(DeviceContext->Context);
         CU_CHECK(CuResult, CtxPushCurrent);
 
-        CuResult = Cu->MemAllocManaged((PCU_DEVICE_POINTER)&DeviceGraphs,
-                                       AllocSizeInBytes.LowPart,
-                                       CU_MEM_ATTACH_GLOBAL);
+        SolveContext = &SolveContexts->SolveContexts[Index];
+        ASSERT(SolveContext->DeviceContext == DeviceContext);
+        CuResult = Cu->MemAlloc((PCU_DEVICE_POINTER)&DeviceGraphs,
+                                AllocSizeInBytes.LowPart);
         CU_CHECK(CuResult, MemAlloc);
 
-        DeviceContext->DeviceGraphs = DeviceGraph = DeviceGraphs;
-
-        //
-        // Loop over the solve contexts pointing to this device context and
-        // wire up matching ones to the device graph memory we just allocated.
-        //
-
-        MatchedGraphCount = 0;
-        for (Inner = 0; Inner < NumberOfSolveContexts; Inner++) {
-            SolveContext = &SolveContexts->SolveContexts[Inner];
-
-            if (SolveContext->DeviceContext == DeviceContext) {
-                SolveContext->DeviceGraph = DeviceGraph++;
-                MatchedGraphCount++;
-                if (FindBestGraph(Context)) {
-                    SolveContext->DeviceSpareGraph = DeviceGraph++;
-                    MatchedGraphCount++;
-                }
-            }
+        DeviceContext->DeviceGraphs = DeviceGraphs;
+        SolveContext->DeviceGraph = DeviceGraphs;
+        if (FindBestGraph(Context)) {
+            SolveContext->DeviceSpareGraph = DeviceGraphs + 1;
         }
-
-        ASSERT(MatchedGraphCount == NumberOfGraphsForDevice);
 
         //
         // Allocate device memory to hold the CU_DEVICE_ATTRIBUTES structure.
@@ -724,15 +727,12 @@ Return Value:
     Context->CpuGraphs = CpuGraphs;
 
     TlsContext = PerfectHashTlsGetOrSetContext(&LocalTlsContext);
-
-    ASSERT(!TlsContext->Flags.DisableGlobalAllocatorComponent);
-    ASSERT(!TlsContext->Flags.CustomAllocatorDetailsPresent);
-    ASSERT(!TlsContext->HeapCreateFlags);
-    ASSERT(!TlsContext->HeapMinimumSize);
+    SavedTlsContext = *TlsContext;
 
     TlsContextDisableGlobalAllocator(TlsContext);
     TlsContext->Flags.CustomAllocatorDetailsPresent = TRUE;
     TlsContext->HeapCreateFlags = HEAP_NO_SERIALIZE;
+    TlsContext->HeapMinimumSize = 0;
 
     //
     // Copy the table create flags into the TLS context as well; they are now
@@ -966,6 +966,9 @@ Error:
     }
 
     DestroyCuRuntimeContext(&Context->CuRuntimeContext);
+    if (Context->Cu == NULL) {
+        RELEASE(Cu);
+    }
 
     //
     // TODO: loop through any device contexts here and free?
@@ -976,6 +979,20 @@ Error:
     //
 
 End:
+
+    // Direct COM calls can install LocalTlsContext on this thread.  Restore
+    // the caller's graph-construction settings and leave no stack pointer in TLS.
+    if (TlsContext) {
+        TlsContext->Flags.DisableGlobalAllocatorComponent =
+            SavedTlsContext.Flags.DisableGlobalAllocatorComponent;
+        TlsContext->Flags.CustomAllocatorDetailsPresent =
+            SavedTlsContext.Flags.CustomAllocatorDetailsPresent;
+        TlsContext->HeapCreateFlags = SavedTlsContext.HeapCreateFlags;
+        TlsContext->HeapMinimumSize = SavedTlsContext.HeapMinimumSize;
+        TlsContext->TableCreateFlags = SavedTlsContext.TableCreateFlags;
+        TlsContext->Table = SavedTlsContext.Table;
+        PerfectHashTlsClearContextIfActive(&LocalTlsContext);
+    }
 
     //
     // Release any temporary component references.

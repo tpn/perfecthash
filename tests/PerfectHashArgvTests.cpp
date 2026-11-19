@@ -103,6 +103,26 @@ protected:
 #endif
   }
 
+  void OpenRetryTable(const std::filesystem::path &keysPath) {
+    auto keysName = keysPath.wstring();
+    UNICODE_STRING keysString = {};
+    keysString.Length = static_cast<USHORT>(keysName.size() * sizeof(WCHAR));
+    keysString.MaximumLength = keysString.Length + sizeof(WCHAR);
+    keysString.Buffer = keysName.data();
+#ifdef PH_WINDOWS
+#define PH_TEST_IID(Name) Name
+#else
+#define PH_TEST_IID(Name) &Name
+#endif
+    ASSERT_EQ(S_OK, classFactory_->Vtbl->CreateInstance(
+        classFactory_, nullptr, PH_TEST_IID(IID_PERFECT_HASH_KEYS),
+        reinterpret_cast<void **>(&retryKeys_)));
+    ASSERT_EQ(S_OK, retryKeys_->Vtbl->Load(retryKeys_, nullptr, &keysString, sizeof(ULONG)));
+    ASSERT_EQ(S_OK, classFactory_->Vtbl->CreateInstance(
+        classFactory_, nullptr, PH_TEST_IID(IID_PERFECT_HASH_TABLE),
+        reinterpret_cast<void **>(&retryTable_)));
+  }
+
   std::filesystem::path retryDirectory_;
 
   PPERFECT_HASH_TABLE retryTable_ = nullptr;
@@ -172,23 +192,7 @@ TEST_F(PerfectHashArgvTests, FailedFileCreateRegeneratesSharedFiles) {
       "MultiplyShiftR", "And", "1", "--Quiet", "--DoNotTryUseHash16Impl",
       "--Seeds=1,1,0x1010", "--FixedAttempts=1"}));
   EXPECT_FALSE(std::filesystem::exists(outputPath / "CompiledPerfectHash.props"));
-  auto keysName = keysPath.wstring();
-  UNICODE_STRING keysString = {};
-  keysString.Length = static_cast<USHORT>(keysName.size() * sizeof(WCHAR));
-  keysString.MaximumLength = keysString.Length + sizeof(WCHAR);
-  keysString.Buffer = keysName.data();
-#ifdef PH_WINDOWS
-#define PH_TEST_IID(Name) Name
-#else
-#define PH_TEST_IID(Name) &Name
-#endif
-  ASSERT_EQ(S_OK, classFactory_->Vtbl->CreateInstance(
-      classFactory_, nullptr, PH_TEST_IID(IID_PERFECT_HASH_KEYS),
-      reinterpret_cast<void **>(&retryKeys_)));
-  ASSERT_EQ(S_OK, retryKeys_->Vtbl->Load(retryKeys_, nullptr, &keysString, sizeof(ULONG)));
-  ASSERT_EQ(S_OK, classFactory_->Vtbl->CreateInstance(
-      classFactory_, nullptr, PH_TEST_IID(IID_PERFECT_HASH_TABLE),
-      reinterpret_cast<void **>(&retryTable_)));
+  ASSERT_NO_FATAL_FAILURE(OpenRetryTable(keysPath));
   auto tableVtbl = reinterpret_cast<TableShim *>(retryTable_)->Vtbl;
   PERFECT_HASH_TABLE_CREATE_FLAGS flags = {};
   flags.Quiet = TRUE;
@@ -240,6 +244,85 @@ TEST_F(PerfectHashArgvTests, FailedFileCreateRegeneratesSharedFiles) {
   EXPECT_GT(std::filesystem::file_size(outputPath / "CompiledPerfectHash.h"), 0u);
 #undef PH_TEST_IID
 }
+
+#ifdef PH_USE_CUDA
+TEST_F(PerfectHashArgvTests, RejectedCudaOrdinalsCanBeCorrectedOnSameContext) {
+#ifdef PH_WINDOWS
+  auto driver = LoadLibraryA("nvcuda.dll");
+#else
+  auto driver = LoadLibraryA("libcuda.so.1");
+#endif
+  if (!driver) {
+    GTEST_SKIP() << "CUDA driver library unavailable";
+  }
+  using CuInit = int (STDAPICALLTYPE *)(unsigned);
+  using CuDeviceGetCount = int (STDAPICALLTYPE *)(int *);
+  auto init = reinterpret_cast<CuInit>(GetProcAddress(driver, "cuInit"));
+  auto getCount = reinterpret_cast<CuDeviceGetCount>(GetProcAddress(driver, "cuDeviceGetCount"));
+  int status = init && getCount ? init(0) : -1;
+  int count = 0;
+  if (status == 0) {
+    status = getCount(&count);
+  }
+  FreeLibrary(driver);
+  if (status == 100 || (status == 0 && count == 0)) { // CUDA_ERROR_NO_DEVICE
+    GTEST_SKIP() << "No visible CUDA devices";
+  }
+  ASSERT_EQ(0, status);
+
+  std::random_device entropy;
+  const auto candidate = std::filesystem::temp_directory_path() /
+      ("perfecthash-cuda-retry-" + std::to_string(entropy()) + "-" +
+       std::to_string(entropy()));
+  ASSERT_TRUE(std::filesystem::create_directory(candidate));
+  retryDirectory_ = candidate;
+  const auto keysPath = candidate / "HologramWorld.keys";
+  std::filesystem::copy_file(std::filesystem::path(PERFECTHASH_TEST_ROOT_DIR) /
+      "keys" / "HologramWorld-31016.keys", keysPath);
+  auto rejected = RunTableCreate({
+      "PerfectHashCreate", keysPath.string(), candidate.string(), "Chm02",
+      "Mulshrolate3RX", "And", "1", "--CuConcurrency=1", "--CuDevices=0,0",
+      "--Quiet", "--NoFileIo", "--DisableCsvOutputFile"});
+  ASSERT_EQ(PH_E_CU_DEVICES_COUNT_MUST_MATCH_CU_CONCONCURRENCY, rejected);
+
+  ASSERT_NO_FATAL_FAILURE(OpenRetryTable(keysPath));
+  ULONG ordinal = 0;
+  ULONG seeds[] = {0xF0192B55, 0xD9C83970, 0x0C1E0D10, 0xD11A5847};
+  PERFECT_HASH_TABLE_CREATE_PARAMETER params[4] = {};
+  params[0].Id = TableCreateParameterCuConcurrencyId;
+  params[0].AsULong = 1;
+  params[1].Id = TableCreateParameterCuDevicesId;
+  params[1].AsValueArray.Values = &ordinal;
+  params[1].AsValueArray.NumberOfValues = 1;
+  params[1].AsValueArray.ValueSizeInBytes = sizeof(ordinal);
+  params[2].Id = TableCreateParameterSeedsId;
+  params[2].AsValueArray.Values = seeds;
+  params[2].AsValueArray.NumberOfValues = 4;
+  params[2].AsValueArray.ValueSizeInBytes = sizeof(ULONG);
+  auto missingPtx = (candidate / "missing.ptx").wstring();
+  params[3].Id = TableCreateParameterCuPtxPathId;
+  params[3].AsUnicodeString.Buffer = missingPtx.data();
+  params[3].AsUnicodeString.Length = static_cast<USHORT>(missingPtx.size() * sizeof(WCHAR));
+  params[3].AsUnicodeString.MaximumLength = params[3].AsUnicodeString.Length + sizeof(WCHAR);
+  PERFECT_HASH_TABLE_CREATE_PARAMETERS parameters = {};
+  parameters.SizeOfStruct = sizeof(parameters);
+  parameters.NumberOfElements = 4;
+  parameters.Params = params;
+  PERFECT_HASH_TABLE_CREATE_FLAGS flags = {};
+  flags.NoFileIo = TRUE;
+  flags.Quiet = TRUE;
+  auto vtbl = reinterpret_cast<TableShim *>(retryTable_)->Vtbl;
+  auto create = [&]() {
+    return vtbl->Create(retryTable_, context_, PerfectHashChm02AlgorithmId,
+        PerfectHashHashMulshrolate3RXFunctionId, PerfectHashAndMaskFunctionId,
+        retryKeys_, &flags, &parameters);
+  };
+  ASSERT_EQ(PH_E_SYSTEM_CALL_FAILED, create());
+  parameters.NumberOfElements = 3;
+  ASSERT_EQ(S_OK, create());
+  EXPECT_EQ(S_OK, vtbl->Test(retryTable_, retryKeys_, FALSE));
+}
+#endif
 
 TEST_F(PerfectHashArgvTests, InvalidAlgorithmId) {
   const std::vector<std::string> args = {

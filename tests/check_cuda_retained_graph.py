@@ -16,10 +16,14 @@ parser.add_argument("width", type=int, choices=(16, 32), nargs="?", default=32)
 parser.add_argument("--mixed", action="store_true", help="run one CPU and one CUDA worker")
 parser.add_argument("--subset", action="store_true", help="select width automatically for key-subset coverage")
 parser.add_argument("--small-fallback", action="store_true", help="fall back below the minimum for best-graph mode")
+parser.add_argument("--skip-verify", action="store_true", help="read the retained graph without a verification kernel")
 args = parser.parse_args()
 width_flags = ["--DoNotTryUseHash16Impl"] if args.width == 32 and not args.subset else []
 # The CPU can consume the short CUDA-only budget while the GPU initializes.
 attempts = 8192 if args.mixed else 128
+if args.skip_verify:
+    # An odd limit stops the CPU oracle after its GPU spare has queued resets.
+    attempts = 127
 workers = "2" if args.mixed else "1"
 with tempfile.TemporaryDirectory() as tmp:
     output = Path(tmp)
@@ -43,16 +47,20 @@ with tempfile.TemporaryDirectory() as tmp:
          "--CuConcurrency=1", "--FindBestGraph",
          *coverage_flags,
          f"--FixedAttempts={attempts}", *width_flags,
+         *(["--SkipGraphVerification"] if args.skip_verify else []),
          "--Rng=Philox43210", "--RngSeed=12345", "--NoFileIo"],
         env={**os.environ, "PH_DEBUG_CUDA_CHM02": "1"},
         stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, timeout=120,
     )
     # In a mixed run the winning graph may be verified by the CPU.
-    if result.returncode or (not args.mixed and b"PH_CHM02_CUDA_VERIFY_OK" not in result.stderr):
+    gpu_verified = b"PH_CHM02_CUDA_VERIFY_OK" in result.stderr
+    if result.returncode or (not args.mixed and not args.skip_verify and not gpu_verified):
         raise AssertionError(
             f"Retained graph verification failed (exit {result.returncode:#x})\n"
             + result.stderr[-3000:].decode(errors="replace")
         )
+    if args.skip_verify and (gpu_verified or b"Winning CUDA stream synchronized." not in result.stderr):
+        raise AssertionError("Expected a synchronized winning stream with no GPU verification kernel")
 
     report, = output.glob("*.csv")
     with report.open(newline="") as stream:

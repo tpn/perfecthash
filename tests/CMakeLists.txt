@@ -426,6 +426,16 @@ if(TARGET PerfectHashCreateExe AND TARGET PerfectHashBulkCreateExe)
         )
 
         add_test(
+            NAME perfecthash.cuda.chm02.device-selection
+            COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/check_cuda_device_selection.py
+                $<TARGET_FILE:PerfectHashCreateExe> ${TEST_KEYS_FILE}
+        )
+        set_tests_properties(perfecthash.cuda.chm02.device-selection PROPERTIES
+            LABELS "cuda"
+            SKIP_RETURN_CODE 77
+        )
+
+        add_test(
             NAME perfecthash.cuda.chm02.hologram.fileio
             COMMAND ${CMAKE_COMMAND}
                 -DTEST_EXE=$<TARGET_FILE:PerfectHashCreateExe>
@@ -473,6 +483,11 @@ if(TARGET PerfectHashCreateExe AND TARGET PerfectHashBulkCreateExe)
         endforeach()
 
         add_test(
+            NAME perfecthash.cuda.chm02.retained-graph.skip-verify
+            COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/check_cuda_retained_graph.py
+                $<TARGET_FILE:PerfectHashCreateExe> ${TEST_KEYS_FILE} 16 --skip-verify
+        )
+        add_test(
             NAME perfecthash.cuda.chm02.retained-graph.key-subset
             COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/check_cuda_retained_graph.py
                 $<TARGET_FILE:PerfectHashCreateExe> ${TEST_KEYS_FILE} 32 --subset
@@ -502,6 +517,7 @@ if(TARGET PerfectHashCreateExe AND TARGET PerfectHashBulkCreateExe)
             perfecthash.cuda.chm02.retained-graph.mixed.assigned16
             perfecthash.cuda.chm02.retained-graph.mixed.assigned32
             perfecthash.cuda.chm02.retained-graph.key-subset
+            perfecthash.cuda.chm02.retained-graph.skip-verify
             perfecthash.cuda.chm02.key-subset-fallback
             perfecthash.cuda.chm02.perf-surface
             PROPERTIES
