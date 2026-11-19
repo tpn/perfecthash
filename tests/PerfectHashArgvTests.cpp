@@ -387,33 +387,26 @@ TEST_F(PerfectHashArgvTests, CreatesMissingParentsOfARelativeOutputDirectory) {
 }
 #endif
 
-// A keys path as short as "/k", or "C:\k" on Windows, is accepted as a path,
-// whatever becomes of it later.
-TEST_F(PerfectHashArgvTests, AcceptsShortPaths) {
-#ifdef PH_WINDOWS
-  const std::string shortest = "C:\\k";
-#else
-  const std::string shortest = "/k";
-#endif
-  if (std::filesystem::exists(shortest)) {
-    GTEST_SKIP() << shortest << " exists";
-  }
-  std::random_device entropy;
-  const auto candidate = std::filesystem::temp_directory_path() /
-      ("perfecthash-short-" + std::to_string(entropy()) + "-" +
-       std::to_string(entropy()));
-  ASSERT_TRUE(std::filesystem::create_directory(candidate));
-  retryDirectory_ = candidate;
-  auto create = [&](const std::string &keysPath) {
-    return RunTableCreate({
-        "PerfectHashCreate", keysPath, retryDirectory_.string(), "Chm01",
-        "MultiplyShiftR", "And", "1", "--Quiet", "--NoFileIo"});
+TEST_F(PerfectHashArgvTests, ValidatesMinimumKeysPathLengthBeforeLoading) {
+  // A valid keys path reaches the required output-directory check. This tests
+  // the path length without creating a file at the root of the filesystem.
+  auto validateKeysPath = [&](std::wstring path) {
+    UNICODE_STRING keys = {};
+    keys.Buffer = path.data();
+    keys.Length = static_cast<USHORT>(path.size() * sizeof(WCHAR));
+    keys.MaximumLength = keys.Length + sizeof(WCHAR);
+    return context_->Vtbl->TableCreate(
+        context_, &keys, nullptr, PerfectHashChm01AlgorithmId,
+        PerfectHashHashMultiplyShiftRFunctionId, PerfectHashAndMaskFunctionId,
+        nullptr, nullptr, nullptr, nullptr, nullptr);
   };
 
-  EXPECT_NE(E_INVALIDARG, create(shortest));
 #ifdef PH_WINDOWS
-  // Without a name after the drive there is no directory to speak of.
-  EXPECT_EQ(E_INVALIDARG, create("C:\\"));
+  EXPECT_EQ(E_POINTER, validateKeysPath(L"C:\\k"));
+  EXPECT_EQ(E_INVALIDARG, validateKeysPath(L"C:\\"));
+#else
+  EXPECT_EQ(E_POINTER, validateKeysPath(L"/k"));
+  EXPECT_EQ(E_POINTER, validateKeysPath(L"k"));
 #endif
 }
 
