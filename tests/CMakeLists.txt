@@ -106,52 +106,33 @@ if((WIN32 OR PERFECTHASH_IS_LINUX) AND PERFECTHASH_ARCH_ARM64 AND PERFECTHASH_HA
 endif()
 
 if(TARGET PerfectHashLLVM)
-    # A static client loads PerfectHashLLVM from its own directory on Windows
-    # and through its rpath elsewhere. Give this one a plugin that lacks the
-    # hash JIT entry points, in a directory of its own.
-    add_library(perfecthash_stale_llvm_plugin SHARED StaleLlvmPlugin.c)
+    # Each static client loads its own test module from the executable directory
+    # on Windows and from its first embedded search path on Unix.
+    foreach(variant stale unversioned)
+        set(plugin perfecthash_${variant}_llvm_plugin)
+        set(client ${plugin}_client)
+        set(fixture_dir "${CMAKE_CURRENT_BINARY_DIR}/${variant}-llvm-plugin/$<CONFIG>")
+        add_library(${plugin} SHARED StaleLlvmPlugin.c)
+        add_executable(${client} StaleLlvmPluginClient.cpp)
+        set_target_properties(${plugin} ${client} PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY "${fixture_dir}"
+            LIBRARY_OUTPUT_DIRECTORY "${fixture_dir}"
+            ARCHIVE_OUTPUT_DIRECTORY "${fixture_dir}")
+        set_target_properties(${plugin} PROPERTIES OUTPUT_NAME PerfectHashLLVM)
+        target_link_libraries(${client} PRIVATE PerfectHashOnlineCoreStatic)
+        target_compile_features(${client} PRIVATE cxx_std_17)
+        add_dependencies(${client} ${plugin})
+        if(NOT WIN32)
+            target_link_options(${client} PRIVATE "LINKER:-rpath,$<TARGET_FILE_DIR:${plugin}>")
+        endif()
+        add_test(NAME perfecthash.llvm.${variant}_plugin
+            COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/check_stale_llvm_plugin.py
+                $<TARGET_FILE:${client}> ${variant})
+    endforeach()
     target_compile_definitions(perfecthash_stale_llvm_plugin PRIVATE
         PerfectHashTableCompileJit=PerfectHashTableCompileJitV1
         PerfectHashTableJitRundown=PerfectHashTableJitRundownV1)
-    add_executable(perfecthash_stale_llvm_plugin_client StaleLlvmPluginClient.cpp)
-    set(ph_stale_dir "${CMAKE_CURRENT_BINARY_DIR}/stale-llvm-plugin")
-    set(ph_stale_dirs)
-    foreach(ph_kind RUNTIME LIBRARY ARCHIVE)
-        list(APPEND ph_stale_dirs ${ph_kind}_OUTPUT_DIRECTORY "${ph_stale_dir}")
-        foreach(config ${CMAKE_CONFIGURATION_TYPES})
-            string(TOUPPER "${config}" config_upper)
-            list(APPEND ph_stale_dirs
-                ${ph_kind}_OUTPUT_DIRECTORY_${config_upper} "${ph_stale_dir}/${config}")
-        endforeach()
-    endforeach()
-    set_target_properties(
-        perfecthash_stale_llvm_plugin perfecthash_stale_llvm_plugin_client
-        PROPERTIES ${ph_stale_dirs}
-    )
-    set_target_properties(perfecthash_stale_llvm_plugin PROPERTIES OUTPUT_NAME PerfectHashLLVM)
-    target_link_libraries(perfecthash_stale_llvm_plugin_client PRIVATE PerfectHashOnlineCoreStatic)
-    target_compile_features(perfecthash_stale_llvm_plugin_client PRIVATE cxx_std_17)
-    add_dependencies(perfecthash_stale_llvm_plugin_client perfecthash_stale_llvm_plugin)
-    add_library(perfecthash_unversioned_llvm_plugin MODULE StaleLlvmPlugin.c)
     target_compile_definitions(perfecthash_unversioned_llvm_plugin PRIVATE PH_TEST_UNVERSIONED_LLVM)
-    add_dependencies(perfecthash_stale_llvm_plugin_client perfecthash_unversioned_llvm_plugin)
-    add_test(
-        NAME perfecthash.llvm.unversioned_plugin
-        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/check_unversioned_llvm_plugin.py
-            $<TARGET_FILE:perfecthash_stale_llvm_plugin_client>
-            $<TARGET_FILE:perfecthash_unversioned_llvm_plugin>
-            $<TARGET_FILE_NAME:PerfectHashLLVM>
-    )
-    if(NOT WIN32)
-        # A target's own link options precede the archive's rpath to the real plugin.
-        target_link_options(perfecthash_stale_llvm_plugin_client PRIVATE
-            "LINKER:-rpath,$<TARGET_FILE_DIR:perfecthash_stale_llvm_plugin>")
-    endif()
-    add_test(
-        NAME perfecthash.llvm.stale_plugin
-        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/check_stale_llvm_plugin.py
-            $<TARGET_FILE:perfecthash_stale_llvm_plugin_client>
-    )
     if(WIN32)
         # Windows also says why a plugin could not be loaded. Run the same
         # client with no plugin, then with the real one and no LLVM-C.dll.

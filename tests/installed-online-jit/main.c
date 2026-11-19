@@ -7,18 +7,37 @@
 #include <dlfcn.h>
 #endif
 
-static int IsPluginLoaded(const char *path)
+static int CheckLoadedPlugin(const char *path)
 {
+    static const char *entries[][2] = {
+        {"PerfectHashTableCompileJit", "PerfectHashTableCompileJitV1"},
+        {"PerfectHashTableJitRundown", "PerfectHashTableJitRundownV1"},
+        {"PerfectHashTableCompileHashJit", "PerfectHashTableCompileHashJitV1"},
+        {"PerfectHashTableHashJitRundown", "PerfectHashTableHashJitRundownV1"},
+    };
 #ifdef _WIN32
-    return GetModuleHandleA(path) != NULL;
+    HMODULE plugin = GetModuleHandleA(path);
+#define HAS_EXPORT(name) (GetProcAddress(plugin, (name)) != NULL)
 #else
     void *plugin = dlopen(path, RTLD_NOW | RTLD_NOLOAD);
+#define HAS_EXPORT(name) (dlsym(plugin, (name)) != NULL)
+#endif
+    int valid = 1;
     if (!plugin) {
+        fprintf(stderr, "The expected installed plugin was not loaded: %s\n", path);
         return 0;
     }
+    for (unsigned i = 0; i < sizeof(entries) / sizeof(entries[0]); ++i) {
+        if (HAS_EXPORT(entries[i][0]) || !HAS_EXPORT(entries[i][1])) {
+            fprintf(stderr, "Expected only the versioned export %s in %s\n", entries[i][1], path);
+            valid = 0;
+        }
+    }
+#undef HAS_EXPORT
+#ifndef _WIN32
     dlclose(plugin);
-    return 1;
 #endif
+    return valid;
 }
 
 int main(int argc, char **argv)
@@ -67,8 +86,7 @@ int main(int argc, char **argv)
             goto done;
         }
     }
-    if (!IsPluginLoaded(argv[1])) {
-        fprintf(stderr, "The expected installed plugin was not loaded: %s\n", argv[1]);
+    if (!CheckLoadedPlugin(argv[1])) {
         goto done;
     }
     result = 0;
