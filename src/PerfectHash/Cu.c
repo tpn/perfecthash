@@ -14,6 +14,10 @@ Abstract:
 
 #include "stdafx.h"
 
+#ifdef PH_LINUX
+#include <dlfcn.h>
+#endif
+
 extern LOAD_SYMBOLS LoadSymbols;
 
 #ifdef PH_WINDOWS
@@ -140,7 +144,16 @@ Return Value:
     Cu->NumberOfCuFunctions = sizeof(Cu->CuFunctions) / sizeof(ULONG_PTR);
     ASSERT(Cu->NumberOfCuFunctions == NumberOfCuNames);
 
+#ifdef PH_LINUX
+    // The driver runtime installs the versioned soname.  Keep the unversioned
+    // name as a fallback for deployments that previously relied on it.
+    Module = dlopen("libcuda.so.1", RTLD_LAZY);
+    if (!Module) {
+        Module = LoadLibraryA(PH_NVCUDA_DLL_NAME);
+    }
+#else
     Module = LoadLibraryA(PH_NVCUDA_DLL_NAME);
+#endif
     if (!IsValidHandle(Module)) {
         Result = PH_E_NVCUDA_DLL_LOAD_LIBRARY_FAILED;
         goto Error;
