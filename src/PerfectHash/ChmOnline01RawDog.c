@@ -223,6 +223,9 @@ RawDogHostHasAvx(
     return TRUE;
 }
 
+#if defined(__GNUC__) || defined(__clang__)
+__attribute__((target("avx2")))
+#endif
 DECLSPEC_NOINLINE
 static
 VOID

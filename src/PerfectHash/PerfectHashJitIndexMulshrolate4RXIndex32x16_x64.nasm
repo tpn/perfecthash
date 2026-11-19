@@ -239,6 +239,7 @@ PerfectHashJitIndexMulshrolate4RXIndex32x16_x64:
         ;IACA_VC_END
 
         add     rsp, 0xC0
+        vzeroupper
         ret
 
         align 8
