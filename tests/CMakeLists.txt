@@ -111,13 +111,18 @@ if(TARGET PerfectHashLLVM)
     foreach(variant stale unversioned)
         set(plugin perfecthash_${variant}_llvm_plugin)
         set(client ${plugin}_client)
-        set(fixture_dir "${CMAKE_CURRENT_BINARY_DIR}/${variant}-llvm-plugin/$<CONFIG>")
+        set(fixture_dir "${CMAKE_CURRENT_BINARY_DIR}/${variant}-llvm-plugin")
         add_library(${plugin} SHARED StaleLlvmPlugin.c)
         add_executable(${client} StaleLlvmPluginClient.cpp)
-        set_target_properties(${plugin} ${client} PROPERTIES
-            RUNTIME_OUTPUT_DIRECTORY "${fixture_dir}"
-            LIBRARY_OUTPUT_DIRECTORY "${fixture_dir}"
-            ARCHIVE_OUTPUT_DIRECTORY "${fixture_dir}")
+        foreach(kind RUNTIME LIBRARY ARCHIVE)
+            set_target_properties(${plugin} ${client} PROPERTIES
+                ${kind}_OUTPUT_DIRECTORY "${fixture_dir}")
+            foreach(config IN LISTS CMAKE_CONFIGURATION_TYPES)
+                string(TOUPPER "${config}" config_upper)
+                set_target_properties(${plugin} ${client} PROPERTIES
+                    ${kind}_OUTPUT_DIRECTORY_${config_upper} "${fixture_dir}/${config}")
+            endforeach()
+        endforeach()
         set_target_properties(${plugin} PROPERTIES OUTPUT_NAME PerfectHashLLVM)
         target_link_libraries(${client} PRIVATE PerfectHashOnlineCoreStatic)
         target_compile_features(${client} PRIVATE cxx_std_17)
