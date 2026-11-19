@@ -3946,22 +3946,22 @@ TEST_F(PerfectHashOnlineTests, RawDogJitMulshrolate4RXStrictWidthsMatchIndex) {
   const auto keys = MakePseudoRandomKeys(64);
   const std::vector<uint32_t> queries(keys.begin(), keys.end());
   PH_ONLINE_JIT_CONTEXT context = {classFactory_, online_};
-  const auto compile = [&](PH_ONLINE_JIT_TABLE *table, uint32_t width,
-                           PH_ONLINE_JIT_MAX_ISA max_isa) {
-#if defined(_M_X64) || defined(__x86_64__)
-    if (width == 4 && max_isa != PhOnlineJitMaxIsaAuto) {
-      return CompileRawDogX4WithoutAvx2(&context, table, max_isa);
-    }
-#endif
-    return PhOnlineJitCompileTableEx(
-        &context, table, PhOnlineJitBackendRawDogJit, width, max_isa,
-        PH_ONLINE_JIT_COMPILE_FLAG_STRICT_VECTOR_WIDTH, nullptr, nullptr);
-  };
-
   struct Request {
     uint32_t width;
     PH_ONLINE_JIT_MAX_ISA max_isa;
+    bool avx_only = false;
   };
+  const auto compile = [&](PH_ONLINE_JIT_TABLE *table, const Request &request) {
+#if defined(_M_X64) || defined(__x86_64__)
+    if (request.avx_only) {
+      return CompileRawDogX4WithoutAvx2(&context, table, request.max_isa);
+    }
+#endif
+    return PhOnlineJitCompileTableEx(
+        &context, table, PhOnlineJitBackendRawDogJit, request.width, request.max_isa,
+        PH_ONLINE_JIT_COMPILE_FLAG_STRICT_VECTOR_WIDTH, nullptr, nullptr);
+  };
+
 #if defined(_M_X64) || defined(__x86_64__)
   // MultiplyShiftRX has the same ISA requirements for x4, x8 and x16.
   std::vector<Request> requests = {{1, PhOnlineJitMaxIsaAuto}};
@@ -3971,17 +3971,19 @@ TEST_F(PerfectHashOnlineTests, RawDogJitMulshrolate4RXStrictWidthsMatchIndex) {
   std::unique_ptr<PH_ONLINE_JIT_TABLE, decltype(&PhOnlineJitReleaseTable)>
       probe_owner(probe, &PhOnlineJitReleaseTable);
   for (uint32_t width : {4u, 8u, 16u}) {
-    const auto result = compile(probe, width, PhOnlineJitMaxIsaAuto);
+    const auto result = compile(probe, {width, PhOnlineJitMaxIsaAuto});
     if (result == PH_E_NOT_IMPLEMENTED) {
       continue;
     }
     ASSERT_GE(result, 0);
-    requests.push_back({width, PhOnlineJitMaxIsaAuto});
     if (width == 4) {
-      // The x4 kernel uses AVX even when the requested cap is higher.
-      requests.push_back({4, PhOnlineJitMaxIsaAvx});
-      requests.push_back({4, PhOnlineJitMaxIsaAvx2});
-      requests.push_back({4, PhOnlineJitMaxIsaAvx512});
+      for (const auto cap : {PhOnlineJitMaxIsaAuto, PhOnlineJitMaxIsaAvx,
+                             PhOnlineJitMaxIsaAvx2, PhOnlineJitMaxIsaAvx512}) {
+        requests.push_back({4, cap, false});
+        requests.push_back({4, cap, true});
+      }
+    } else {
+      requests.push_back({width, PhOnlineJitMaxIsaAuto});
     }
   }
 #else
@@ -4008,11 +4010,14 @@ TEST_F(PerfectHashOnlineTests, RawDogJitMulshrolate4RXStrictWidthsMatchIndex) {
       ASSERT_GE(PhOnlineJitIndex32(&wrapper, queries[i], &expected[i]), 0);
     }
 
-    for (const auto &[width, max_isa] : requests) {
+    for (const auto &request : requests) {
+      const auto width = request.width;
       SCOPED_TRACE(width);
-      SCOPED_TRACE(max_isa);
-      ASSERT_GE(compile(&wrapper, width, max_isa), 0);
-      if (max_isa != PhOnlineJitMaxIsaAuto) {
+      SCOPED_TRACE(request.max_isa);
+      SCOPED_TRACE(request.avx_only);
+      ASSERT_GE(compile(&wrapper, request), 0);
+#if defined(_M_X64) || defined(__x86_64__)
+      if (width == 4) {
         auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
         PPERFECT_HASH_TABLE_JIT_INTERFACE jit = nullptr;
         HRESULT result = shim->Vtbl->QueryInterface(
@@ -4031,6 +4036,7 @@ TEST_F(PerfectHashOnlineTests, RawDogJitMulshrolate4RXStrictWidthsMatchIndex) {
         ASSERT_GE(result, 0);
         EXPECT_EQ(jit_info.JitMaxIsa, PerfectHashJitMaxIsaAvx);
       }
+#endif
       std::vector<uint32_t> actual(keys.size());
       for (size_t i = 0; i < keys.size(); i += width) {
         if (width == 1) {

@@ -26,31 +26,34 @@ def compare(*arguments):
     return comparison.stdout, rows, skipped
 
 
-output, rows, skipped = compare("--hash=Mulshrolate4RX")
-for backend in ("llvm", "rawdog"):
-    if (backend, "x1") not in rows:
-        raise AssertionError(f"Missing {backend} scalar baseline\n{output}")
-    for width, isa in ((4, "avx"), (8, "avx2"), (16, "avx512")):
-        entry = (backend, f"x{width}")
-        # Compare to an independent single-width run. The ordinary benchmark
-        # may fall back to scalar, so read the actual compiled widths.
-        flags = [f"--jit-backend={backend}", f"--jit-max-isa={isa}", f"--index32x{width}"]
-        if width in (4, 8):
-            flags.append(f"--jit-vector-index32x{width}")
-        probe = run("--hash=Mulshrolate4RX", *flags)
-        if probe.returncode:
-            if "CompileTable failed: 0xe0040230" not in probe.stdout:  # PH_E_NOT_IMPLEMENTED
-                raise AssertionError(probe.stdout)
-            available = False
-        else:
-            compiled = re.search(r"JIT compiled widths:([^\n]*)", probe.stdout)
-            if compiled is None:
-                raise AssertionError(probe.stdout)
-            available = str(width) in compiled[1].split()
-        if (entry in rows) != available or (entry in skipped) == available:
-            raise AssertionError(f"{entry} availability was {available}\n{output}")
+def width_available(hash_arg, backend, width, isa):
+    # The ordinary benchmark may fall back to scalar, so read the actual
+    # compiled widths from an independent single-width run.
+    flags = [f"--jit-backend={backend}", f"--jit-max-isa={isa}", f"--index32x{width}"]
+    if width in (4, 8):
+        flags.append(f"--jit-vector-index32x{width}")
+    probe = run(hash_arg, *flags)
+    if probe.returncode:
+        if "CompileTable failed: 0xe0040230" not in probe.stdout:  # PH_E_NOT_IMPLEMENTED
+            raise AssertionError(probe.stdout)
+        return False
+    compiled = re.search(r"JIT compiled widths:([^\n]*)", probe.stdout)
+    if compiled is None:
+        raise AssertionError(probe.stdout)
+    return str(width) in compiled[1].split()
 
-# RawDog has no x64 x4 kernel for Mulshrolate3RX, including on AVX-512 hosts.
-output, rows, skipped = compare("--hash=Mulshrolate3RX", "--jit-max-isa=avx")
-if ("rawdog", "x1") not in rows or ("rawdog", "x4") in rows or ("rawdog", "x4") not in skipped:
-    raise AssertionError(f"Expected RawDog scalar results and an x4 skip\n{output}")
+
+for name in ("Mulshrolate4RX", "Mulshrolate3RX"):
+    hash_arg = f"--hash={name}"
+    output, rows, skipped = compare(hash_arg)
+    # RawDog's x4 skip for 3RX must leave the later x8 and x16 entries intact.
+    if name == "Mulshrolate3RX" and ("rawdog", "x4") not in skipped:
+        raise AssertionError(f"Expected RawDog x4 skip\n{output}")
+    for backend in ("llvm", "rawdog"):
+        if (backend, "x1") not in rows:
+            raise AssertionError(f"Missing {backend} scalar baseline\n{output}")
+        for width, isa in ((4, "avx"), (8, "avx2"), (16, "avx512")):
+            entry = (backend, f"x{width}")
+            available = width_available(hash_arg, backend, width, isa)
+            if (entry in rows) != available or (entry in skipped) == available:
+                raise AssertionError(f"{entry} availability was {available}\n{output}")
