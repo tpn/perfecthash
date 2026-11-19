@@ -174,38 +174,20 @@ Abstract:
 #define RAWDOG_IMM8_TABLE_MAGIC           0x8C4B2A1D9F573E61ULL
 
 #if defined(PH_RAWDOG_X64)
+#if defined(__GNUC__) || defined(__clang__)
+__attribute__((target("xsave")))
+#endif
 static
-BOOLEAN
-RawDogOsAvxEnabled(
+ULONGLONG
+RawDogGetXcr0(
     _In_opt_ PRTL Rtl
     )
 {
     if (!ARGUMENT_PRESENT(Rtl) || Rtl->CpuFeatures.OSXSAVE == FALSE) {
-        return FALSE;
+        return 0;
     }
 
-#if defined(_M_AMD64) || defined(_M_X64)
-    return ((_xgetbv(0) & 0x6) == 0x6);
-#else
-    return FALSE;
-#endif
-}
-
-static
-BOOLEAN
-RawDogOsAvx512Enabled(
-    _In_opt_ PRTL Rtl
-    )
-{
-    if (!ARGUMENT_PRESENT(Rtl) || Rtl->CpuFeatures.OSXSAVE == FALSE) {
-        return FALSE;
-    }
-
-#if defined(_M_AMD64) || defined(_M_X64)
-    return ((_xgetbv(0) & 0xE6) == 0xE6);
-#else
-    return FALSE;
-#endif
+    return _xgetbv(0);
 }
 
 static
@@ -216,7 +198,7 @@ RawDogHostHasAvx(
 {
     if (!ARGUMENT_PRESENT(Rtl) ||
         Rtl->CpuFeatures.AVX == FALSE ||
-        !RawDogOsAvxEnabled(Rtl)) {
+        (RawDogGetXcr0(Rtl) & 0x6) != 0x6) {
         return FALSE;
     }
 
@@ -248,8 +230,7 @@ RawDogHostHasAvx2(
 {
     if (!ARGUMENT_PRESENT(Rtl) ||
         Rtl->CpuFeatures.AVX2 == FALSE ||
-        Rtl->CpuFeatures.AVX == FALSE ||
-        !RawDogOsAvxEnabled(Rtl)) {
+        !RawDogHostHasAvx(Rtl)) {
         return FALSE;
     }
 
@@ -271,7 +252,7 @@ RawDogHostSupportsAvx512Kernel(
 {
     if (!ARGUMENT_PRESENT(Rtl) ||
         Rtl->CpuFeatures.AVX512F == FALSE ||
-        !RawDogOsAvx512Enabled(Rtl)) {
+        (RawDogGetXcr0(Rtl) & 0xE6) != 0xE6) {
         return FALSE;
     }
 
@@ -450,9 +431,7 @@ RawDogTraceCpuFeatures(
         Avx2 = (ULONG)Rtl->CpuFeatures.AVX2;
         Avx512 = (ULONG)Rtl->CpuFeatures.AVX512F;
         Osxsave = (ULONG)Rtl->CpuFeatures.OSXSAVE;
-        if (Rtl->CpuFeatures.OSXSAVE != FALSE) {
-            Xcr0 = (unsigned long long)_xgetbv(0);
-        }
+        Xcr0 = RawDogGetXcr0(Rtl);
     }
 
     fprintf(stderr,
