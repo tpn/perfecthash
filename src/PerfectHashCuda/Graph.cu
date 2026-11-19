@@ -101,7 +101,7 @@ GraphCuHashKeysKernel(
     while (Index < NumberOfKeys) {
 
         Key = Keys[Index];
-        Hash = HashFunction(Key, Mask);
+        Hash = HashFunction(Key, Mask, Graph->GraphSeeds);
 
         //
         // For each active thread in the group, check if any thread has
@@ -554,21 +554,11 @@ GraphCuAddKeys(
     }
 
     //
-    // Copy the seeds to constant memory.
-    //
-
-    CUDA_CALL(cudaMemcpyToSymbol(c_GraphSeeds,
-                                 &Graph->GraphSeeds,
-                                 sizeof(Graph->GraphSeeds),
-                                 0,
-                                 cudaMemcpyHostToDevice));
-
-    //
     // Initialize aliases.
     //
 
     SolveContext = Graph->CuSolveContext;
-    DeviceGraph = SolveContext->DeviceGraph;
+    DeviceGraph = Graph->CuDeviceGraph;
     Stream = (CUstream_st *)SolveContext->Stream;
 
     //
@@ -1069,7 +1059,7 @@ GraphCuVerifyKernel(
 
     while (Index < NumberOfKeys) {
         Key = Keys[Index];
-        Hash = HashFunction(Key, HashMask);
+        Hash = HashFunction(Key, HashMask, Graph->GraphSeeds);
 
         if (Hash.Vertex1 == Hash.Vertex2) {
             atomicAdd(Failures, 1u);
@@ -1113,7 +1103,7 @@ GraphCuIsAcyclic(
     //
 
     SolveContext = Graph->CuSolveContext;
-    DeviceGraph = SolveContext->DeviceGraph;
+    DeviceGraph = Graph->CuDeviceGraph;
     Stream = (CUstream_st *)SolveContext->Stream;
 
     BlocksPerGrid = 1;
@@ -1161,40 +1151,7 @@ GraphCuIsAcyclic(
     //
 
     if (IsAcyclic) {
-
         Graph->Flags.IsAcyclic = TRUE;
-
-    } else {
-
-        ULONG HighestDeletedEdges;
-        ULONG NumberOfEdgesDeleted;
-        PPERFECT_HASH_CONTEXT Context;
-
-        Context = Graph->Info->Context;
-        NumberOfEdgesDeleted = Graph->DeletedEdgeCount;
-
-        if (NumberOfEdgesDeleted > Context->HighestDeletedEdgesCount) {
-
-            //
-            // Register as the highest deleted edges count if applicable.
-            //
-
-            while (TRUE) {
-
-                HighestDeletedEdges = Context->HighestDeletedEdgesCount;
-
-                if (NumberOfEdgesDeleted <= HighestDeletedEdges) {
-                    break;
-                }
-
-                InterlockedCompareExchange(
-                    (PLONG)&Context->HighestDeletedEdgesCount,
-                    NumberOfEdgesDeleted,
-                    HighestDeletedEdges
-                );
-
-            }
-        }
     }
 
     return (IsAcyclic ? S_OK : PH_E_GRAPH_CYCLIC_FAILURE);
@@ -1220,7 +1177,7 @@ GraphCuAssign(
     (void)SharedMemoryInBytes;
 
     SolveContext = Graph->CuSolveContext;
-    DeviceGraph = SolveContext->DeviceGraph;
+    DeviceGraph = Graph->CuDeviceGraph;
     Stream = (CUstream_st *)SolveContext->Stream;
 
     if (IsUsingAssigned16(Graph)) {
@@ -1258,7 +1215,7 @@ GraphCuVerify(
     ULONG SharedMemory = SharedMemoryInBytes;
 
     SolveContext = Graph->CuSolveContext;
-    DeviceGraph = SolveContext->DeviceGraph;
+    DeviceGraph = Graph->CuDeviceGraph;
     Stream = (CUstream_st *)SolveContext->Stream;
 
     if (IsUsingAssigned16(Graph)) {

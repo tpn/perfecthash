@@ -651,7 +651,7 @@ Abstract:
           OUTPUT_STRING)                                                                     \
                                                                                              \
     ENTRY(AttemptThatFoundBestGraph,                                                         \
-          Coverage->Attempt,                                                                 \
+          (Coverage == &EmptyCoverage ? 0 : Table->WinningGraphAttempt),                     \
           OUTPUT_INT)                                                                        \
                                                                                              \
     ENTRY(NewBestGraphCount,                                                                 \

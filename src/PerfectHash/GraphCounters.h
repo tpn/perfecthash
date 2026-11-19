@@ -75,6 +75,7 @@ Abstract:
     RESET_GRAPH_COUNTER(IsAcyclicPhase2)
 
 #define COPY_GRAPH_COUNTERS_FROM_GRAPH_TO_TABLE() \
+    Table->WinningGraphAttempt = Graph->Attempt;  \
     COPY_GRAPH_COUNTER(AddKeys);                  \
     COPY_GRAPH_COUNTER(HashKeys);                 \
     COPY_GRAPH_COUNTER(AddHashedKeys);            \

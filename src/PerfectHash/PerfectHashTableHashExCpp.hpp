@@ -38,7 +38,7 @@ Abstract:
         ULONGLONG
         (STDAPICALLTYPE PERFECT_HASH_TABLE_SEEDED_HASH_EX)(
             _In_ KeyType Key,
-                    _In_ VertexType Mask
+            _In_ VertexType Mask
             );
 
     The routines in this module have this signature:
@@ -51,7 +51,8 @@ Abstract:
     ResultType
     (STDAPICALLTYPE PERFECT_HASH_TABLE_SEEDED_HASH_EX_CPP)(
         _In_ KeyType Key,
-        _In_ VertexType Mask
+        _In_ VertexType Mask,
+        _In_ const GRAPH_SEEDS &GraphSeeds
         );
 
 --*/
@@ -60,35 +61,32 @@ Abstract:
 
 #include "stdafx.h"
 
-DEVICE CONSTANT GRAPH_SEEDS c_GraphSeeds;
-
 //
-// Define helper macros for referring to seed constants stored in the
-// __constant__ c_GraphSeeds struct.  This allows easy copy-and-pasting of the
+// Define helper macros for the selected graph's seeds.  This allows copying the
 // algorithm "guts" between the "compiled" perfect hash table routines in
 // ../CompiledPerfectHashTable and the SeededHashEx() implementations here.
 //
 
-#define SEEDS c_GraphSeeds.Seeds
+#define SEEDS GraphSeeds.Seeds
 
-#define SEED1 c_GraphSeeds.Seed1
-#define SEED2 c_GraphSeeds.Seed2
-#define SEED3 c_GraphSeeds.Seed3
-#define SEED4 c_GraphSeeds.Seed4
-#define SEED5 c_GraphSeeds.Seed5
-#define SEED6 c_GraphSeeds.Seed6
-#define SEED7 c_GraphSeeds.Seed7
-#define SEED8 c_GraphSeeds.Seed8
+#define SEED1 GraphSeeds.Seed1
+#define SEED2 GraphSeeds.Seed2
+#define SEED3 GraphSeeds.Seed3
+#define SEED4 GraphSeeds.Seed4
+#define SEED5 GraphSeeds.Seed5
+#define SEED6 GraphSeeds.Seed6
+#define SEED7 GraphSeeds.Seed7
+#define SEED8 GraphSeeds.Seed8
 
-#define SEED3_BYTE1 c_GraphSeeds.Seed3Bytes.Byte1
-#define SEED3_BYTE2 c_GraphSeeds.Seed3Bytes.Byte2
-#define SEED3_BYTE3 c_GraphSeeds.Seed3Bytes.Byte3
-#define SEED3_BYTE4 c_GraphSeeds.Seed3Bytes.Byte4
+#define SEED3_BYTE1 GraphSeeds.Seed3Bytes.Byte1
+#define SEED3_BYTE2 GraphSeeds.Seed3Bytes.Byte2
+#define SEED3_BYTE3 GraphSeeds.Seed3Bytes.Byte3
+#define SEED3_BYTE4 GraphSeeds.Seed3Bytes.Byte4
 
-#define SEED6_BYTE1 c_GraphSeeds.Seed6Bytes.Byte1
-#define SEED6_BYTE2 c_GraphSeeds.Seed6Bytes.Byte2
-#define SEED6_BYTE3 c_GraphSeeds.Seed6Bytes.Byte3
-#define SEED6_BYTE4 c_GraphSeeds.Seed6Bytes.Byte4
+#define SEED6_BYTE1 GraphSeeds.Seed6Bytes.Byte1
+#define SEED6_BYTE2 GraphSeeds.Seed6Bytes.Byte2
+#define SEED6_BYTE3 GraphSeeds.Seed6Bytes.Byte3
+#define SEED6_BYTE4 GraphSeeds.Seed6Bytes.Byte4
 
 #define DOWNSIZE_KEY(Key) ((KeyType)(Key))
 
@@ -143,7 +141,8 @@ DEVICE
 ResultType
 PerfectHashTableSeededHashExCppNull(
     _In_ KeyType Key,
-    _In_ VertexType Mask
+    _In_ VertexType Mask,
+    const GRAPH_SEEDS &GraphSeeds
     )
 /*++
 
@@ -182,7 +181,8 @@ DEVICE
 ResultType
 PerfectHashTableSeededHashExCppJenkins(
     _In_ KeyType Key,
-    _In_ VertexType Mask
+    _In_ VertexType Mask,
+    const GRAPH_SEEDS &GraphSeeds
     )
 /*++
 
@@ -280,7 +280,8 @@ DEVICE
 ResultType
 PerfectHashTableSeededHashExCppRotateMultiplyXorRotate(
     _In_ KeyType Key,
-    _In_ VertexType Mask
+    _In_ VertexType Mask,
+    const GRAPH_SEEDS &GraphSeeds
     )
 /*++
 
@@ -337,7 +338,8 @@ DEVICE
 ResultType
 PerfectHashTableSeededHashExCppShiftMultiplyXorShift(
     KeyType Key,
-    VertexType Mask
+    VertexType Mask,
+    const GRAPH_SEEDS &GraphSeeds
     )
 /*++
 
@@ -394,7 +396,8 @@ DEVICE
 ResultType
 PerfectHashTableSeededHashExCppRotateMultiplyXorRotate2(
     KeyType Key,
-    VertexType Mask
+    VertexType Mask,
+    const GRAPH_SEEDS &GraphSeeds
     )
 /*++
 
@@ -458,7 +461,8 @@ DEVICE
 ResultType
 PerfectHashTableSeededHashExCppShiftMultiplyXorShift2(
     KeyType Key,
-    VertexType Mask
+    VertexType Mask,
+    const GRAPH_SEEDS &GraphSeeds
     )
 /*++
 
@@ -519,7 +523,8 @@ DEVICE
 ResultType
 PerfectHashTableSeededHashExCppMultiplyRotateR(
     KeyType Key,
-    VertexType Mask
+    VertexType Mask,
+    const GRAPH_SEEDS &GraphSeeds
     )
 /*++
 
@@ -574,7 +579,8 @@ DEVICE
 ResultType
 PerfectHashTableSeededHashExCppMultiplyRotateLR(
     KeyType Key,
-    VertexType Mask
+    VertexType Mask,
+    const GRAPH_SEEDS &GraphSeeds
     )
 /*++
 
@@ -629,7 +635,8 @@ DEVICE
 ResultType
 PerfectHashTableSeededHashExCppMultiplyShiftR(
     KeyType Key,
-    VertexType Mask
+    VertexType Mask,
+    const GRAPH_SEEDS &GraphSeeds
     )
 /*++
 
@@ -684,7 +691,8 @@ DEVICE
 ResultType
 PerfectHashTableSeededHashExCppMultiplyShiftRX(
     KeyType Key,
-    VertexType Mask
+    VertexType Mask,
+    const GRAPH_SEEDS &GraphSeeds
     )
 /*++
 
@@ -739,7 +747,8 @@ DEVICE
 ResultType
 PerfectHashTableSeededHashExCppMultiply643ShiftR(
     KeyType Key,
-    VertexType Mask
+    VertexType Mask,
+    const GRAPH_SEEDS &GraphSeeds
     )
 /*++
 
@@ -799,7 +808,8 @@ DEVICE
 ResultType
 PerfectHashTableSeededHashExCppMultiply644ShiftR(
     KeyType Key,
-    VertexType Mask
+    VertexType Mask,
+    const GRAPH_SEEDS &GraphSeeds
     )
 /*++
 
@@ -862,7 +872,8 @@ DEVICE
 ResultType
 PerfectHashTableSeededHashExCppMultiplyShiftLR(
     KeyType Key,
-    VertexType Mask
+    VertexType Mask,
+    const GRAPH_SEEDS &GraphSeeds
     )
 /*++
 
@@ -917,7 +928,8 @@ DEVICE
 ResultType
 PerfectHashTableSeededHashExCppMultiply(
     KeyType Key,
-    VertexType Mask
+    VertexType Mask,
+    const GRAPH_SEEDS &GraphSeeds
     )
 /*++
 
@@ -969,7 +981,8 @@ DEVICE
 ResultType
 PerfectHashTableSeededHashExCppMultiplyXor(
     KeyType Key,
-    VertexType Mask
+    VertexType Mask,
+    const GRAPH_SEEDS &GraphSeeds
     )
 /*++
 
@@ -1024,7 +1037,8 @@ DEVICE
 ResultType
 PerfectHashTableSeededHashExCppMultiplyRotateRMultiply(
     KeyType Key,
-    VertexType Mask
+    VertexType Mask,
+    const GRAPH_SEEDS &GraphSeeds
     )
 /*++
 
@@ -1081,7 +1095,8 @@ DEVICE
 ResultType
 PerfectHashTableSeededHashExCppMultiplyRotateR2(
     KeyType Key,
-    VertexType Mask
+    VertexType Mask,
+    const GRAPH_SEEDS &GraphSeeds
     )
 /*++
 
@@ -1140,7 +1155,8 @@ DEVICE
 ResultType
 PerfectHashTableSeededHashExCppMultiplyShiftRMultiply(
     KeyType Key,
-    VertexType Mask
+    VertexType Mask,
+    const GRAPH_SEEDS &GraphSeeds
     )
 /*++
 
@@ -1197,7 +1213,8 @@ DEVICE
 ResultType
 PerfectHashTableSeededHashExCppMultiplyShiftR2(
     KeyType Key,
-    VertexType Mask
+    VertexType Mask,
+    const GRAPH_SEEDS &GraphSeeds
     )
 /*++
 
@@ -1256,7 +1273,8 @@ DEVICE
 ResultType
 PerfectHashTableSeededHashExCppRotateRMultiply(
     KeyType Key,
-    VertexType Mask
+    VertexType Mask,
+    const GRAPH_SEEDS &GraphSeeds
     )
 /*++
 
@@ -1313,7 +1331,8 @@ DEVICE
 ResultType
 PerfectHashTableSeededHashExCppRotateRMultiplyRotateR(
     KeyType Key,
-    VertexType Mask
+    VertexType Mask,
+    const GRAPH_SEEDS &GraphSeeds
     )
 /*++
 
@@ -1372,7 +1391,8 @@ DEVICE
 ResultType
 PerfectHashTableSeededHashExCppMulshrolate1RX(
     KeyType Key,
-    VertexType Mask
+    VertexType Mask,
+    const GRAPH_SEEDS &GraphSeeds
     )
 {
     VertexType Vertex1;
@@ -1411,7 +1431,8 @@ DEVICE
 ResultType
 PerfectHashTableSeededHashExCppMulshrolate2RX(
     KeyType Key,
-    VertexType Mask
+    VertexType Mask,
+    const GRAPH_SEEDS &GraphSeeds
     )
 {
     VertexType Vertex1;
@@ -1451,7 +1472,8 @@ DEVICE
 ResultType
 PerfectHashTableSeededHashExCppMulshrolate3RX(
     KeyType Key,
-    VertexType Mask
+    VertexType Mask,
+    const GRAPH_SEEDS &GraphSeeds
     )
 {
     VertexType Vertex1;
@@ -1492,7 +1514,8 @@ DEVICE
 ResultType
 PerfectHashTableSeededHashExCppMulshrolate4RX(
     KeyType Key,
-    VertexType Mask
+    VertexType Mask,
+    const GRAPH_SEEDS &GraphSeeds
     )
 {
     VertexType Vertex1;
@@ -1535,7 +1558,7 @@ template<typename ResultType,
          typename KeyType>
 FORCEINLINE
 DEVICE
-auto
+HashFunctionType<ResultType, KeyType, VertexType>
 GetHashFunctionForId(
     _In_ PERFECT_HASH_HASH_FUNCTION_ID Id
     )

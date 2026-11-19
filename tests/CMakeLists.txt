@@ -177,7 +177,20 @@ add_test(
 )
 set_tests_properties(perfecthash.fast.unit PROPERTIES LABELS fast)
 
+add_executable(perfecthash_subset_hits_test GraphKeysSubsetTest.c)
+target_link_libraries(perfecthash_subset_hits_test PRIVATE PerfectHashOnlineCoreStatic)
+target_compile_definitions(perfecthash_subset_hits_test PRIVATE _PERFECT_HASH_INTERNAL_BUILD)
+target_include_directories(perfecthash_subset_hits_test PRIVATE "${PERFECTHASH_SRC_DIR}/PerfectHash")
+add_test(NAME perfecthash_unit_tests.KeysSubsetCacheLineHits COMMAND perfecthash_subset_hits_test)
+
 if(PERFECTHASH_HAS_CUDA)
+    add_executable(perfecthash_cuda_best_graph_test GraphCuBestGraphTest.c)
+    target_link_libraries(perfecthash_cuda_best_graph_test PRIVATE PerfectHashOnlineCoreStatic)
+    target_compile_definitions(perfecthash_cuda_best_graph_test PRIVATE _PERFECT_HASH_INTERNAL_BUILD)
+    target_include_directories(perfecthash_cuda_best_graph_test PRIVATE "${PERFECTHASH_SRC_DIR}/PerfectHash")
+    add_test(NAME perfecthash.cuda.best-graph-ownership COMMAND perfecthash_cuda_best_graph_test)
+    set_tests_properties(perfecthash.cuda.best-graph-ownership PROPERTIES LABELS "cuda")
+
     add_executable(perfecthash_cuda_threshold2_bitset_tests
         PerfectHashCudaThreshold2BitsetTests.cu
     )
@@ -444,6 +457,31 @@ if(TARGET PerfectHashCreateExe AND TARGET PerfectHashBulkCreateExe)
                 -P ${CMAKE_CURRENT_SOURCE_DIR}/run_cli_chm02_cuda_generated_33000_test.cmake
         )
 
+        foreach(width IN ITEMS 16 32)
+            add_test(
+                NAME perfecthash.cuda.chm02.retained-graph.assigned${width}
+                COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/check_cuda_retained_graph.py
+                    $<TARGET_FILE:PerfectHashCreateExe> ${TEST_KEYS_FILE} ${width}
+            )
+            add_test(
+                NAME perfecthash.cuda.chm02.retained-graph.mixed.assigned${width}
+                COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/check_cuda_retained_graph.py
+                    $<TARGET_FILE:PerfectHashCreateExe> ${TEST_KEYS_FILE} ${width} --mixed
+            )
+            set_tests_properties(perfecthash.cuda.chm02.retained-graph.mixed.assigned${width}
+                PROPERTIES SKIP_RETURN_CODE 77)
+        endforeach()
+
+        add_test(
+            NAME perfecthash.cuda.chm02.retained-graph.key-subset
+            COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/check_cuda_retained_graph.py
+                $<TARGET_FILE:PerfectHashCreateExe> ${TEST_KEYS_FILE} 32 --subset
+        )
+        add_test(
+            NAME perfecthash.cuda.chm02.key-subset-fallback
+            COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/check_cuda_retained_graph.py
+                $<TARGET_FILE:PerfectHashCreateExe> ${TEST_KEYS_FILE} 16 --small-fallback
+        )
         add_test(
             NAME perfecthash.cuda.chm02.perf-surface
             COMMAND ${CMAKE_COMMAND}
@@ -459,6 +497,12 @@ if(TARGET PerfectHashCreateExe AND TARGET PerfectHashBulkCreateExe)
             perfecthash.cuda.chm02.hologram.fileio
             perfecthash.cuda.chm02.hologram.nondebug
             perfecthash.cuda.chm02.generated33000.nofileio
+            perfecthash.cuda.chm02.retained-graph.assigned16
+            perfecthash.cuda.chm02.retained-graph.assigned32
+            perfecthash.cuda.chm02.retained-graph.mixed.assigned16
+            perfecthash.cuda.chm02.retained-graph.mixed.assigned32
+            perfecthash.cuda.chm02.retained-graph.key-subset
+            perfecthash.cuda.chm02.key-subset-fallback
             perfecthash.cuda.chm02.perf-surface
             PROPERTIES
                 LABELS "cuda"

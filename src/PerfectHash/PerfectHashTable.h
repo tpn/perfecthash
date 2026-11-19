@@ -671,6 +671,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
         struct _ASSIGNED_MEMORY_COVERAGE *Coverage;
         struct _ASSIGNED16_MEMORY_COVERAGE *Coverage16;
     };
+    LONGLONG WinningGraphAttempt;
 
     //
     // Pointer to a string representation of the Index() routine's

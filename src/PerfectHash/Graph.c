@@ -2866,9 +2866,9 @@ Return Value:
     PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_CONTEXT Context;
     PASSIGNED_MEMORY_COVERAGE Coverage;
-    PASSIGNED_PAGE_COUNT PageCount;
+    PULONG PageCount;
     PASSIGNED_LARGE_PAGE_COUNT LargePageCount;
-    PASSIGNED_CACHE_LINE_COUNT CacheLineCount;
+    PULONG CacheLineCount;
 
     ASSERT(!IsUsingAssigned16(Graph));
 
@@ -2921,9 +2921,9 @@ Return Value:
         LargePageIndex1 = (ULONG)(Offset1 >> LARGE_PAGE_SHIFT);
         CacheLineIndex1 = (ULONG)(Offset1 >> CACHE_LINE_SHIFT);
 
-        Coverage->NumberOfAssignedPerPage[PageIndex1]++;
+        Coverage->SubsetHitsPerPage[PageIndex1]++;
         Coverage->NumberOfAssignedPerLargePage[LargePageIndex1]++;
-        Coverage->NumberOfAssignedPerCacheLine[CacheLineIndex1]++;
+        Coverage->SubsetHitsPerCacheLine[CacheLineIndex1]++;
 
         //
         // Process the second vertex.
@@ -2935,9 +2935,9 @@ Return Value:
         LargePageIndex2 = (ULONG)(Offset2 >> LARGE_PAGE_SHIFT);
         CacheLineIndex2 = (ULONG)(Offset2 >> CACHE_LINE_SHIFT);
 
-        Coverage->NumberOfAssignedPerPage[PageIndex2]++;
+        Coverage->SubsetHitsPerPage[PageIndex2]++;
         Coverage->NumberOfAssignedPerLargePage[LargePageIndex2]++;
-        Coverage->NumberOfAssignedPerCacheLine[CacheLineIndex2]++;
+        Coverage->SubsetHitsPerCacheLine[CacheLineIndex2]++;
 
         //
         // Increment relevant counters if the same large page, page or cache
@@ -2959,7 +2959,7 @@ Return Value:
     // Sum the counts captured above.
     //
 
-    PageCount = Coverage->NumberOfAssignedPerPage;
+    PageCount = Coverage->SubsetHitsPerPage;
     for (Index = 0; Index < Coverage->TotalNumberOfPages; Index++) {
         Count = *PageCount++;
         if (Count > 0) {
@@ -2975,7 +2975,7 @@ Return Value:
         }
     }
 
-    CacheLineCount = Coverage->NumberOfAssignedPerCacheLine;
+    CacheLineCount = Coverage->SubsetHitsPerCacheLine;
     for (Index = 0; Index < Coverage->TotalNumberOfCacheLines; Index++) {
         Count = *CacheLineCount++;
         if (Count > 0) {
@@ -2984,7 +2984,11 @@ Return Value:
                 Coverage->MaxAssignedPerCacheLineCount = Count;
             }
         }
-        Coverage->NumberOfAssignedPerCacheLineCounts[Count]++;
+        // The occupancy histogram has one bin per possible number of
+        // distinct assigned values. Repeated subset visits can exceed it.
+        if (Count < ARRAYSIZE(Coverage->NumberOfAssignedPerCacheLineCounts)) {
+            Coverage->NumberOfAssignedPerCacheLineCounts[Count]++;
+        }
     }
 
     return;
@@ -3128,6 +3132,48 @@ VerifyMemoryCoverage16Invariants(
 }
 #pragma optimize("", on)
 
+// Called under the best-graph critical section when a new winner is retained.
+PGRAPH
+GraphGetReplacementForNewBest(
+    _In_ PGRAPH Graph,
+    _In_opt_ PGRAPH PreviousBest
+    )
+{
+    PGRAPH NextGraph;
+    PPERFECT_HASH_CONTEXT Context = Graph->Context;
+
+#ifdef PH_USE_CUDA
+    if (IsCuGraph(Graph)) {
+        // Each CUDA worker owns two graphs on one solve stream.  Another
+        // worker may still be using the previous winner's stream.
+        if (PreviousBest && !IsCuGraph(PreviousBest)) {
+            ASSERT(Context->SpareGraph == NULL);
+            Context->SpareGraph = PreviousBest;
+        }
+        NextGraph = (Graph == Graph->CuHostGraph ?
+                     Graph->CuHostSpareGraph : Graph->CuHostGraph);
+        ASSERT(NextGraph != NULL);
+        ASSERT(NextGraph->CuSolveContext == Graph->CuSolveContext);
+        NextGraph->Flags.IsSpare = FALSE;
+        return NextGraph;
+    }
+#endif
+
+    // A displaced CPU winner is available immediately.  When the winner
+    // was on a GPU, the CPU spare was left in the context for this worker.
+    if (PreviousBest && !IsCuGraph(PreviousBest)) {
+        ASSERT(Context->SpareGraph == NULL);
+        return PreviousBest;
+    }
+    NextGraph = Context->SpareGraph;
+    ASSERT(NextGraph != NULL);
+    Context->SpareGraph = NULL;
+    if (IsSpareGraph(NextGraph)) {
+        NextGraph->Flags.IsSpare = FALSE;
+    }
+    return NextGraph;
+}
+
 GRAPH_REGISTER_SOLVED GraphRegisterSolved;
 
 _Use_decl_annotations_
@@ -3230,20 +3276,7 @@ Return Value:
     } else {
         ASSERT(Context->NewBestGraphCount == 0);
         ASSERT(Context->FirstAttemptSolved == 0);
-#ifdef PH_USE_CUDA
-        if (IsCuGraph(Graph)) {
-            SpareGraph = Graph->CuHostSpareGraph;
-        } else {
-            SpareGraph = Context->SpareGraph;
-            Context->SpareGraph = NULL;
-        }
-#else
-        SpareGraph = Context->SpareGraph;
-        Context->SpareGraph = NULL;
-#endif
-        ASSERT(SpareGraph != NULL);
-        ASSERT(IsSpareGraph(SpareGraph));
-        SpareGraph->Flags.IsSpare = FALSE;
+        SpareGraph = GraphGetReplacementForNewBest(Graph, NULL);
         BestGraph = Context->BestGraph = Graph;
         *NewGraphPointer = SpareGraph;
         BestGraphIndex = Context->NewBestGraphCount++;
@@ -3254,11 +3287,8 @@ Return Value:
     }
 
     //
-    // There's an existing best graph set.  Verify spare graph is NULL, then
-    // initialize aliases to the previous best.
+    // Initialize aliases to the previous best graph.
     //
-
-    ASSERT(Context->SpareGraph == NULL);
     PreviousBestGraph = Context->BestGraph;
     PreviousBestCoverage = &PreviousBestGraph->AssignedMemoryCoverage;
 
@@ -3270,7 +3300,7 @@ Return Value:
 
 #define FOUND_BEST_GRAPH()                         \
     Context->BestGraph = Graph;                    \
-    *NewGraphPointer = PreviousBestGraph;          \
+    *NewGraphPointer = GraphGetReplacementForNewBest(Graph, PreviousBestGraph); \
     BestGraphIndex = Context->NewBestGraphCount++; \
     Result = PH_S_USE_NEW_GRAPH_FOR_SOLVING
 
@@ -3385,8 +3415,10 @@ End:
         ASSERT(!FoundBestGraph);
         ASSERT(EqualBestGraphIndex >= 0);
 
-        BestGraphInfo = &Context->BestGraphInfo[EqualBestGraphIndex];
-        EqualCount = ++BestGraphInfo->EqualCount;
+        EqualCount = ++Context->CurrentBestGraphEqualCount;
+        if (EqualBestGraphIndex < MAX_BEST_GRAPH_INFO) {
+            Context->BestGraphInfo[EqualBestGraphIndex].EqualCount = EqualCount;
+        }
 
         //
         // If we've hit the maximum number of equal graphs, we can stop solving.
@@ -3402,6 +3434,7 @@ End:
     } else if (FoundBestGraph) {
 
         BestGraph = Graph;
+        Context->CurrentBestGraphEqualCount = 0;
 
         Graph->AssignedMemoryCoverage.BestGraphNumber = BestGraphIndex + 1;
 
@@ -3432,39 +3465,29 @@ End:
 
             BestCoverage = &BestGraphInfo->Coverage;
 
-        } else {
-
             //
-            // Nothing to do if we've exceeded the number of best graphs we
-            // capture in the context.  (The information may still be emitted
-            // via an ETW event.)
+            // Capture the value used to determine that this graph was the best.
             //
-
-            ASSERT(BestCoverage == NULL);
-        }
-
-        //
-        // Capture the value used to determine that this graph was the best.
-        //
 
 #define EXPAND_AS_SAVE_BEST_GRAPH_VALUE(Name, Comparison, Comparator) \
-    case BestCoverageType##Comparison##Name##Id:                      \
-        BestGraphInfo->Value = (ULONG)Coverage->Name;               \
-        BestGraphInfo->ValueAsDouble = (DOUBLE)Coverage->Name;      \
-        break;
+        case BestCoverageType##Comparison##Name##Id:                      \
+            BestGraphInfo->Value = (ULONG)Coverage->Name;               \
+            BestGraphInfo->ValueAsDouble = (DOUBLE)Coverage->Name;      \
+            break;
 
-        switch (CoverageType) {
+            switch (CoverageType) {
 
-            case BestCoverageTypeNullId:
-            case BestCoverageTypeInvalidId:
-                PH_RAISE(PH_E_UNREACHABLE_CODE);
-                break;
+                case BestCoverageTypeNullId:
+                case BestCoverageTypeInvalidId:
+                    PH_RAISE(PH_E_UNREACHABLE_CODE);
+                    break;
 
-            BEST_COVERAGE_TYPE_TABLE_ENTRY(EXPAND_AS_SAVE_BEST_GRAPH_VALUE)
+                BEST_COVERAGE_TYPE_TABLE_ENTRY(EXPAND_AS_SAVE_BEST_GRAPH_VALUE)
 
-            default:
-                Result = PH_E_INVALID_BEST_COVERAGE_TYPE_ID;
-                break;
+                default:
+                    Result = PH_E_INVALID_BEST_COVERAGE_TYPE_ID;
+                    break;
+            }
         }
     }
 
@@ -4055,8 +4078,7 @@ Return Value:
         return E_POINTER;
     }
 
-    DebugCudaSolve = (IsCuGraph(Graph) ? IsPerfectHashCudaDebugEnabled() : FALSE);
-    Graph->Flags.DebugCudaChm02 = DebugCudaSolve;
+    DebugCudaSolve = (IsCuGraph(Graph) ? IsCudaDebugGraph(Graph) : FALSE);
 
     //
     // Acquire the exclusive graph lock for the duration of the routine.  The
@@ -4176,6 +4198,7 @@ Return Value:
         }
 
         if (Result == PH_S_USE_NEW_GRAPH_FOR_SOLVING) {
+            ULONG PreviousNumberOfVertices = Graph->NumberOfVertices;
 
             if (NewGraph == NULL) {
                 PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
@@ -4188,19 +4211,18 @@ Return Value:
 
             AcquireGraphLockExclusive(NewGraph);
             ReleaseGraphLockExclusive(Graph);
+            Graph = NewGraph;
 
-            if (!IsGraphInfoLoaded(NewGraph) ||
-                NewGraph->LastLoadedNumberOfVertices <
-                Graph->NumberOfVertices) {
+            if (!IsGraphInfoLoaded(Graph) ||
+                Graph->LastLoadedNumberOfVertices < PreviousNumberOfVertices) {
 
-                Result = NewGraph->Vtbl->LoadInfo(NewGraph);
+                Result = Graph->Vtbl->LoadInfo(Graph);
                 if (FAILED(Result)) {
                     PH_ERROR(GraphLoadInfo_NewGraph, Result);
                     goto End;
                 }
             }
 
-            Graph = NewGraph;
             continue;
         }
 
@@ -4672,19 +4694,10 @@ SkipGraphVtblHackery:
         goto End;
     }
 
-    if (FirstSolvedGraphWins(Context)) {
-
-        Graph->Flags.WantsAssignedMemoryCoverage = TRUE;
-
-    } else {
-
-        if (DoesBestCoverageTypeRequireKeysSubset(Context->BestCoverageType)) {
-            Graph->Flags.WantsAssignedMemoryCoverageForKeysSubset = TRUE;
-        } else {
-            Graph->Flags.WantsAssignedMemoryCoverage = TRUE;
-        }
-
-    }
+    Graph->Flags.WantsAssignedMemoryCoverageForKeysSubset =
+        BestMemoryCoverageForKeysSubset(Context);
+    Graph->Flags.WantsAssignedMemoryCoverage =
+        !BestMemoryCoverageForKeysSubset(Context);
 
 
 #define ALLOC_ASSIGNED_ARRAY(Coverage_, Name, Type)   \
@@ -6439,11 +6452,7 @@ Return Value:
     } else {
         ASSERT(Context->NewBestGraphCount == 0);
         ASSERT(Context->FirstAttemptSolved == 0);
-        SpareGraph = Context->SpareGraph;
-        ASSERT(SpareGraph != NULL);
-        ASSERT(IsSpareGraph(SpareGraph));
-        SpareGraph->Flags.IsSpare = FALSE;
-        Context->SpareGraph = NULL;
+        SpareGraph = GraphGetReplacementForNewBest(Graph, NULL);
         BestGraph = Context->BestGraph = Graph;
         *NewGraphPointer = SpareGraph;
         BestGraphIndex = Context->NewBestGraphCount++;
@@ -6454,11 +6463,8 @@ Return Value:
     }
 
     //
-    // There's an existing best graph set.  Verify spare graph is NULL, then
-    // initialize aliases to the previous best.
+    // Initialize aliases to the previous best graph.
     //
-
-    ASSERT(Context->SpareGraph == NULL);
     PreviousBestGraph = Context->BestGraph;
     PreviousBestCoverage = &PreviousBestGraph->Assigned16MemoryCoverage;
 
@@ -6470,7 +6476,7 @@ Return Value:
 
 #define FOUND_BEST_GRAPH()                         \
     Context->BestGraph = Graph;                    \
-    *NewGraphPointer = PreviousBestGraph;          \
+    *NewGraphPointer = GraphGetReplacementForNewBest(Graph, PreviousBestGraph); \
     BestGraphIndex = Context->NewBestGraphCount++; \
     Result = PH_S_USE_NEW_GRAPH_FOR_SOLVING
 
@@ -6585,8 +6591,10 @@ End:
         ASSERT(!FoundBestGraph);
         ASSERT(EqualBestGraphIndex >= 0);
 
-        BestGraphInfo = &Context->BestGraphInfo[EqualBestGraphIndex];
-        EqualCount = ++BestGraphInfo->EqualCount;
+        EqualCount = ++Context->CurrentBestGraphEqualCount;
+        if (EqualBestGraphIndex < MAX_BEST_GRAPH_INFO) {
+            Context->BestGraphInfo[EqualBestGraphIndex].EqualCount = EqualCount;
+        }
 
         //
         // If we've hit the maximum number of equal graphs, we can stop solving.
@@ -6601,6 +6609,7 @@ End:
     } else if (FoundBestGraph) {
 
         BestGraph = Graph;
+        Context->CurrentBestGraphEqualCount = 0;
 
         Graph->Assigned16MemoryCoverage.BestGraphNumber = BestGraphIndex + 1;
 
@@ -6631,39 +6640,29 @@ End:
 
             BestCoverage = &BestGraphInfo->Coverage16;
 
-        } else {
-
             //
-            // Nothing to do if we've exceeded the number of best graphs we
-            // capture in the context.  (The information may still be emitted
-            // via an ETW event.)
+            // Capture the value used to determine that this graph was the best.
             //
-
-            ASSERT(BestCoverage == NULL);
-        }
-
-        //
-        // Capture the value used to determine that this graph was the best.
-        //
 
 #define EXPAND_AS_SAVE_BEST_GRAPH_VALUE(Name, Comparison, Comparator) \
-    case BestCoverageType##Comparison##Name##Id:                      \
-        BestGraphInfo->Value = (ULONG)Coverage->Name;                 \
-        BestGraphInfo->ValueAsDouble = (DOUBLE)Coverage->Name;        \
-        break;
+        case BestCoverageType##Comparison##Name##Id:                      \
+            BestGraphInfo->Value = (ULONG)Coverage->Name;                 \
+            BestGraphInfo->ValueAsDouble = (DOUBLE)Coverage->Name;        \
+            break;
 
-        switch (CoverageType) {
+            switch (CoverageType) {
 
-            case BestCoverageTypeNullId:
-            case BestCoverageTypeInvalidId:
-                PH_RAISE(PH_E_UNREACHABLE_CODE);
-                break;
+                case BestCoverageTypeNullId:
+                case BestCoverageTypeInvalidId:
+                    PH_RAISE(PH_E_UNREACHABLE_CODE);
+                    break;
 
-            BEST_COVERAGE_TYPE_TABLE_ENTRY(EXPAND_AS_SAVE_BEST_GRAPH_VALUE)
+                BEST_COVERAGE_TYPE_TABLE_ENTRY(EXPAND_AS_SAVE_BEST_GRAPH_VALUE)
 
-            default:
-                Result = PH_E_INVALID_BEST_COVERAGE_TYPE_ID;
-                break;
+                default:
+                    Result = PH_E_INVALID_BEST_COVERAGE_TYPE_ID;
+                    break;
+            }
         }
     }
 

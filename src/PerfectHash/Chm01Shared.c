@@ -73,6 +73,7 @@ Return Value:
     ULONG GraphImpl;
     ULONG NumberOfKeys;
     BOOLEAN UseAssigned16;
+    BOOLEAN UseSubsetCoverage;
     USHORT NumberOfBitmaps;
     PGRAPH_DIMENSIONS Dim;
     SYSTEM_INFO SystemInfo;
@@ -371,12 +372,16 @@ Return Value:
     //  2) edge ids stored in ORDER16 must remain representable as SHORT, so
     //     NumberOfEdges <= 32768 (max edge id == 32767)
     //  3) Order16Index is a signed SHORT, so NumberOfKeys <= 32767
+    //  4) Key-subset coverage uses the 32-bit assigned layout.
     //
+
+    UseSubsetCoverage = BestMemoryCoverageForKeysSubset(Context);
 
     if ((GraphImpl == 3) &&
         ((NumberOfVertices.LowPart - 1) <= 0x0000ffff) &&
         (NumberOfEdges.LowPart <= 0x00008000) &&
         (NumberOfKeys <= 0x00007fff) &&
+        !UseSubsetCoverage &&
         (TableCreateFlags.DoNotTryUseHash16Impl == FALSE)) {
 
         UseAssigned16 = TRUE;
@@ -578,8 +583,7 @@ Return Value:
 
         Info->NumberOfAssignedPerPageSizeInBytes = (
             Info->AssignedArrayNumberOfPages *
-            RTL_ELEMENT_SIZE(ASSIGNED_MEMORY_COVERAGE,
-                             NumberOfAssignedPerPage)
+            (UseSubsetCoverage ? sizeof(ULONG) : sizeof(ASSIGNED_PAGE_COUNT))
         );
 
         Info->NumberOfAssignedPerLargePageSizeInBytes = (
@@ -590,8 +594,8 @@ Return Value:
 
         Info->NumberOfAssignedPerCacheLineSizeInBytes = (
             Info->AssignedArrayNumberOfCacheLines *
-            RTL_ELEMENT_SIZE(ASSIGNED_MEMORY_COVERAGE,
-                             NumberOfAssignedPerCacheLine)
+            (UseSubsetCoverage ? sizeof(ULONG) :
+                                 sizeof(ASSIGNED_CACHE_LINE_COUNT))
         );
 
     } else {

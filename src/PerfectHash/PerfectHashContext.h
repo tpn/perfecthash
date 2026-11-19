@@ -453,7 +453,9 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
 
     ULONG MinNumberOfKeysForFindBestGraph;
 
-    ULONG Padding1;
+    // Equal solutions for the current winner, including winners beyond the history.
+    _Guarded_by_(BestGraphCriticalSection)
+    ULONG CurrentBestGraphEqualCount;
 
     //
     // Pointer to a buffer that is used to construct console output before

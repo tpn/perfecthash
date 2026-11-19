@@ -433,9 +433,8 @@ Return Value:
     }
 
     //
-    // For each graph instance, set the graph info, and, if we haven't reached
-    // the concurrency limit, append the graph to the context work list and
-    // submit threadpool work for it (to begin graph solving).
+    // Set the graph info for every worker, spare and CPU oracle before any
+    // worker can load its spare graph or exchange a winner.
     //
 
     ASSERT(Context->MainWorkList->Vtbl->IsEmpty(Context->MainWorkList));
@@ -472,11 +471,18 @@ Return Value:
             }
         }
 
-        if (!IsSpareGraph(Graph)) {
-            InitializeListHead(&Graph->ListEntry);
-            InsertTailMainWork(Context, &Graph->ListEntry);
-            SubmitThreadpoolWork(Context->MainWork);
+    }
+
+    // Only the designated primary graphs enter the pool as workers.
+    for (Index = 0; Index < Concurrency; Index++) {
+        if (Index < NumberOfSolveContexts) {
+            Graph = SolveContexts->SolveContexts[Index].HostGraph;
+        } else {
+            Graph = Context->CpuGraphs[Index - NumberOfSolveContexts];
         }
+        InitializeListHead(&Graph->ListEntry);
+        InsertTailMainWork(Context, &Graph->ListEntry);
+        SubmitThreadpoolWork(Context->MainWork);
     }
 
     //
@@ -705,8 +711,6 @@ Return Value:
         Graph->CuIsAcyclicElapsedMicroseconds.QuadPart;
     Table->CuAssignElapsedMicroseconds.QuadPart =
         Graph->CuAssignElapsedMicroseconds.QuadPart;
-    Table->CuVerifyElapsedMicroseconds.QuadPart =
-        Graph->CuVerifyElapsedMicroseconds.QuadPart;
 #endif
 
     //
@@ -923,6 +927,10 @@ Return Value:
     }
 
     CONTEXT_END_TIMERS(Verify);
+#ifdef PH_USE_CUDA
+    Table->CuVerifyElapsedMicroseconds.QuadPart =
+        Graph->CuVerifyElapsedMicroseconds.QuadPart;
+#endif
 
     if (DebugCuda) {
         fprintf(stderr, "[Chm02] Verify result=0x%08x\n", (unsigned)Result);

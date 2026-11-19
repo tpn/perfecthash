@@ -322,14 +322,20 @@ typedef struct _ASSIGNED_MEMORY_COVERAGE {
 
     ULONG TotalNumberOfAssigned;
 
-    _Writable_elements_(TotalNumberOfPages)
-    PASSIGNED_PAGE_COUNT NumberOfAssignedPerPage;
+    union {
+        _Writable_elements_(TotalNumberOfPages)
+        PASSIGNED_PAGE_COUNT NumberOfAssignedPerPage;
+        PULONG SubsetHitsPerPage;
+    };
 
     _Writable_elements_(TotalNumberOfLargePages)
     PASSIGNED_LARGE_PAGE_COUNT NumberOfAssignedPerLargePage;
 
-    _Writable_elements_(TotalNumberOfCacheLines)
-    PASSIGNED_CACHE_LINE_COUNT NumberOfAssignedPerCacheLine;
+    union {
+        _Writable_elements_(TotalNumberOfCacheLines)
+        PASSIGNED_CACHE_LINE_COUNT NumberOfAssignedPerCacheLine;
+        PULONG SubsetHitsPerCacheLine;
+    };
 
     //
     // Histogram of cache line counts.  The +1 accounts for the fact that we
@@ -2191,6 +2197,11 @@ extern GRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE
 extern GRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE_FOR_KEYS_SUBSET
     GraphCalculateAssignedMemoryCoverageForKeysSubset;
 extern GRAPH_REGISTER_SOLVED GraphRegisterSolved;
+PGRAPH
+GraphGetReplacementForNewBest(
+    _In_ PGRAPH Graph,
+    _In_opt_ PGRAPH PreviousBest
+    );
 #ifdef _M_X64
 extern GRAPH_REGISTER_SOLVED GraphRegisterSolvedTsx;
 #endif
