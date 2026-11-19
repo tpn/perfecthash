@@ -53,6 +53,7 @@ Return Value:
     ULONG Index;
     ULONG Inner;
     BOOLEAN Found;
+    BOOLEAN DebugCuda = IsPerfectHashCudaDebugEnabled();
     CU_RESULT CuResult;
     ULONG NumberOfDevices;
     ULONG NumberOfContexts;
@@ -544,6 +545,14 @@ Return Value:
 
         CuResult = Cu->CtxPushCurrent(DeviceContext->Context);
         CU_CHECK(CuResult, CtxPushCurrent);
+
+        if (DebugCuda) {
+            CU_DEVICE ActiveDevice;
+            CuResult = Cu->CtxGetDevice(&ActiveDevice);
+            CU_CHECK(CuResult, CtxGetDevice);
+            fprintf(stderr, "[Chm02] Solver %u CUDA device %d\n",
+                    (unsigned)Index, (int)ActiveDevice);
+        }
 
         //
         // Create the streams for this solve context.

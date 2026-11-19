@@ -772,6 +772,8 @@ FinishedSolution:
     //
 
     if (!NoFileIo(Table)) {
+        ThreadpoolWait(FileWorkThreadpool);
+        CHECK_ALL_PREPARE_ERRORS();
         if (!IsCuGraph(Graph)) {
             SUBMIT_SAVE_FILE_WORK();
         }
@@ -1035,9 +1037,13 @@ End:
     Verb##Name.FileWorkId = FileWork##Verb##Name##Id;   \
     Verb##Name.Context = Context;                       \
     Verb##Name.EndOfFile = EndOfFile;                   \
-    ThreadpoolAddWork(FileWorkThreadpool,               \
-                      FileWorkItemCallbackChm01,        \
-                      &Verb##Name);
+    if (Result == S_OK ||                               \
+        (Prepare##Name.FilePointer &&                   \
+         *Prepare##Name.FilePointer)) {                 \
+        ThreadpoolAddWork(FileWorkThreadpool,           \
+                          FileWorkItemCallbackChm01,    \
+                          &Verb##Name);                 \
+    }
 
 #define SUBMIT_CLOSE_FILE_WORK() \
     CLOSE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_SUBMIT_CLOSE_FILE_WORK)
@@ -1058,7 +1064,7 @@ End:
         }                                                            \
         PH_ERROR(                                                    \
             CreatePerfectHashTableImplChm02_ErrorDuring##Verb##Name, \
-            Result                                                   \
+            CloseResult                                              \
         );                                                           \
         CloseFileErrorCount++;                                       \
     }
@@ -1069,11 +1075,10 @@ End:
     CHECK_ALL_CLOSE_ERRORS();
 
     //
-    // Just use whatever the last close file error was for our return value if
-    // we encountered any errors.
+    // Preserve an earlier failure; propagate a close error after a successful solve.
     //
 
-    if (CloseFileErrorCount > 0) {
+    if (CloseFileErrorCount > 0 && Result == S_OK) {
         Result = CloseResult;
     }
 
