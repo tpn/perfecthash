@@ -4694,19 +4694,10 @@ SkipGraphVtblHackery:
         goto End;
     }
 
-    if (FirstSolvedGraphWins(Context)) {
-
-        Graph->Flags.WantsAssignedMemoryCoverage = TRUE;
-
-    } else {
-
-        if (DoesBestCoverageTypeRequireKeysSubset(Context->BestCoverageType)) {
-            Graph->Flags.WantsAssignedMemoryCoverageForKeysSubset = TRUE;
-        } else {
-            Graph->Flags.WantsAssignedMemoryCoverage = TRUE;
-        }
-
-    }
+    Graph->Flags.WantsAssignedMemoryCoverageForKeysSubset =
+        BestMemoryCoverageForKeysSubset(Context);
+    Graph->Flags.WantsAssignedMemoryCoverage =
+        !BestMemoryCoverageForKeysSubset(Context);
 
 
 #define ALLOC_ASSIGNED_ARRAY(Coverage_, Name, Type)   \

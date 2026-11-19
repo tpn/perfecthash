@@ -1163,6 +1163,7 @@ Return Value:
     Context->FinishedWorkList->Vtbl->Reset(Context->FinishedWorkList);
 
     Context->KeysSubset = NULL;
+    Context->State.BestMemoryCoverageForKeysSubset = FALSE;
     Context->UserSeeds = NULL;
     Context->SeedMasks = NULL;
 

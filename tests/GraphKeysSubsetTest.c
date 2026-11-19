@@ -1,7 +1,7 @@
 #include "stdafx.h"
 
 // Each key joins vertex zero to a different cache line, forming an acyclic
-// star. The center receives more hits than both the histogram and a BYTE.
+// star. The center exceeds both the cache-line BYTE and page USHORT limits.
 static HRESULT STDAPICALLTYPE
 HashStar(PPERFECT_HASH_TABLE Table, ULONG Key, ULONG Count, PULONG Seeds,
          PULONGLONG Hash)
@@ -28,8 +28,7 @@ int main(void)
     static PERFECT_HASH_TABLE_VTBL Vtbl;
     static GRAPH Graph;
     static KEYS_SUBSET Subset;
-    ULONG Keys[300];
-    ULONG Pages[5] = { 0 }, LargePages[1] = { 0 }, Lines[301] = { 0 };
+    static ULONG Keys[65536], Pages[1025], LargePages[3], Lines[65537];
     PASSIGNED_MEMORY_COVERAGE Coverage = &Graph.AssignedMemoryCoverage;
     ULONG Index;
 
@@ -55,7 +54,9 @@ int main(void)
     if (Coverage->MaxAssignedPerCacheLineCount != ARRAYSIZE(Keys) ||
         Coverage->NumberOfUsedCacheLines != ARRAYSIZE(Lines) ||
         Coverage->NumberOfAssignedPerCacheLineCounts[1] != ARRAYSIZE(Keys) ||
-        Lines[0] != ARRAYSIZE(Keys) || LargePages[0] != 2 * ARRAYSIZE(Keys)) {
+        Coverage->NumberOfUsedPages != ARRAYSIZE(Pages) ||
+        Coverage->NumberOfUsedLargePages != ARRAYSIZE(LargePages) ||
+        Lines[0] != ARRAYSIZE(Keys) || Pages[0] != ARRAYSIZE(Keys) + 63) {
         return 1;
     }
     for (Index = 0; Index < ARRAYSIZE(Coverage->NumberOfAssignedPerCacheLineCounts); Index++) {

@@ -762,19 +762,10 @@ Return Value:
         goto Finalize;
     }
 
-    if (FirstSolvedGraphWins(Context)) {
-
-        Graph->Flags.WantsAssignedMemoryCoverage = TRUE;
-
-    } else {
-
-        if (DoesBestCoverageTypeRequireKeysSubset(Context->BestCoverageType)) {
-            Graph->Flags.WantsAssignedMemoryCoverageForKeysSubset = TRUE;
-        } else {
-            Graph->Flags.WantsAssignedMemoryCoverage = TRUE;
-        }
-
-    }
+    Graph->Flags.WantsAssignedMemoryCoverageForKeysSubset =
+        BestMemoryCoverageForKeysSubset(Context);
+    Graph->Flags.WantsAssignedMemoryCoverage =
+        !BestMemoryCoverageForKeysSubset(Context);
 
 #define ALLOC_DEVICE_ASSIGNED_ARRAY(Name)                                    \
     ASSERT(Coverage->Name == NULL);                                          \

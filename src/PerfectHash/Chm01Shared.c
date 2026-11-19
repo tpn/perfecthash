@@ -375,8 +375,7 @@ Return Value:
     //  4) Key-subset coverage uses the 32-bit assigned layout.
     //
 
-    UseSubsetCoverage = (!FirstSolvedGraphWins(Context) &&
-        DoesBestCoverageTypeRequireKeysSubset(Context->BestCoverageType));
+    UseSubsetCoverage = BestMemoryCoverageForKeysSubset(Context);
 
     if ((GraphImpl == 3) &&
         ((NumberOfVertices.LowPart - 1) <= 0x0000ffff) &&

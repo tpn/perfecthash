@@ -15,6 +15,7 @@ parser.add_argument("source", type=Path)
 parser.add_argument("width", type=int, choices=(16, 32), nargs="?", default=32)
 parser.add_argument("--mixed", action="store_true", help="run one CPU and one CUDA worker")
 parser.add_argument("--subset", action="store_true", help="select width automatically for key-subset coverage")
+parser.add_argument("--small-fallback", action="store_true", help="fall back below the minimum for best-graph mode")
 args = parser.parse_args()
 width_flags = ["--DoNotTryUseHash16Impl"] if args.width == 32 and not args.subset else []
 # The CPU can consume the short CUDA-only budget while the GPU initializes.
@@ -24,13 +25,16 @@ with tempfile.TemporaryDirectory() as tmp:
     output = Path(tmp)
     keys = output / "Hologram8193.keys"
     with args.source.open("rb") as fixture:
-        data = fixture.read(8193 * 4)
+        data = fixture.read((1024 if args.small_fallback else 8193) * 4)
     keys.write_bytes(data)
     coverage_flags = ["--BestCoverageType=HighestNumberOfEmptyCacheLines"]
     if args.subset:
         subset = ",".join(map(str, struct.unpack_from("<512I", data)))
         coverage_flags = ["--BestCoverageType=HighestMaxAssignedPerCacheLineCountForKeysSubset",
                           f"--KeysSubset={subset}"]
+    elif args.small_fallback:
+        coverage_flags = ["--BestCoverageType=HighestMaxAssignedPerCacheLineCountForKeysSubset",
+                          "--MinNumberOfKeysForFindBestGraph=8193"]
 
     # Philox selects new seeds each attempt. This prefix produces several
     # successive winners and the best graph predates the final attempt.
@@ -57,6 +61,10 @@ with tempfile.TemporaryDirectory() as tmp:
         raise AssertionError(f"Table creation returned {row['TableCreateResult']}")
     if row["UsedAssigned16"] != ("Y" if args.width == 16 else "N"):
         raise AssertionError(f"Expected {args.width}-bit data, got UsedAssigned16={row['UsedAssigned16']}")
+    if args.small_fallback:
+        if row["FindBestMemoryCoverageForKeysSubset"] != "N" or int(row["AttemptThatFoundBestGraph"]) < 1:
+            raise AssertionError("Expected ordinary coverage and a recorded winning attempt after fallback")
+        raise SystemExit(0)
     # The shared attempt counter can include the final reset that observes
     # the fixed limit. It is also advanced by the CPU oracle's reset.
     reported = int(row["Attempts"])
@@ -65,11 +73,11 @@ with tempfile.TemporaryDirectory() as tmp:
     winners = int(row["NewBestGraphCount"])
     if winners < 2:
         raise AssertionError(f"Expected multiple best graphs, got {winners}")
-    if args.subset and int(row["BestGraph2_Value"]) <= int(row["BestGraph1_Value"]):
+    stored_winner = min(winners, 32)
+    if args.subset and int(row[f"BestGraph{stored_winner}_Value"]) <= int(row["BestGraph1_Value"]):
         raise AssertionError("The retained graph did not improve the key-subset score")
     winning_attempt = int(row["AttemptThatFoundBestGraph"])
-    history_attempt = row.get(f"BestGraph{winners}_Attempt")
-    if history_attempt is not None and int(history_attempt) != winning_attempt:
+    if winners == stored_winner and int(row[f"BestGraph{winners}_Attempt"]) != winning_attempt:
         raise AssertionError(f"Expected the summary and winner to agree on attempt {winning_attempt}")
     if not 0 < winning_attempt < attempts - 1:
         raise AssertionError(f"Expected an earlier retained winner, got attempt {winning_attempt}")
