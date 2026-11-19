@@ -149,7 +149,14 @@ Return Value:
     // name as a fallback for deployments that previously relied on it.
     Module = dlopen("libcuda.so.1", RTLD_LAZY);
     if (!Module) {
+        // The fallback lookup can invalidate the first dlerror() string.
+        const char *Error = dlerror();
+        char *RuntimeError = Error ? strdup(Error) : NULL;
         Module = LoadLibraryA(PH_NVCUDA_DLL_NAME);
+        if (!Module && RuntimeError) {
+            fprintf(stderr, "dlopen failed: %s\n", RuntimeError);
+        }
+        free(RuntimeError);
     }
 #else
     Module = LoadLibraryA(PH_NVCUDA_DLL_NAME);

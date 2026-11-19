@@ -411,6 +411,14 @@ if(TARGET PerfectHashCreateExe AND TARGET PerfectHashBulkCreateExe)
     )
 
     if(PERFECTHASH_HAS_CUDA)
+        if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+            add_test(
+                NAME perfecthash.cuda.driver-library-names
+                COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/check_cuda_driver_names.py
+                    $<TARGET_FILE:PerfectHashCreateExe> ${TEST_KEYS_FILE} $<TARGET_FILE:PerfectHash>
+            )
+        endif()
+
         add_test(
             NAME perfecthash.cuda.chm02.hologram.nofileio
             COMMAND ${CMAKE_COMMAND}
